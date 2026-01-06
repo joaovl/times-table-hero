@@ -28,7 +28,7 @@ const SETTINGS_KEY = 'multiplication-game-settings';
 
 export function getProgress(): Record<string, QuestionRecord> {
   try {
-    const data = localStorage.getItem(STORAGE_KEY);
+    const data = sessionStorage.getItem(STORAGE_KEY);
     return data ? JSON.parse(data) : {};
   } catch {
     return {};
@@ -36,7 +36,7 @@ export function getProgress(): Record<string, QuestionRecord> {
 }
 
 export function saveProgress(progress: Record<string, QuestionRecord>): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
 }
 
 export function getQuestionKey(multiplier: number, multiplicand: number): string {
@@ -93,7 +93,7 @@ export function saveSession(session: GameSession): void {
     sessions.push(session);
     // Keep only last 50 sessions
     const trimmed = sessions.slice(-50);
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
+    sessionStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
   } catch {
     // Ignore storage errors
   }
@@ -101,7 +101,7 @@ export function saveSession(session: GameSession): void {
 
 export function getSessions(): GameSession[] {
   try {
-    const data = localStorage.getItem(SESSIONS_KEY);
+    const data = sessionStorage.getItem(SESSIONS_KEY);
     return data ? JSON.parse(data) : [];
   } catch {
     return [];
@@ -135,7 +135,7 @@ const DEFAULT_SETTINGS: SavedSettings = {
 
 export function getSavedSettings(): SavedSettings {
   try {
-    const data = localStorage.getItem(SETTINGS_KEY);
+    const data = sessionStorage.getItem(SETTINGS_KEY);
     if (data) {
       return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
     }
@@ -147,7 +147,7 @@ export function getSavedSettings(): SavedSettings {
 
 export function saveSettings(settings: SavedSettings): void {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    sessionStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   } catch {
     // Ignore storage errors
   }
