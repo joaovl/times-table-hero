@@ -36,6 +36,7 @@ export function GamePlay({ settings, onComplete, onQuit }: GamePlayProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [incorrectQuestions, setIncorrectQuestions] = useState<GameResults['incorrectQuestions']>([]);
   const [feedback, setFeedback] = useState<FeedbackState>('none');
   const [feedbackMessage, setFeedbackMessage] = useState('');
@@ -92,16 +93,19 @@ export function GamePlay({ settings, onComplete, onQuit }: GamePlayProps) {
     if (isComplete) {
       onComplete({
         score,
-        total: currentIndex,
+        total: questionsAnswered,
         incorrectQuestions,
         settings,
       });
     }
-  }, [isComplete, score, currentIndex, incorrectQuestions, settings, onComplete]);
+  }, [isComplete, score, questionsAnswered, incorrectQuestions, settings, onComplete]);
 
   const handleAnswer = useCallback((userAnswer: number | null) => {
     const currentQuestion = questions[currentIndex];
     const isCorrect = userAnswer === currentQuestion.answer;
+
+    // Track answered questions
+    setQuestionsAnswered(prev => prev + 1);
 
     // Record progress
     recordAnswer(currentQuestion.multiplier, currentQuestion.multiplicand, isCorrect);
