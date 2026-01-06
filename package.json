@@ -1,7 +1,24 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "times-table-hero",
+  "description": "An interactive multiplication learning game for children with multiple difficulty levels and progress tracking",
+  "version": "1.0.0",
+  "author": "joaovl",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joaovl/times-table-hero"
+  },
+  "keywords": [
+    "multiplication",
+    "times-tables",
+    "math-game",
+    "education",
+    "children",
+    "learning",
+    "react",
+    "typescript"
+  ],
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
