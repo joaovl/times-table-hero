@@ -24,6 +24,7 @@ export interface GameSession {
 
 const STORAGE_KEY = 'multiplication-game-progress';
 const SESSIONS_KEY = 'multiplication-game-sessions';
+const SETTINGS_KEY = 'multiplication-game-settings';
 
 export function getProgress(): Record<string, QuestionRecord> {
   try {
@@ -114,4 +115,40 @@ export function getTotalStats(): { totalGames: number; totalCorrect: number; tot
     totalCorrect: sessions.reduce((sum, s) => sum + s.score, 0),
     totalQuestions: sessions.reduce((sum, s) => sum + s.total, 0),
   };
+}
+
+export interface SavedSettings {
+  tables: number[];
+  difficulty: string;
+  gameMode: string;
+  questionCount: number;
+  timeLimit: number;
+}
+
+const DEFAULT_SETTINGS: SavedSettings = {
+  tables: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  difficulty: 'easy',
+  gameMode: 'questions',
+  questionCount: 10,
+  timeLimit: 180,
+};
+
+export function getSavedSettings(): SavedSettings {
+  try {
+    const data = localStorage.getItem(SETTINGS_KEY);
+    if (data) {
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+    }
+    return DEFAULT_SETTINGS;
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+export function saveSettings(settings: SavedSettings): void {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // Ignore storage errors
+  }
 }

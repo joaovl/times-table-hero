@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Difficulty, GameMode, GameSettings } from '@/lib/gameLogic';
 import { TABLE_COLORS } from '@/lib/gameLogic';
-import { getTotalStats } from '@/lib/gameStorage';
+import { getTotalStats, getSavedSettings, saveSettings } from '@/lib/gameStorage';
 
 interface GameSetupProps {
   onStart: (settings: GameSettings) => void;
@@ -21,13 +21,25 @@ const TIME_LIMITS = [
 ];
 
 export function GameSetup({ onStart }: GameSetupProps) {
-  const [selectedTables, setSelectedTables] = useState<number[]>([2, 5, 10]);
+  const [selectedTables, setSelectedTables] = useState<number[]>(TABLES);
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [gameMode, setGameMode] = useState<GameMode>('questions');
   const [questionCount, setQuestionCount] = useState(10);
   const [timeLimit, setTimeLimit] = useState(180);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const stats = getTotalStats();
+
+  // Load saved settings on mount
+  useEffect(() => {
+    const saved = getSavedSettings();
+    setSelectedTables(saved.tables);
+    setDifficulty(saved.difficulty as Difficulty);
+    setGameMode(saved.gameMode as GameMode);
+    setQuestionCount(saved.questionCount);
+    setTimeLimit(saved.timeLimit);
+    setIsLoaded(true);
+  }, []);
 
   const toggleTable = (table: number) => {
     setSelectedTables(prev =>
@@ -42,6 +54,16 @@ export function GameSetup({ onStart }: GameSetupProps) {
 
   const handleStart = () => {
     if (selectedTables.length === 0) return;
+
+    // Save settings for next time
+    saveSettings({
+      tables: selectedTables,
+      difficulty,
+      gameMode,
+      questionCount,
+      timeLimit,
+    });
+
     onStart({
       tables: selectedTables.sort((a, b) => a - b),
       difficulty,
@@ -50,6 +72,14 @@ export function GameSetup({ onStart }: GameSetupProps) {
       timeLimit,
     });
   };
+
+  if (!isLoaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-2xl font-bold text-primary">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
