@@ -9,43 +9,52 @@ interface GameResultsProps {
   results: GameResultsType;
   onPlayAgain: () => void;
   onNewGame: () => void;
+  userId?: string;
 }
 
-export function GameResults({ results, onPlayAgain, onNewGame }: GameResultsProps) {
+const getSymbol = (op: 'multiply' | 'divide') => op === 'multiply' ? '×' : '÷';
+
+export function GameResults({ results, onPlayAgain, onNewGame, userId }: GameResultsProps) {
   const [improved, setImproved] = useState<string[]>([]);
   const [stillChallenging, setStillChallenging] = useState<string[]>([]);
 
   const percentage = results.total > 0 ? Math.round((results.score / results.total) * 100) : 0;
-  
+
   const getScoreMessage = () => {
-    if (percentage === 100) return "Perfect score! You're a maths superstar! ⭐";
-    if (percentage >= 80) return "Brilliant work! Keep it up! 🎉";
-    if (percentage >= 60) return "Good effort! Practice makes perfect! 💪";
-    if (percentage >= 40) return "Nice try! You'll get better! 🌟";
-    return "Keep practising, you've got this! 💫";
+    if (percentage === 100) return "Perfect score! You're a maths superstar!";
+    if (percentage >= 80) return "Brilliant work! Keep it up!";
+    if (percentage >= 60) return "Good effort! Practice makes perfect!";
+    if (percentage >= 40) return "Nice try! You'll get better!";
+    return "Keep practising, you've got this!";
   };
 
   useEffect(() => {
-    // Save session
+    // Save session (convert to old format for storage compatibility)
     saveSession({
       date: new Date().toISOString(),
       score: results.score,
       total: results.total,
       difficulty: results.settings.difficulty,
       tables: results.settings.tables,
-      incorrectQuestions: results.incorrectQuestions,
-    });
+      incorrectQuestions: results.incorrectQuestions.map(q => ({
+        multiplier: q.operand1,
+        multiplicand: q.operand2,
+        userAnswer: q.userAnswer,
+        correctAnswer: q.correctAnswer,
+      })),
+    }, userId);
 
     // Check for improvements
-    const progress = getProgress();
+    const progress = getProgress(userId);
     const improvedList: string[] = [];
     const challengingList: string[] = [];
 
     results.incorrectQuestions.forEach(q => {
-      const key = getQuestionKey(q.multiplier, q.multiplicand);
+      const key = getQuestionKey(q.operand1, q.operand2);
       const record = progress[key];
+      const symbol = getSymbol(q.operation);
       if (record && record.timesWrong > 1) {
-        challengingList.push(`${q.multiplier} × ${q.multiplicand}`);
+        challengingList.push(`${q.operand1} ${symbol} ${q.operand2}`);
       }
     });
 
@@ -53,7 +62,7 @@ export function GameResults({ results, onPlayAgain, onNewGame }: GameResultsProp
     Object.values(progress).forEach(record => {
       if (record.timesWrong > 0 && record.timesCorrect > 0) {
         const wasWrongThisSession = results.incorrectQuestions.some(
-          q => q.multiplier === record.multiplier && q.multiplicand === record.multiplicand
+          q => q.operand1 === record.multiplier && q.operand2 === record.multiplicand
         );
         if (!wasWrongThisSession && results.settings.tables.includes(record.multiplier)) {
           improvedList.push(`${record.multiplier} × ${record.multiplicand}`);
@@ -87,7 +96,7 @@ export function GameResults({ results, onPlayAgain, onNewGame }: GameResultsProp
         {/* Improvements */}
         {improved.length > 0 && (
           <Card className="mb-4 border-success/30 bg-success/10 p-4">
-            <h3 className="mb-2 font-bold text-success">🎉 You've improved!</h3>
+            <h3 className="mb-2 font-bold text-success">You've improved!</h3>
             <p className="text-sm text-foreground">
               These were tricky before, but you got them right this time:
             </p>
@@ -106,21 +115,24 @@ export function GameResults({ results, onPlayAgain, onNewGame }: GameResultsProp
           <Card className="mb-4 p-4">
             <h3 className="mb-3 font-bold text-foreground">Questions to practise:</h3>
             <div className="space-y-2">
-              {results.incorrectQuestions.map((q, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between rounded-lg bg-muted px-4 py-2"
-                >
-                  <span className="font-medium">
-                    {q.multiplier} × {q.multiplicand} = {q.correctAnswer}
-                  </span>
-                  {q.userAnswer !== null && (
-                    <span className="text-sm text-destructive">
-                      You said: {q.userAnswer}
+              {results.incorrectQuestions.map((q, idx) => {
+                const symbol = getSymbol(q.operation);
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between rounded-lg bg-muted px-4 py-2"
+                  >
+                    <span className="font-medium">
+                      {q.operand1} {symbol} {q.operand2} = {q.correctAnswer}
                     </span>
-                  )}
-                </div>
-              ))}
+                    {q.userAnswer !== null && (
+                      <span className="text-sm text-destructive">
+                        You said: {q.userAnswer}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </Card>
         )}

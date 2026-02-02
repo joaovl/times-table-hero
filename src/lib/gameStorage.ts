@@ -1,4 +1,4 @@
-// Progress tracking with localStorage
+// Progress tracking with localStorage, namespaced by userId
 
 export interface QuestionRecord {
   multiplier: number;
@@ -22,21 +22,26 @@ export interface GameSession {
   }>;
 }
 
-const STORAGE_KEY = 'multiplication-game-progress';
-const SESSIONS_KEY = 'multiplication-game-sessions';
-const SETTINGS_KEY = 'multiplication-game-settings';
+function getStorageKey(base: string, userId?: string): string {
+  if (userId) {
+    return `maths-challenge-${base}-${userId}`;
+  }
+  return `maths-challenge-${base}`;
+}
 
-export function getProgress(): Record<string, QuestionRecord> {
+export function getProgress(userId?: string): Record<string, QuestionRecord> {
   try {
-    const data = sessionStorage.getItem(STORAGE_KEY);
+    const key = getStorageKey('progress', userId);
+    const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : {};
   } catch {
     return {};
   }
 }
 
-export function saveProgress(progress: Record<string, QuestionRecord>): void {
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+export function saveProgress(progress: Record<string, QuestionRecord>, userId?: string): void {
+  const key = getStorageKey('progress', userId);
+  localStorage.setItem(key, JSON.stringify(progress));
 }
 
 export function getQuestionKey(multiplier: number, multiplicand: number): string {
@@ -46,11 +51,12 @@ export function getQuestionKey(multiplier: number, multiplicand: number): string
 export function recordAnswer(
   multiplier: number,
   multiplicand: number,
-  correct: boolean
+  correct: boolean,
+  userId?: string
 ): void {
-  const progress = getProgress();
+  const progress = getProgress(userId);
   const key = getQuestionKey(multiplier, multiplicand);
-  
+
   if (!progress[key]) {
     progress[key] = {
       multiplier,
@@ -60,56 +66,59 @@ export function recordAnswer(
       lastAttempt: new Date().toISOString(),
     };
   }
-  
+
   if (correct) {
     progress[key].timesCorrect++;
   } else {
     progress[key].timesWrong++;
   }
   progress[key].lastAttempt = new Date().toISOString();
-  
-  saveProgress(progress);
+
+  saveProgress(progress, userId);
 }
 
-export function getChallengingQuestions(): QuestionRecord[] {
-  const progress = getProgress();
+export function getChallengingQuestions(userId?: string): QuestionRecord[] {
+  const progress = getProgress(userId);
   return Object.values(progress)
     .filter(q => q.timesWrong > q.timesCorrect)
     .sort((a, b) => (b.timesWrong - b.timesCorrect) - (a.timesWrong - a.timesCorrect));
 }
 
 export function getImprovedQuestions(
-  incorrectThisSession: Array<{ multiplier: number; multiplicand: number }>
+  incorrectThisSession: Array<{ multiplier: number; multiplicand: number }>,
+  userId?: string
 ): QuestionRecord[] {
-  const progress = getProgress();
+  const progress = getProgress(userId);
   return incorrectThisSession
     .map(q => progress[getQuestionKey(q.multiplier, q.multiplicand)])
     .filter(q => q && q.timesWrong > 0 && q.timesCorrect > 0);
 }
 
-export function saveSession(session: GameSession): void {
+export function saveSession(session: GameSession, userId?: string): void {
   try {
-    const sessions = getSessions();
+    const sessions = getSessions(userId);
     sessions.push(session);
     // Keep only last 50 sessions
     const trimmed = sessions.slice(-50);
-    sessionStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
+    const key = getStorageKey('sessions', userId);
+    localStorage.setItem(key, JSON.stringify(trimmed));
   } catch {
     // Ignore storage errors
   }
 }
 
-export function getSessions(): GameSession[] {
+export function getSessions(userId?: string): GameSession[] {
   try {
-    const data = sessionStorage.getItem(SESSIONS_KEY);
+    const key = getStorageKey('sessions', userId);
+    const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : [];
   } catch {
     return [];
   }
 }
 
-export function getTotalStats(): { totalGames: number; totalCorrect: number; totalQuestions: number } {
-  const sessions = getSessions();
+export function getTotalStats(userId?: string): { totalGames: number; totalCorrect: number; totalQuestions: number } {
+  const sessions = getSessions(userId);
   return {
     totalGames: sessions.length,
     totalCorrect: sessions.reduce((sum, s) => sum + s.score, 0),
@@ -121,6 +130,7 @@ export interface SavedSettings {
   tables: number[];
   difficulty: string;
   gameMode: string;
+  operation: string;
   questionCount: number;
   timeLimit: number;
 }
@@ -129,13 +139,15 @@ const DEFAULT_SETTINGS: SavedSettings = {
   tables: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
   difficulty: 'easy',
   gameMode: 'questions',
+  operation: 'multiply',
   questionCount: 10,
   timeLimit: 180,
 };
 
-export function getSavedSettings(): SavedSettings {
+export function getSavedSettings(userId?: string): SavedSettings {
   try {
-    const data = sessionStorage.getItem(SETTINGS_KEY);
+    const key = getStorageKey('settings', userId);
+    const data = localStorage.getItem(key);
     if (data) {
       return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
     }
@@ -145,9 +157,10 @@ export function getSavedSettings(): SavedSettings {
   }
 }
 
-export function saveSettings(settings: SavedSettings): void {
+export function saveSettings(settings: SavedSettings, userId?: string): void {
   try {
-    sessionStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    const key = getStorageKey('settings', userId);
+    localStorage.setItem(key, JSON.stringify(settings));
   } catch {
     // Ignore storage errors
   }

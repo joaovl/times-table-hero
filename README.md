@@ -1,8 +1,13 @@
-# Times Table Hero
+# Maths Challenge
 
-An interactive multiplication learning game designed for children to practice and master times tables from 0 to 12.
+An interactive maths learning game designed for children to practice multiplication and division with times tables from 0 to 12.
 
 ## Features
+
+- **User Profiles**
+  - Simple avatar-based profiles (name, color, icon)
+  - Individual progress tracking per user
+  - No passwords - kid-friendly identification
 
 - **Three Difficulty Levels**
   - Easy: Multiple choice with clearly different options
@@ -13,8 +18,19 @@ An interactive multiplication learning game designed for children to practice an
   - Practice Mode: Answer a set number of questions at your own pace
   - Timed Mode: Race against the clock to answer as many as possible
 
+- **Operations**
+  - Multiplication
+  - Division
+  - Both combined
+
+- **Printable Worksheets**
+  - Generate practice sheets for offline use
+  - A4 optimized layout
+  - Configurable question count (20-100)
+  - Dynamic sizing based on content
+
 - **Progress Tracking**
-  - Tracks your best scores locally
+  - Tracks scores per user locally
   - Shows improvement between sessions
   - Detailed results breakdown after each game
 
@@ -75,13 +91,18 @@ src/
 │   │   ├── GamePlay.tsx
 │   │   ├── GameResults.tsx
 │   │   └── GameSetup.tsx
-│   └── ui/             # Reusable UI components
+│   ├── ui/             # Reusable UI components
+│   ├── NewUserModal.tsx
+│   ├── UserSelector.tsx
+│   └── Worksheet.tsx
 ├── lib/
 │   ├── gameLogic.ts    # Game mechanics and question generation
 │   ├── gameStorage.ts  # Local storage for progress
+│   ├── userStorage.ts  # User profile management
 │   └── utils.ts        # Utility functions
-├── hooks/              # Custom React hooks
-├── pages/              # Route pages
+├── pages/
+│   ├── Index.tsx       # Main game page
+│   └── PrintResources.tsx # Worksheet generator
 └── App.tsx             # Main application
 ```
 

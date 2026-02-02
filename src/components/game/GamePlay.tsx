@@ -16,14 +16,16 @@ interface GamePlayProps {
   settings: GameSettings;
   onComplete: (results: GameResults) => void;
   onQuit: () => void;
+  userId?: string;
 }
 
 export interface GameResults {
   score: number;
   total: number;
   incorrectQuestions: Array<{
-    multiplier: number;
-    multiplicand: number;
+    operand1: number;
+    operand2: number;
+    operation: 'multiply' | 'divide';
     userAnswer: number | null;
     correctAnswer: number;
   }>;
@@ -32,7 +34,7 @@ export interface GameResults {
 
 type FeedbackState = 'none' | 'correct' | 'incorrect';
 
-export function GamePlay({ settings, onComplete, onQuit }: GamePlayProps) {
+export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -46,24 +48,26 @@ export function GamePlay({ settings, onComplete, onQuit }: GamePlayProps) {
   const [isComplete, setIsComplete] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const getOperationSymbol = (op: 'multiply' | 'divide') => op === 'multiply' ? '×' : '÷';
+
   // Generate questions on mount
   useEffect(() => {
     const count = settings.gameMode === 'questions' ? settings.questionCount : 100;
-    const generated = generateQuestions(settings.tables, count);
+    const generated = generateQuestions(settings.tables, count, settings.operation);
     setQuestions(generated);
   }, [settings]);
 
   // Generate options when question changes
   useEffect(() => {
     if (questions.length === 0 || currentIndex >= questions.length) return;
-    
+
     const currentQuestion = questions[currentIndex];
     if (settings.difficulty !== 'hard') {
       const wrong = generateWrongAnswers(currentQuestion.answer, settings.difficulty);
       setOptions(shuffleOptions(currentQuestion.answer, wrong));
     }
     setTypedAnswer('');
-    
+
     // Focus input for hard mode
     if (settings.difficulty === 'hard' && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -103,12 +107,13 @@ export function GamePlay({ settings, onComplete, onQuit }: GamePlayProps) {
   const handleAnswer = useCallback((userAnswer: number | null) => {
     const currentQuestion = questions[currentIndex];
     const isCorrect = userAnswer === currentQuestion.answer;
+    const symbol = getOperationSymbol(currentQuestion.operation);
 
     // Track answered questions
     setQuestionsAnswered(prev => prev + 1);
 
-    // Record progress
-    recordAnswer(currentQuestion.multiplier, currentQuestion.multiplicand, isCorrect);
+    // Record progress (using operand2 as the "table" for tracking)
+    recordAnswer(currentQuestion.operand1, currentQuestion.operand2, isCorrect, userId);
 
     if (isCorrect) {
       setScore(prev => prev + 1);
@@ -116,12 +121,13 @@ export function GamePlay({ settings, onComplete, onQuit }: GamePlayProps) {
       setFeedbackMessage(getRandomPositiveMessage());
     } else {
       setFeedback('incorrect');
-      setFeedbackMessage(`${currentQuestion.multiplier} × ${currentQuestion.multiplicand} = ${currentQuestion.answer}`);
+      setFeedbackMessage(`${currentQuestion.operand1} ${symbol} ${currentQuestion.operand2} = ${currentQuestion.answer}`);
       setIncorrectQuestions(prev => [
         ...prev,
         {
-          multiplier: currentQuestion.multiplier,
-          multiplicand: currentQuestion.multiplicand,
+          operand1: currentQuestion.operand1,
+          operand2: currentQuestion.operand2,
+          operation: currentQuestion.operation,
           userAnswer,
           correctAnswer: currentQuestion.answer,
         },
@@ -132,7 +138,7 @@ export function GamePlay({ settings, onComplete, onQuit }: GamePlayProps) {
     setTimeout(() => {
       setFeedback('none');
       const nextIndex = currentIndex + 1;
-      
+
       if (settings.gameMode === 'questions' && nextIndex >= settings.questionCount) {
         setIsComplete(true);
       } else if (nextIndex >= questions.length) {
@@ -158,6 +164,7 @@ export function GamePlay({ settings, onComplete, onQuit }: GamePlayProps) {
   }
 
   const currentQuestion = questions[currentIndex];
+  const symbol = getOperationSymbol(currentQuestion.operation);
   const progress = settings.gameMode === 'questions'
     ? (currentIndex / settings.questionCount) * 100
     : ((settings.timeLimit - timeLeft) / settings.timeLimit) * 100;
@@ -213,7 +220,7 @@ export function GamePlay({ settings, onComplete, onQuit }: GamePlayProps) {
           {feedback === 'none' ? (
             <>
               <div className="mb-2 text-6xl font-extrabold text-foreground md:text-7xl">
-                {currentQuestion.multiplier} × {currentQuestion.multiplicand}
+                {currentQuestion.operand1} {symbol} {currentQuestion.operand2}
               </div>
               <div className="text-3xl font-bold text-muted-foreground">=  ?</div>
             </>
@@ -226,7 +233,7 @@ export function GamePlay({ settings, onComplete, onQuit }: GamePlayProps) {
                 {feedback === 'correct' ? feedbackMessage : 'Not quite!'}
               </div>
               <div className="text-4xl font-bold text-foreground">
-                {currentQuestion.multiplier} × {currentQuestion.multiplicand} = {currentQuestion.answer}
+                {currentQuestion.operand1} {symbol} {currentQuestion.operand2} = {currentQuestion.answer}
               </div>
             </>
           )}
