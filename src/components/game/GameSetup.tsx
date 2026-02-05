@@ -206,7 +206,8 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 </div>
               )}
             </div>
-            <h1 className="text-[30px] font-bold text-primary">
+            <h1 className="text-[30px] font-bold text-primary flex items-center gap-2">
+              <img src="/favicon.png" alt="Maths Challenge" className="w-8 h-8" />
               Maths Challenge
             </h1>
             <div className="absolute right-0">
