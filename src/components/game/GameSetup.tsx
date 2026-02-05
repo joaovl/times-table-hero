@@ -123,8 +123,10 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
       <div className="mx-auto max-w-2xl">
         {/* Header */}
         <div className="mb-4 md:mb-8">
-          <div className="relative flex items-center justify-center">
-            <div className="absolute left-0" ref={menuRef}>
+          {/* Desktop: Side-by-side layout */}
+          <div className="hidden md:block">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute left-0" ref={menuRef}>
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base flex items-center gap-1"
@@ -206,32 +208,62 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 </div>
               )}
             </div>
-            <h1 className="text-[30px] font-bold text-primary flex items-center gap-2">
-              <img src="/favicon.png" alt="Maths Challenge" className="w-8 h-8" />
+              <h1 className="text-[30px] font-bold text-primary flex items-center gap-2">
+                <img src="/favicon.png" alt="Maths Challenge" className="w-8 h-8" />
+                Maths Challenge
+              </h1>
+              <div className="absolute right-0">
+                <UserSelector
+                  currentUser={currentUser}
+                  onUserChange={onUserChange}
+                  onNewUser={onNewUser}
+                />
+              </div>
+            </div>
+            <p className="mt-1 text-center text-[13px] text-muted-foreground">
+              {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick your tables and let's practise!
+            </p>
+            {stats.totalGames > 0 && (
+              <p className="mt-1 text-center text-xs md:text-sm text-muted-foreground">
+                {stats.totalGames} games, {stats.totalCorrect} correct!
+              </p>
+            )}
+          </div>
+
+          {/* Mobile: Stacked layout */}
+          <div className="md:hidden">
+            <h1 className="text-[24px] font-bold text-primary flex items-center justify-center gap-2 mb-3">
+              <img src="/favicon.png" alt="Maths Challenge" className="w-6 h-6" />
               Maths Challenge
             </h1>
-            <div className="absolute right-0">
+            <div className="flex items-center justify-between mb-2">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="text-muted-foreground hover:text-foreground transition-colors text-sm flex items-center gap-1"
+              >
+                ☰ Menu
+              </button>
               <UserSelector
                 currentUser={currentUser}
                 onUserChange={onUserChange}
                 onNewUser={onNewUser}
               />
             </div>
-          </div>
-          <p className="mt-1 text-center text-[13px] text-muted-foreground">
-            {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick your tables and let's practise!
-          </p>
-          {stats.totalGames > 0 && (
-            <p className="mt-1 text-center text-xs md:text-sm text-muted-foreground">
-              {stats.totalGames} games, {stats.totalCorrect} correct!
+            <p className="text-center text-[11px] text-muted-foreground">
+              {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick your tables and let's practise!
             </p>
-          )}
+            {stats.totalGames > 0 && (
+              <p className="mt-1 text-center text-[10px] text-muted-foreground">
+                {stats.totalGames} games, {stats.totalCorrect} correct!
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Table Selection */}
         <Card className="mb-[14px] p-4 shadow-card">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[18px] font-semibold text-foreground">Choose Your Tables</h2>
+            <h2 className="text-[14px] md:text-[18px] font-semibold text-foreground">Choose Your Tables</h2>
             <div className="flex gap-1 md:gap-2">
               <Button
                 variant="outline"
@@ -258,7 +290,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   key={table}
                   onClick={() => toggleTable(table)}
                   className={cn(
-                    'rounded-[20px] py-2 text-[18px] font-bold transition-all',
+                    'rounded-[20px] py-2 text-[14px] md:text-[18px] font-bold transition-all',
                     'hover:scale-105 active:scale-95',
                     selectedTables.includes(table)
                       ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -275,7 +307,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   key={table}
                   onClick={() => toggleTable(table)}
                   className={cn(
-                    'rounded-[20px] py-2 text-[18px] font-bold transition-all',
+                    'rounded-[20px] py-2 text-[14px] md:text-[18px] font-bold transition-all',
                     'hover:scale-105 active:scale-95',
                     selectedTables.includes(table)
                       ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -381,7 +413,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   key={count}
                   onClick={() => setQuestionCount(count)}
                   className={cn(
-                    'rounded-[20px] py-2 text-[18px] font-bold transition-all',
+                    'rounded-[20px] py-2 text-[14px] md:text-[18px] font-bold transition-all',
                     questionCount === count
                       ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl'
                       : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
@@ -398,7 +430,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   key={value}
                   onClick={() => setTimeLimit(value)}
                   className={cn(
-                    'rounded-[20px] py-2 text-[18px] font-bold transition-all',
+                    'rounded-[20px] py-2 text-[14px] md:text-[18px] font-bold transition-all',
                     timeLimit === value
                       ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl'
                       : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'

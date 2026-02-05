@@ -78,8 +78,14 @@ export function generateWrongAnswers(
     while (wrongAnswers.size < 2) {
       const offset = Math.floor(Math.random() * 16) + 5;
       const sign = Math.random() > 0.5 ? 1 : -1;
-      const wrong = Math.max(0, correctAnswer + (offset * sign));
-      if (wrong !== correctAnswer) {
+      let wrong = correctAnswer + (offset * sign);
+
+      // Ensure wrong answer is non-negative and different from correct
+      if (wrong < 0) {
+        wrong = correctAnswer + offset; // Force positive offset if negative
+      }
+
+      if (wrong !== correctAnswer && wrong >= 0) {
         wrongAnswers.add(wrong);
       }
     }
@@ -102,8 +108,14 @@ export function generateWrongAnswers(
     while (wrongAnswers.size < 2) {
       const offset = Math.floor(Math.random() * 3) + 3;
       const sign = Math.random() > 0.5 ? 1 : -1;
-      const wrong = Math.max(0, correctAnswer + (offset * sign));
-      if (wrong !== correctAnswer) {
+      let wrong = correctAnswer + (offset * sign);
+
+      // Ensure wrong answer is non-negative and different from correct
+      if (wrong < 0) {
+        wrong = correctAnswer + offset; // Force positive offset if negative
+      }
+
+      if (wrong !== correctAnswer && wrong >= 0) {
         wrongAnswers.add(wrong);
       }
     }
