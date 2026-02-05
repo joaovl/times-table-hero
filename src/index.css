@@ -1,7 +1,4 @@
-@import "@fontsource/nunito/400.css";
-@import "@fontsource/nunito/600.css";
-@import "@fontsource/nunito/700.css";
-@import "@fontsource/nunito/800.css";
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -11,26 +8,27 @@
 
 @layer base {
   :root {
-    --background: 45 100% 97%;
-    --foreground: 220 25% 20%;
+    --background: 15 55% 97%;
+    --foreground: 15 60% 22%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 25% 20%;
+    --card: 15 40% 99%;
+    --card-border: 15 45% 88%;
+    --card-foreground: 15 60% 22%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 20%;
+    --popover: 15 40% 99%;
+    --popover-foreground: 15 60% 22%;
 
-    --primary: 174 72% 45%;
+    --primary: 15 85% 58%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 45 100% 70%;
-    --secondary-foreground: 220 25% 20%;
+    --secondary: 15 40% 92%;
+    --secondary-foreground: 15 60% 22%;
 
-    --muted: 45 50% 92%;
-    --muted-foreground: 220 15% 45%;
+    --muted: 15 30% 95%;
+    --muted-foreground: 15 20% 50%;
 
-    --accent: 10 85% 65%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 15 50% 86%;
+    --accent-foreground: 15 60% 22%;
 
     --success: 145 65% 45%;
     --success-foreground: 0 0% 100%;
@@ -38,29 +36,29 @@
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 45 30% 85%;
-    --input: 45 30% 85%;
-    --ring: 174 72% 45%;
+    --border: 15 45% 88%;
+    --input: 15 45% 88%;
+    --ring: 15 85% 58%;
 
     --radius: 1rem;
 
     /* Custom game colors */
     --game-teal: 174 72% 45%;
-    --game-coral: 10 85% 65%;
+    --game-coral: 15 85% 58%;
     --game-yellow: 45 100% 65%;
     --game-green: 145 65% 45%;
     --game-purple: 270 60% 65%;
     --game-blue: 210 85% 60%;
 
     /* Gradients */
-    --gradient-fun: linear-gradient(135deg, hsl(174 72% 45%), hsl(210 85% 60%));
-    --gradient-warm: linear-gradient(135deg, hsl(45 100% 65%), hsl(10 85% 65%));
-    --gradient-success: linear-gradient(135deg, hsl(145 65% 45%), hsl(174 72% 45%));
+    --gradient-fun: linear-gradient(135deg, hsl(15 85% 58%), hsl(210 85% 60%));
+    --gradient-warm: linear-gradient(135deg, hsl(45 100% 65%), hsl(15 85% 58%));
+    --gradient-success: linear-gradient(135deg, hsl(145 65% 45%), hsl(15 85% 58%));
 
     /* Shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(220 25% 20% / 0.15);
-    --shadow-button: 0 4px 0 hsl(174 72% 35%);
-    --shadow-card: 0 8px 30px -8px hsl(220 25% 20% / 0.12);
+    --shadow-soft: 0 2px 8px hsl(15 30% 85%);
+    --shadow-button: 0 4px 16px hsl(15 60% 70%);
+    --shadow-card: 0 2px 8px hsl(15 30% 85%);
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -125,7 +123,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-nunito;
+    @apply bg-background text-foreground font-comfortaa;
   }
 }
 

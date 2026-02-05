@@ -6,6 +6,7 @@ import type { Difficulty, GameMode, GameSettings, Operation } from '@/lib/gameLo
 import { getTotalStats, getSavedSettings, saveSettings } from '@/lib/gameStorage';
 import type { UserProfile } from '@/lib/userStorage';
 import { UserSelector } from '@/components/UserSelector';
+import { PRESET_THEMES, DEFAULT_THEME, getTheme, saveTheme, resetTheme } from '@/lib/themeStorage';
 
 interface GameSetupProps {
   onStart: (settings: GameSettings) => void;
@@ -15,7 +16,7 @@ interface GameSetupProps {
   onNavigateToPrint?: () => void;
 }
 
-const TABLES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const TABLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const QUESTION_COUNTS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const TIME_LIMITS = [
@@ -37,7 +38,9 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
   const [timeLimit, setTimeLimit] = useState(180);
   const [isLoaded, setIsLoaded] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [currentTheme, setCurrentTheme] = useState(getTheme());
 
   const stats = getTotalStats(currentUser?.id);
 
@@ -52,6 +55,13 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
+
+  // Reset color picker when menu closes
+  useEffect(() => {
+    if (!showMenu) {
+      setShowColorPicker(false);
+    }
   }, [showMenu]);
 
   // Load saved settings on mount or when user changes
@@ -109,7 +119,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
   }
 
   return (
-    <div className="min-h-screen bg-background p-3 md:p-8">
+    <div className="min-h-screen bg-background p-7">
       <div className="mx-auto max-w-2xl">
         {/* Header */}
         <div className="mb-4 md:mb-8">
@@ -122,7 +132,66 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 ☰ Menu
               </button>
               {showMenu && (
-                <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg py-1 z-50 min-w-[160px]">
+                <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
+                  {/* Colors Option */}
+                  <div className="px-2">
+                    <button
+                      onClick={() => setShowColorPicker(!showColorPicker)}
+                      className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2"
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full border border-card-border"
+                        style={{
+                          backgroundColor: currentTheme.customColors?.primary
+                            ? `hsl(${currentTheme.customColors.primary})`
+                            : `hsl(${currentTheme.hue}, 85%, 58%)`
+                        }}
+                      />
+                      Colors
+                    </button>
+                    {showColorPicker && (
+                      <div className="px-2 py-2 space-y-2">
+                        <div className="grid grid-cols-3 gap-2">
+                          {PRESET_THEMES.map((theme, index) => (
+                            <button
+                              key={theme.hue || `custom-${index}`}
+                              onClick={() => {
+                                saveTheme(theme);
+                                setCurrentTheme(theme);
+                              }}
+                              className={cn(
+                                'flex flex-col items-center gap-1 p-2 rounded-lg transition-all hover:bg-muted',
+                                currentTheme.name === theme.name && 'ring-2 ring-primary bg-muted'
+                              )}
+                            >
+                              <div
+                                className="w-8 h-8 rounded-full border border-card-border"
+                                style={{
+                                  backgroundColor: theme.customColors?.primary
+                                    ? `hsl(${theme.customColors.primary})`
+                                    : `hsl(${theme.hue}, 85%, 58%)`
+                                }}
+                              />
+                              <span className="text-[9px] text-center text-muted-foreground leading-tight">
+                                {theme.name}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => {
+                            resetTheme();
+                            setCurrentTheme(DEFAULT_THEME);
+                          }}
+                          className="w-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                        >
+                          Reset to Default
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Print Worksheets Option */}
                   {onNavigateToPrint && (
                     <button
                       onClick={() => {
@@ -137,7 +206,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 </div>
               )}
             </div>
-            <h1 className="text-2xl font-extrabold text-primary md:text-5xl">
+            <h1 className="text-[30px] font-bold text-primary">
               Maths Challenge
             </h1>
             <div className="absolute right-0">
@@ -148,7 +217,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
               />
             </div>
           </div>
-          <p className="mt-1 text-center text-sm md:text-lg text-muted-foreground">
+          <p className="mt-1 text-center text-[13px] text-muted-foreground">
             {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick your tables and let's practise!
           </p>
           {stats.totalGames > 0 && (
@@ -159,9 +228,9 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
         </div>
 
         {/* Table Selection */}
-        <Card className="mb-3 md:mb-6 p-3 md:p-6 shadow-card">
-          <div className="mb-2 md:mb-4 flex items-center justify-between">
-            <h2 className="text-base md:text-xl font-bold">Choose Your Tables</h2>
+        <Card className="mb-[14px] p-4 shadow-card">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[18px] font-semibold text-foreground">Choose Your Tables</h2>
             <div className="flex gap-1 md:gap-2">
               <Button
                 variant="outline"
@@ -181,104 +250,125 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
               </Button>
             </div>
           </div>
-          <div className="grid grid-cols-7 gap-1 md:gap-2">
-            {TABLES.map(table => (
-              <button
-                key={table}
-                onClick={() => toggleTable(table)}
-                className={cn(
-                  'flex h-10 md:h-14 w-full items-center justify-center rounded-lg md:rounded-xl transition-all',
-                  'hover:scale-105 active:scale-95',
-                  selectedTables.includes(table)
-                    ? 'bg-primary text-primary-foreground text-base md:text-xl font-extrabold shadow-button translate-y-[-2px] ring-2 ring-primary ring-offset-1 md:ring-offset-2'
-                    : 'bg-muted/50 text-muted-foreground text-sm md:text-lg font-medium hover:bg-muted'
-                )}
-              >
-                {table}
-              </button>
-            ))}
+          <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-6 gap-2">
+              {TABLES.slice(0, 6).map(table => (
+                <button
+                  key={table}
+                  onClick={() => toggleTable(table)}
+                  className={cn(
+                    'rounded-[20px] py-2 text-[18px] font-bold transition-all',
+                    'hover:scale-105 active:scale-95',
+                    selectedTables.includes(table)
+                      ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
+                      : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                  )}
+                >
+                  {table}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-6 gap-2">
+              {TABLES.slice(6, 12).map(table => (
+                <button
+                  key={table}
+                  onClick={() => toggleTable(table)}
+                  className={cn(
+                    'rounded-[20px] py-2 text-[18px] font-bold transition-all',
+                    'hover:scale-105 active:scale-95',
+                    selectedTables.includes(table)
+                      ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
+                      : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                  )}
+                >
+                  {table}
+                </button>
+              ))}
+            </div>
           </div>
         </Card>
 
         {/* Operation */}
-        <Card className="mb-3 md:mb-6 p-3 md:p-6 shadow-card">
-          <h2 className="mb-2 md:mb-4 text-base md:text-xl font-bold">Operation</h2>
-          <div className="grid grid-cols-3 gap-2">
+        <Card className="mb-[14px] p-4 shadow-card">
+          <h2 className="mb-3 text-[18px] font-semibold text-foreground">Operation</h2>
+          <div className="grid grid-cols-3 gap-[10px]">
             {([
-              { id: 'multiply', label: '×' },
-              { id: 'divide', label: '÷' },
-              { id: 'both', label: '×÷' },
+              { id: 'multiply', label: '× Multiply' },
+              { id: 'divide', label: '÷ Divide' },
+              { id: 'both', label: '×÷ Both' },
             ] as const).map(op => (
               <button
                 key={op.id}
                 onClick={() => setOperation(op.id)}
                 className={cn(
-                  'rounded-lg py-2 md:py-3 text-center font-bold transition-all',
+                  'rounded-xl h-[54px] flex items-center justify-center text-center font-bold transition-all',
                   'hover:scale-[1.02] active:scale-[0.98]',
                   operation === op.id
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
+                    : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
                 )}
               >
-                <span className="text-xl md:text-2xl">{op.label}</span>
+                <span className="text-[18px]">{op.label}</span>
               </button>
             ))}
           </div>
         </Card>
 
         {/* Difficulty */}
-        <Card className="mb-3 md:mb-6 p-3 md:p-6 shadow-card">
-          <h2 className="mb-2 md:mb-4 text-base md:text-xl font-bold">Difficulty</h2>
-          <div className="grid grid-cols-3 gap-2">
+        <Card className="mb-[14px] p-4 shadow-card">
+          <h2 className="mb-3 text-[18px] font-semibold text-foreground">Difficulty</h2>
+          <div className="grid grid-cols-3 gap-[10px]">
             {([
-              { id: 'easy', label: 'Easy', color: 'bg-success text-success-foreground' },
-              { id: 'medium', label: 'Medium', color: 'bg-secondary text-secondary-foreground' },
-              { id: 'hard', label: 'Hard', color: 'bg-accent text-accent-foreground' },
+              { id: 'easy', label: 'Easy', desc: 'far apart' },
+              { id: 'medium', label: 'Medium', desc: 'closer together' },
+              { id: 'hard', label: 'Hard', desc: 'type your answer' },
             ] as const).map(diff => (
-              <button
-                key={diff.id}
-                onClick={() => setDifficulty(diff.id)}
-                className={cn(
-                  'rounded-lg py-2 md:py-3 text-center font-bold transition-all',
-                  'hover:scale-[1.02] active:scale-[0.98]',
-                  difficulty === diff.id
-                    ? `${diff.color} shadow-sm`
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                )}
-              >
-                <span className="text-sm md:text-base">{diff.label}</span>
-              </button>
+              <div key={diff.id} className="flex flex-col gap-1">
+                <button
+                  onClick={() => setDifficulty(diff.id)}
+                  className={cn(
+                    'rounded-xl h-[54px] flex items-center justify-center text-center font-bold transition-all',
+                    'hover:scale-[1.02] active:scale-[0.98]',
+                    difficulty === diff.id
+                      ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
+                      : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                  )}
+                >
+                  <span className="text-[18px]">{diff.label}</span>
+                </button>
+                <p className="text-[11px] text-muted-foreground text-center">{diff.desc}</p>
+              </div>
             ))}
           </div>
         </Card>
 
         {/* Game Mode */}
-        <Card className="mb-3 md:mb-6 p-3 md:p-6 shadow-card">
-          <h2 className="mb-2 md:mb-4 text-base md:text-xl font-bold">Game Mode</h2>
-          <div className="flex gap-2 md:gap-3 mb-2 md:mb-4">
+        <Card className="mb-[14px] p-4 shadow-card">
+          <h2 className="mb-3 text-[18px] font-semibold text-foreground">Game Mode</h2>
+          <div className="flex gap-[10px] mb-3">
             <button
               onClick={() => setGameMode('questions')}
               className={cn(
-                'flex-1 rounded-lg py-2 md:py-3 text-center font-bold transition-all',
+                'flex-1 rounded-xl h-[54px] flex items-center justify-center text-center font-bold transition-all',
                 'hover:scale-[1.02] active:scale-[0.98]',
                 gameMode === 'questions'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
+                  : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
               )}
             >
-              <span className="text-sm md:text-lg">Questions</span>
+              <span className="text-[18px]">Questions</span>
             </button>
             <button
               onClick={() => setGameMode('time')}
               className={cn(
-                'flex-1 rounded-lg py-2 md:py-3 text-center font-bold transition-all',
+                'flex-1 rounded-xl h-[54px] flex items-center justify-center text-center font-bold transition-all',
                 'hover:scale-[1.02] active:scale-[0.98]',
                 gameMode === 'time'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
+                  : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
               )}
             >
-              <span className="text-sm md:text-lg">Timed</span>
+              <span className="text-[18px]">Timed</span>
             </button>
           </div>
 
@@ -290,10 +380,10 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   key={count}
                   onClick={() => setQuestionCount(count)}
                   className={cn(
-                    'rounded py-1 md:py-2 text-xs md:text-sm font-bold transition-all',
+                    'rounded-[20px] py-2 text-[18px] font-bold transition-all',
                     questionCount === count
-                      ? 'bg-primary/20 text-primary ring-2 ring-primary'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl'
+                      : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
                   )}
                 >
                   {count}
@@ -307,10 +397,10 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   key={value}
                   onClick={() => setTimeLimit(value)}
                   className={cn(
-                    'rounded py-1 md:py-2 text-xs md:text-sm font-bold transition-all',
+                    'rounded-[20px] py-2 text-[18px] font-bold transition-all',
                     timeLimit === value
-                      ? 'bg-primary/20 text-primary ring-2 ring-primary'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl'
+                      : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
                   )}
                 >
                   {label}
@@ -324,7 +414,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
         <Button
           onClick={handleStart}
           disabled={selectedTables.length === 0}
-          className="w-full py-4 md:py-8 text-lg md:text-2xl font-bold shadow-button transition-all hover:translate-y-[-2px] active:translate-y-0 active:shadow-none disabled:opacity-50"
+          className="w-full py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary to-primary/90 shadow-button transition-all hover:translate-y-[-2px] hover:shadow-xl active:translate-y-0 active:shadow-md disabled:opacity-50 disabled:from-muted disabled:to-muted"
           size="lg"
         >
           {selectedTables.length === 0 ? 'Select at least one table' : "Let's Go!"}

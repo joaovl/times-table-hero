@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        nunito: ["Nunito", "sans-serif"],
+        comfortaa: ["Comfortaa", "cursive"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -53,6 +53,7 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+          border: "hsl(var(--card-border))",
         },
         game: {
           teal: "hsl(var(--game-teal))",
