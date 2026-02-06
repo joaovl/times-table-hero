@@ -124,7 +124,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
 
   return (
     <div className="min-h-screen bg-background p-7">
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-[504px]">
         {/* Header */}
         <div className="mb-4 md:mb-8">
           {/* Desktop: Side-by-side layout */}
@@ -341,9 +341,9 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
         </div>
 
         {/* Table Selection */}
-        <Card className="mb-[14px] p-4 shadow-card">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[14px] md:text-[18px] font-semibold text-foreground">Choose Your Tables</h2>
+        <Card className="mb-[11px] p-[13px] shadow-card">
+          <div className="mb-[10px] flex items-center justify-between">
+            <h2 className="text-[18px] font-semibold text-foreground">Choose Your Tables</h2>
             <div className="flex gap-1 md:gap-2">
               <Button
                 variant="outline"
@@ -363,14 +363,14 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
               </Button>
             </div>
           </div>
-          <div className="flex flex-col gap-2">
-            <div className="grid grid-cols-6 gap-2">
+          <div className="flex flex-col gap-[6px]">
+            <div className="grid grid-cols-6 gap-[6px]">
               {TABLES.slice(0, 6).map(table => (
                 <button
                   key={table}
                   onClick={() => toggleTable(table)}
                   className={cn(
-                    'rounded-[14px] py-[5px] text-[14px] md:text-[18px] font-bold transition-all',
+                    'rounded-[11px] py-1 text-[14px] font-bold transition-all',
                     'hover:scale-105 active:scale-95',
                     selectedTables.includes(table)
                       ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -381,13 +381,13 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-6 gap-[6px]">
               {TABLES.slice(6, 12).map(table => (
                 <button
                   key={table}
                   onClick={() => toggleTable(table)}
                   className={cn(
-                    'rounded-[14px] py-[5px] text-[14px] md:text-[18px] font-bold transition-all',
+                    'rounded-[11px] py-1 text-[14px] font-bold transition-all',
                     'hover:scale-105 active:scale-95',
                     selectedTables.includes(table)
                       ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -402,9 +402,9 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
         </Card>
 
         {/* Operation */}
-        <Card className="mb-[14px] p-4 shadow-card">
-          <h2 className="mb-3 text-[18px] font-semibold text-foreground">Operation</h2>
-          <div className="grid grid-cols-3 gap-[10px]">
+        <Card className="mb-[11px] p-[13px] shadow-card">
+          <h2 className="mb-[10px] text-[18px] font-semibold text-foreground">Operation</h2>
+          <div className="grid grid-cols-3 gap-2">
             {([
               { id: 'multiply', label: '× Multiply' },
               { id: 'divide', label: '÷ Divide' },
@@ -414,40 +414,40 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 key={op.id}
                 onClick={() => setOperation(op.id)}
                 className={cn(
-                  'rounded-[9px] h-[37px] flex items-center justify-center text-center font-bold transition-all',
+                  'rounded-[7px] h-[30px] flex items-center justify-center text-center font-bold transition-all',
                   'hover:scale-[1.02] active:scale-[0.98]',
                   operation === op.id
                     ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
                     : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
                 )}
               >
-                <span className="text-[18px]">{op.label}</span>
+                <span className="text-[14px]">{op.label}</span>
               </button>
             ))}
           </div>
         </Card>
 
         {/* Difficulty */}
-        <Card className="mb-[14px] p-4 shadow-card">
-          <h2 className="mb-3 text-[18px] font-semibold text-foreground">Difficulty</h2>
-          <div className="grid grid-cols-3 gap-[10px]">
+        <Card className="mb-[11px] p-[13px] shadow-card">
+          <h2 className="mb-[10px] text-[18px] font-semibold text-foreground">Difficulty</h2>
+          <div className="grid grid-cols-3 gap-2">
             {([
               { id: 'easy', label: 'Easy', desc: 'far apart' },
               { id: 'medium', label: 'Medium', desc: 'closer together' },
               { id: 'hard', label: 'Hard', desc: 'type your answer' },
             ] as const).map(diff => (
-              <div key={diff.id} className="flex flex-col gap-1">
+              <div key={diff.id} className="flex flex-col gap-[3px]">
                 <button
                   onClick={() => setDifficulty(diff.id)}
                   className={cn(
-                    'rounded-[9px] h-[37px] flex items-center justify-center text-center font-bold transition-all',
+                    'rounded-[7px] h-[30px] flex items-center justify-center text-center font-bold transition-all',
                     'hover:scale-[1.02] active:scale-[0.98]',
                     difficulty === diff.id
                       ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
                       : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
                   )}
                 >
-                  <span className="text-[18px]">{diff.label}</span>
+                  <span className="text-[14px]">{diff.label}</span>
                 </button>
                 <p className="text-[11px] text-muted-foreground text-center">{diff.desc}</p>
               </div>
@@ -456,44 +456,44 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
         </Card>
 
         {/* Game Mode */}
-        <Card className="mb-[14px] p-4 shadow-card">
-          <h2 className="mb-3 text-[18px] font-semibold text-foreground">Game Mode</h2>
-          <div className="flex gap-[10px] mb-3">
+        <Card className="mb-[11px] p-[13px] shadow-card">
+          <h2 className="mb-[10px] text-[18px] font-semibold text-foreground">Game Mode</h2>
+          <div className="flex gap-2 mb-[10px]">
             <button
               onClick={() => setGameMode('questions')}
               className={cn(
-                'flex-1 rounded-[9px] h-[37px] flex items-center justify-center text-center font-bold transition-all',
+                'flex-1 rounded-[7px] h-[30px] flex items-center justify-center text-center font-bold transition-all',
                 'hover:scale-[1.02] active:scale-[0.98]',
                 gameMode === 'questions'
                   ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
                   : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
               )}
             >
-              <span className="text-[18px]">Questions</span>
+              <span className="text-[14px]">Questions</span>
             </button>
             <button
               onClick={() => setGameMode('time')}
               className={cn(
-                'flex-1 rounded-[9px] h-[37px] flex items-center justify-center text-center font-bold transition-all',
+                'flex-1 rounded-[7px] h-[30px] flex items-center justify-center text-center font-bold transition-all',
                 'hover:scale-[1.02] active:scale-[0.98]',
                 gameMode === 'time'
                   ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
                   : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
               )}
             >
-              <span className="text-[18px]">Timed</span>
+              <span className="text-[14px]">Timed</span>
             </button>
           </div>
 
           {/* Options based on mode */}
           {gameMode === 'questions' ? (
-            <div className="grid grid-cols-10 gap-1">
+            <div className="grid grid-cols-10 gap-[3px]">
               {QUESTION_COUNTS.map(count => (
                 <button
                   key={count}
                   onClick={() => setQuestionCount(count)}
                   className={cn(
-                    'rounded-[14px] py-[5px] text-[14px] md:text-[18px] font-bold transition-all',
+                    'rounded-[11px] py-1 text-[14px] font-bold transition-all',
                     questionCount === count
                       ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl'
                       : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
@@ -504,13 +504,13 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-[3px]">
               {TIME_LIMITS.map(({ label, value }) => (
                 <button
                   key={value}
                   onClick={() => setTimeLimit(value)}
                   className={cn(
-                    'rounded-[14px] py-[5px] text-[14px] md:text-[18px] font-bold transition-all',
+                    'rounded-[11px] py-1 text-[14px] font-bold transition-all',
                     timeLimit === value
                       ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl'
                       : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'

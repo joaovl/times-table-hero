@@ -176,26 +176,26 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
   };
 
   return (
-    <div className="min-h-screen bg-background py-[13px] px-4 md:py-[26px] md:px-8">
+    <div className="min-h-screen bg-background py-2 px-3 md:py-[26px] md:px-8">
       <div className="mx-auto max-w-xl">
         {/* Header with progress */}
-        <div className="mb-[19px]">
+        <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
             <Button variant="ghost" onClick={onQuit} className="text-muted-foreground">
               ← Quit
             </Button>
             <div className="text-center">
-              <span className="text-2xl font-bold text-primary">{score}</span>
-              <span className="text-muted-foreground"> correct</span>
+              <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
+              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
-                <span className="font-bold">
+                <span className="text-sm md:text-base font-bold">
                   {currentIndex + 1} / {settings.questionCount}
                 </span>
               ) : (
                 <span className={cn(
-                  'font-bold text-xl',
+                  'font-bold text-lg md:text-xl',
                   timeLeft <= 30 ? 'text-destructive' : 'text-foreground'
                 )}>
                   {formatTime(timeLeft)}
@@ -213,26 +213,26 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
 
         {/* Question Card */}
         <Card className={cn(
-          'mb-[19px] py-[26px] px-8 text-center shadow-card transition-all',
+          'mb-3 md:mb-[19px] py-4 md:py-[26px] px-4 md:px-8 text-center shadow-card transition-all',
           feedback === 'correct' && 'animate-pop bg-success/10',
           feedback === 'incorrect' && 'animate-shake bg-destructive/10'
         )}>
           {feedback === 'none' ? (
             <>
-              <div className="mb-2 text-6xl font-extrabold text-foreground md:text-7xl">
+              <div className="mb-1 md:mb-2 text-5xl md:text-6xl lg:text-7xl font-extrabold text-foreground">
                 {currentQuestion.operand1} {symbol} {currentQuestion.operand2}
               </div>
-              <div className="text-3xl font-bold text-muted-foreground">=  ?</div>
+              <div className="text-2xl md:text-3xl font-bold text-muted-foreground">=  ?</div>
             </>
           ) : (
             <>
               <div className={cn(
-                'mb-4 text-3xl font-extrabold animate-bounce-in',
+                'mb-2 md:mb-4 text-2xl md:text-3xl font-extrabold animate-bounce-in',
                 feedback === 'correct' ? 'text-success' : 'text-destructive'
               )}>
                 {feedback === 'correct' ? feedbackMessage : 'Not quite!'}
               </div>
-              <div className="text-4xl font-bold text-foreground">
+              <div className="text-3xl md:text-4xl font-bold text-foreground">
                 {currentQuestion.operand1} {symbol} {currentQuestion.operand2} = {currentQuestion.answer}
               </div>
             </>
@@ -243,7 +243,7 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
         {feedback === 'none' && (
           <>
             {settings.difficulty === 'hard' ? (
-              <form onSubmit={handleSubmitTyped} className="space-y-[13px]">
+              <form onSubmit={handleSubmitTyped} className="space-y-2 md:space-y-[13px]">
                 <Input
                   ref={inputRef}
                   type="number"
@@ -251,25 +251,25 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
                   value={typedAnswer}
                   onChange={(e) => setTypedAnswer(e.target.value)}
                   placeholder="Type your answer"
-                  className="h-[64px] text-center text-4xl font-bold"
+                  className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
                   autoFocus
                 />
                 <Button
                   type="submit"
-                  className="w-full py-[19px] text-xl font-bold shadow-button"
+                  className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                   disabled={typedAnswer === ''}
                 >
                   Check
                 </Button>
               </form>
             ) : (
-              <div className="grid grid-cols-3 gap-x-4 gap-y-[13px]">
+              <div className="grid grid-cols-3 gap-x-2 md:gap-x-4 gap-y-2 md:gap-y-[13px]">
                 {options.map((option, idx) => (
                   <Button
                     key={idx}
                     onClick={() => handleAnswer(option)}
                     variant="outline"
-                    className="h-[64px] text-3xl font-bold transition-all hover:scale-105 hover:bg-primary hover:text-primary-foreground active:scale-95"
+                    className="h-12 md:h-[64px] text-2xl md:text-3xl font-bold transition-all hover:scale-105 hover:bg-primary hover:text-primary-foreground active:scale-95"
                   >
                     {option}
                   </Button>
