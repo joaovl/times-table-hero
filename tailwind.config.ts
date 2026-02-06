@@ -4,6 +4,19 @@ export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  safelist: [
+    // Gradient backgrounds for buttons
+    'bg-gradient-to-b',
+    'from-primary',
+    'via-primary/90',
+    'to-primary/70',
+    'from-secondary',
+    'via-secondary/85',
+    'to-secondary/65',
+    'hover:from-secondary/80',
+    'hover:to-secondary/60',
+    'hover:shadow-2xl',
+  ],
   theme: {
     container: {
       center: true,
