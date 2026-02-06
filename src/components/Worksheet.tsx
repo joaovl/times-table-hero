@@ -16,19 +16,19 @@ interface Question {
 }
 
 // Layout specifications based on A4 calculations:
-// A4: 210mm × 297mm, Margins: 15mm, Printable: 180mm × 267mm
-// Header: 23mm, Footer: 10mm, Available for questions: 234mm
-// 5 columns × 36mm each evenly distributed
+// A4: 210mm × 297mm, Left margin: 17.5mm, Right margin: 7mm, Printable: 185.5mm × 277mm
+// Header: 18mm, Footer: 14mm, Available for questions: 238mm
+// 5 columns × 37mm each evenly distributed
 function getLayoutSpec(count: number): { fontSize: string; rowHeight: string; columns: number } {
   const rows = Math.ceil(count / 5);
 
-  // 234mm available (with footer), calculate row height based on rows needed
-  if (rows <= 4) return { fontSize: '14pt', rowHeight: '58.5mm', columns: 5 };     // 20 questions
-  if (rows <= 8) return { fontSize: '13pt', rowHeight: '29.25mm', columns: 5 };    // 40 questions
-  if (rows <= 12) return { fontSize: '12pt', rowHeight: '19.5mm', columns: 5 };    // 60 questions
-  if (rows <= 16) return { fontSize: '11pt', rowHeight: '14.6mm', columns: 5 };    // 80 questions
-  if (rows <= 20) return { fontSize: '11pt', rowHeight: '11.7mm', columns: 5 };    // 100 questions
-  return { fontSize: '10pt', rowHeight: '9.4mm', columns: 5 };                     // 125 questions max
+  // 238mm available (with footer), calculate row height based on rows needed
+  if (rows <= 4) return { fontSize: '16pt', rowHeight: '59.5mm', columns: 5 };      // 20 questions
+  if (rows <= 8) return { fontSize: '15pt', rowHeight: '29.75mm', columns: 5 };     // 40 questions
+  if (rows <= 12) return { fontSize: '14pt', rowHeight: '19.83mm', columns: 5 };    // 60 questions
+  if (rows <= 16) return { fontSize: '13pt', rowHeight: '14.875mm', columns: 5 };   // 80 questions
+  if (rows <= 20) return { fontSize: '12pt', rowHeight: '11.9mm', columns: 5 };     // 100 questions
+  return { fontSize: '11pt', rowHeight: '9.52mm', columns: 5 };                     // 125 questions max
 }
 
 function generateQuestions(
@@ -121,10 +121,17 @@ export function Worksheet({
   return (
     <div className="min-h-screen bg-white">
       <style>{`
+        /* Screen styles */
+        .questions-grid {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 0.5rem;
+        }
+
         @media print {
           @page {
             size: A4 portrait;
-            margin: 15mm;
+            margin: 10mm 7mm 10mm 17.5mm;
           }
           html, body {
             width: 210mm;
@@ -137,17 +144,18 @@ export function Worksheet({
             display: none !important;
           }
           .worksheet {
-            width: 180mm;
-            height: 267mm;
-            padding: 0;
-            margin: 0;
+            width: 185.5mm !important;
+            height: 277mm !important;
+            max-width: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
             font-family: Arial, sans-serif;
             overflow: hidden;
             page-break-after: avoid;
             background: white !important;
           }
           .worksheet-header {
-            height: 23mm;
+            height: 18mm;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
@@ -157,25 +165,27 @@ export function Worksheet({
             justify-content: space-between;
             align-items: center;
             border-bottom: 0.5mm solid #000;
-            padding-bottom: 2mm;
-            margin-bottom: 2mm;
+            padding-bottom: 1.5mm;
+            margin-bottom: 1.5mm;
           }
           .header-title {
-            font-size: 16pt;
+            font-size: 15pt;
             font-weight: bold;
           }
           .header-name {
-            font-size: 11pt;
+            font-size: 10pt;
           }
           .header-meta {
-            font-size: 9pt;
+            font-size: 8.5pt;
             color: #333;
           }
           .questions-grid {
             display: grid;
-            grid-template-columns: repeat(5, 36mm);
-            height: 234mm;
-            margin-bottom: 10mm;
+            grid-template-columns: repeat(5, 37mm) !important;
+            grid-auto-flow: row;
+            height: 238mm;
+            margin-bottom: 0;
+            gap: 0;
           }
           .question {
             font-size: ${layout.fontSize};
@@ -185,13 +195,16 @@ export function Worksheet({
             font-family: Arial, sans-serif;
           }
           .footer {
-            height: 10mm;
+            height: 14mm;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14pt;
+            font-size: 16pt;
             font-weight: bold;
-            color: #666;
+            color: #000;
+            margin: 0;
+            padding: 3mm 0;
+            box-sizing: border-box;
           }
         }
       `}</style>
@@ -227,19 +240,11 @@ export function Worksheet({
         </div>
 
         {/* Questions grid - 234mm available, 5 columns evenly distributed */}
-        <div
-          className="questions-grid grid"
-          style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}
+        <div className="questions-grid"
         >
           {questions.map((q, idx) => (
-            <div
-              key={idx}
-              className="question flex items-center"
-              style={{ height: layout.rowHeight }}
-            >
-              <span style={{ fontSize: layout.fontSize }}>
-                {q.operand1} {getSymbol(q.operation)} {q.operand2} = _____
-              </span>
+            <div key={idx} className="question">
+              {q.operand1} {getSymbol(q.operation)} {q.operand2} = _____
             </div>
           ))}
         </div>
