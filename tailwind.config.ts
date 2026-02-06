@@ -5,17 +5,20 @@ export default {
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   safelist: [
-    // Gradient backgrounds for buttons
-    'bg-gradient-to-b',
-    'from-primary',
-    'via-primary/90',
-    'to-primary/70',
-    'from-secondary',
-    'via-secondary/85',
-    'to-secondary/65',
-    'hover:from-secondary/80',
-    'hover:to-secondary/60',
+    // Pattern-based safelist for gradients
+    {
+      pattern: /^bg-gradient-to-(t|b|l|r|tl|tr|bl|br)$/,
+    },
+    {
+      pattern: /^(from|via|to)-(primary|secondary|accent|muted)(\/\d+)?$/,
+    },
+    {
+      pattern: /^hover:(from|via|to)-(primary|secondary)(\/\d+)?$/,
+    },
+    'shadow-xl',
+    'shadow-2xl',
     'hover:shadow-2xl',
+    'border-card-border',
   ],
   theme: {
     container: {
