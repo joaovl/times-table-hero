@@ -124,11 +124,31 @@ export function Worksheet({
   return (
     <div className="min-h-screen bg-white">
       <style>{`
-        /* Screen styles - derived from shared typography config */
-        .questions-grid {
-          display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          gap: 0.5rem;
+        /* Screen styles - match main game area sizing */
+        @media screen {
+          .worksheet {
+            font-size: 16px;
+          }
+          .worksheet-header .header-title {
+            font-size: 1.25rem !important;
+          }
+          .worksheet-header .header-name {
+            font-size: 0.875rem !important;
+          }
+          .worksheet-header .header-meta {
+            font-size: 0.875rem !important;
+          }
+          .questions-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+          }
+          .question {
+            font-size: 1rem !important;
+          }
+          .footer {
+            font-size: 1rem !important;
+          }
         }
 
         @media print {
@@ -263,23 +283,23 @@ export function Worksheet({
 
       {/* Worksheet preview */}
       <div className="worksheet p-8 max-w-3xl mx-auto">
-        {/* Header - derived from typography config */}
+        {/* Header - matches main area baseline */}
         <div className="worksheet-header mb-4">
           <div className="header-top flex justify-between items-center border-b border-black pb-2 mb-2">
-            <div className="header-title text-xl md:text-2xl font-bold">Maths Challenge</div>
-            <div className="header-name text-sm md:text-base">
+            <div className="header-title text-lg font-bold">Maths Challenge</div>
+            <div className="header-name text-xs">
               Name: <span className="inline-block border-b border-black w-44">{studentName || ''}</span>
             </div>
           </div>
-          <div className="header-meta text-sm md:text-base text-gray-600">
+          <div className="header-meta text-xs text-gray-600">
             <strong>{actualCount} Questions</strong> — Testing: {tablesLabel}
           </div>
         </div>
 
-        {/* Questions grid - uses typography config (40% of game baseline) */}
+        {/* Questions grid - matches main area baseline */}
         <div className="questions-grid">
           {questions.map((q, idx) => (
-            <div key={idx} className="question text-lg md:text-xl">
+            <div key={idx} className="question text-sm">
               {q.operand1} {getSymbol(q.operation)} {q.operand2} = _____
             </div>
           ))}
