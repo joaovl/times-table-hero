@@ -125,220 +125,119 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
   return (
     <div className="min-h-screen bg-background p-7">
       <div className="mx-auto max-w-[600px]">
-        {/* Header */}
-        <div className="mb-4 md:mb-8">
-          {/* Desktop: Side-by-side layout */}
-          <div className="hidden md:block">
-            <div className="relative flex items-center justify-center">
-              <div className="absolute left-0" ref={desktopMenuRef}>
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base flex items-center gap-1"
-              >
-                ☰ Menu
-              </button>
-              {showMenu && (
-                <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
-                  {/* Colors Option */}
-                  <div className="px-2">
-                    <button
-                      onClick={() => setShowColorPicker(!showColorPicker)}
-                      className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2"
-                    >
-                      <div
-                        className="w-4 h-4 rounded-full border border-card-border"
-                        style={{
-                          backgroundColor: currentTheme.customColors?.primary
-                            ? `hsl(${currentTheme.customColors.primary})`
-                            : `hsl(${currentTheme.hue}, 85%, 58%)`
-                        }}
-                      />
-                      Colors
-                    </button>
-                    {showColorPicker && (
-                      <div className="px-2 py-2 space-y-2">
-                        <div className="grid grid-cols-3 gap-2">
-                          {PRESET_THEMES.map((theme, index) => (
-                            <button
-                              key={theme.hue || `custom-${index}`}
-                              onClick={() => {
-                                saveTheme(theme);
-                                setCurrentTheme(theme);
-                              }}
-                              className={cn(
-                                'flex flex-col items-center gap-1 p-2 rounded-lg transition-all hover:bg-muted',
-                                currentTheme.name === theme.name && 'ring-2 ring-primary bg-muted'
-                              )}
-                            >
-                              <div
-                                className="w-8 h-8 rounded-full border border-card-border"
-                                style={{
-                                  backgroundColor: theme.customColors?.primary
-                                    ? `hsl(${theme.customColors.primary})`
-                                    : `hsl(${theme.hue}, 85%, 58%)`
-                                }}
-                              />
-                              <span className="text-[9px] text-center text-muted-foreground leading-tight">
-                                {theme.name}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          onClick={() => {
-                            resetTheme();
-                            setCurrentTheme(DEFAULT_THEME);
-                          }}
-                          className="w-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                        >
-                          Reset to Default
-                        </button>
-                      </div>
-                    )}
-                  </div>
+        {/* Title */}
+        <h1 className="text-[28px] md:text-[36px] font-bold text-primary flex items-center justify-center gap-2 mb-2">
+          <img src="/favicon.png" alt="Maths Challenge" className="w-7 h-7 md:w-10 md:h-10" />
+          Maths Challenge
+        </h1>
 
-                  {/* Print Worksheets Option */}
-                  {onNavigateToPrint && (
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        onNavigateToPrint();
+        {/* Subtitle */}
+        <p className="text-center text-[15px] md:text-[17px] text-muted-foreground mb-1">
+          {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick your tables and let\'s practise!
+        </p>
+
+        {/* Stats */}
+        {stats.totalGames > 0 && (
+          <p className="text-center text-sm text-muted-foreground mb-4">
+            {stats.totalGames} games, {stats.totalCorrect} correct!
+          </p>
+        )}
+
+        {/* Menu and User Selector */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="relative" ref={desktopMenuRef}>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="text-muted-foreground hover:text-foreground transition-colors text-base flex items-center gap-1"
+            >
+              ☰ Menu
+            </button>
+            {showMenu && (
+              <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
+                {/* Colors Option */}
+                <div className="px-2">
+                  <button
+                    onClick={() => setShowColorPicker(!showColorPicker)}
+                    className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2"
+                  >
+                    <div
+                      className="w-4 h-4 rounded-full border border-card-border"
+                      style={{
+                        backgroundColor: currentTheme.customColors?.primary
+                          ? `hsl(${currentTheme.customColors.primary})`
+                          : `hsl(${currentTheme.hue}, 85%, 58%)`
                       }}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors"
-                    >
-                      🖨️ Print Worksheets
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-              <h1 className="text-[30px] font-bold text-primary flex items-center gap-2">
-                <img src="/favicon.png" alt="Maths Challenge" className="w-8 h-8" />
-                Maths Challenge
-              </h1>
-              <div className="absolute right-0">
-                <UserSelector
-                  currentUser={currentUser}
-                  onUserChange={onUserChange}
-                  onNewUser={onNewUser}
-                />
-              </div>
-            </div>
-            <p className="mt-1 text-center text-[13px] text-muted-foreground">
-              {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick your tables and let's practise!
-            </p>
-            {stats.totalGames > 0 && (
-              <p className="mt-1 text-center text-xs md:text-sm text-muted-foreground">
-                {stats.totalGames} games, {stats.totalCorrect} correct!
-              </p>
-            )}
-          </div>
-
-          {/* Mobile: Stacked layout */}
-          <div className="md:hidden">
-            <h1 className="text-[24px] font-bold text-primary flex items-center justify-center gap-2 mb-3">
-              <img src="/favicon.png" alt="Maths Challenge" className="w-6 h-6" />
-              Maths Challenge
-            </h1>
-            <div className="flex items-center justify-between mb-2">
-              <div className="relative" ref={mobileMenuRef}>
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="text-muted-foreground hover:text-foreground transition-colors text-sm flex items-center gap-1"
-                >
-                  ☰ Menu
-                </button>
-                {showMenu && (
-                  <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
-                    {/* Colors Option */}
-                    <div className="px-2">
-                      <button
-                        onClick={() => setShowColorPicker(!showColorPicker)}
-                        className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2"
-                      >
-                        <div
-                          className="w-4 h-4 rounded-full border border-card-border"
-                          style={{
-                            backgroundColor: currentTheme.customColors?.primary
-                              ? `hsl(${currentTheme.customColors.primary})`
-                              : `hsl(${currentTheme.hue}, 85%, 58%)`
-                          }}
-                        />
-                        Colors
-                      </button>
-                      {showColorPicker && (
-                        <div className="px-2 py-2 space-y-2">
-                          <div className="grid grid-cols-3 gap-2">
-                            {PRESET_THEMES.map((theme, index) => (
-                              <button
-                                key={theme.hue || `custom-${index}`}
-                                onClick={() => {
-                                  saveTheme(theme);
-                                  setCurrentTheme(theme);
-                                }}
-                                className={cn(
-                                  'flex flex-col items-center gap-1 p-2 rounded-lg transition-all hover:bg-muted',
-                                  currentTheme.name === theme.name && 'ring-2 ring-primary bg-muted'
-                                )}
-                              >
-                                <div
-                                  className="w-8 h-8 rounded-full border border-card-border"
-                                  style={{
-                                    backgroundColor: theme.customColors?.primary
-                                      ? `hsl(${theme.customColors.primary})`
-                                      : `hsl(${theme.hue}, 85%, 58%)`
-                                  }}
-                                />
-                                <span className="text-[9px] text-center text-muted-foreground leading-tight">
-                                  {theme.name}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
+                    />
+                    Colors
+                  </button>
+                  {showColorPicker && (
+                    <div className="px-2 py-2 space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        {PRESET_THEMES.map((theme, index) => (
                           <button
+                            key={theme.hue || `custom-${index}`}
                             onClick={() => {
-                              resetTheme();
-                              setCurrentTheme(DEFAULT_THEME);
+                              saveTheme(theme);
+                              setCurrentTheme(theme);
                             }}
-                            className="w-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                            className={cn(
+                              'flex flex-col items-center gap-1 p-2 rounded-lg transition-all hover:bg-muted',
+                              currentTheme.name === theme.name && 'ring-2 ring-primary bg-muted'
+                            )}
                           >
-                            Reset to Default
+                            <div
+                              className="w-8 h-8 rounded-full border border-card-border"
+                              style={{
+                                backgroundColor: theme.customColors?.primary
+                                  ? `hsl(${theme.customColors.primary})`
+                                  : `hsl(${theme.hue}, 85%, 58%)`
+                              }}
+                            />
+                            <span className="text-[9px] text-center text-muted-foreground leading-tight">
+                              {theme.name}
+                            </span>
                           </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Print Worksheets Option */}
-                    {onNavigateToPrint && (
+                        ))}
+                      </div>
                       <button
                         onClick={() => {
-                          setShowMenu(false);
-                          onNavigateToPrint();
+                          resetTheme();
+                          setCurrentTheme(DEFAULT_THEME);
                         }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors"
+                        className="w-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                       >
-                        🖨️ Print Worksheets
+                        Reset to Default
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Print Worksheets Option */}
+                {onNavigateToPrint && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onNavigateToPrint();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors"
+                  >
+                    🖨️ Print Worksheets
+                  </button>
                 )}
               </div>
-              <UserSelector
-                currentUser={currentUser}
-                onUserChange={onUserChange}
-                onNewUser={onNewUser}
-              />
-            </div>
-            <p className="text-center text-[11px] text-muted-foreground">
-              {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick your tables and let's practise!
-            </p>
-            {stats.totalGames > 0 && (
-              <p className="mt-1 text-center text-[10px] text-muted-foreground">
-                {stats.totalGames} games, {stats.totalCorrect} correct!
-              </p>
             )}
           </div>
+          <UserSelector
+            currentUser={currentUser}
+            onUserChange={onUserChange}
+            onNewUser={onNewUser}
+          />
         </div>
+
+        {/* Hidden mobile ref */}
+        <div className="hidden" ref={mobileMenuRef}></div>
+
+
 
         {/* Table Selection */}
         <Card className="mb-4 p-5 shadow-card">
