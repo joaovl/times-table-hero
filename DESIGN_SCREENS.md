@@ -44,12 +44,16 @@ This document lists all screens in the application with their font sizes and lay
 - "Let's Go!" button
 - Version: v0.1.0-{hash}
 
-**Font Sizes (Current):**
+**Font Sizes (SHARED with Print Resources):**
 - Title: `text-[28px] md:text-[40px]` (mobile: 28px, desktop: 40px)
 - Subtitle: `text-[13px] md:text-[16px]` (mobile: 13px, desktop: 16px)
 - Card headings: `text-[14px] md:text-[20px]` (mobile: 14px, desktop: 20px)
 - Table numbers: `text-base md:text-xl` (16px/20px)
+- Small buttons: `text-xs md:text-sm` (12px/14px)
 - Version: `text-[10px]`
+
+**Typography Config:** `typography.setup.*` in `src/lib/typography.ts`
+**Helper:** `getSetupClasses()` returns all setup screen classes
 
 **Typography Baseline:** This is the MAIN AREA baseline for the app
 
@@ -122,12 +126,17 @@ This document lists all screens in the application with their font sizes and lay
   - "Number of Questions" (20/40/60/80/100)
 - "Generate Worksheet" button
 
-**Font Sizes:**
-- Title: `text-2xl md:text-5xl` (24px/48px)
-- Subtitle: `text-sm md:text-lg` (14px/18px)
-- Card headings: `text-base md:text-xl` (16px/20px)
+**Font Sizes (SHARED with Game Setup):**
+- Title: `text-[28px] md:text-[40px]` (mobile: 28px, desktop: 40px)
+- Subtitle: `text-[13px] md:text-[16px]` (mobile: 13px, desktop: 16px)
+- Card headings: `text-[14px] md:text-[20px]` (mobile: 14px, desktop: 20px)
 - Table numbers: `text-base md:text-xl` (16px/20px)
-- Buttons: Standard sizes
+- Small buttons: `text-xs md:text-sm` (12px/14px)
+
+**Typography Config:** `typography.setup.*` in `src/lib/typography.ts`
+**Helper:** `getSetupClasses()` returns all setup screen classes
+
+⚠️ **IMPORTANT:** Font sizes are IDENTICAL to Game Setup (#2). Changes to one affect both.
 
 ---
 
@@ -214,11 +223,18 @@ DERIVED (Other Screens):
 **File:** `src/lib/typography.ts`
 
 This file contains the centralized typography system:
-- `typography.game.*` - Main game area (BASELINE)
+- `typography.game.*` - Main game area (PRIMARY BASELINE)
+- `typography.setup.*` - **Setup screens (GameSetup & PrintResources) - SHARED**
+  - Mobile optimizations inherited from GameSetup
+  - One change affects both screens
 - `typography.worksheet.*` - Derived from game baseline
 - Helper: `getWorksheetPrintFontSize(count)` - Returns appropriate print size
+- Helper: `getSetupClasses()` - Returns combined setup screen classes
 
 **Key Principle:** Changes to `typography.ts` propagate to all screens
+
+**Shared Screens:**
+- Game Setup (#2) and Print Resources Setup (#5) use **identical** `typography.setup.*` config
 
 ---
 
