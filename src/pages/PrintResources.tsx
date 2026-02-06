@@ -140,8 +140,8 @@ const PrintResources = () => {
                   'hover:scale-105 active:scale-95',
                   setupTypography.tableNumber,
                   selectedTables.includes(table)
-                    ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl translate-y-[-2px] ring-2 ring-primary ring-offset-1 md:ring-offset-2'
-                    : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
+                    ? 'gradient-primary translate-y-[-2px] ring-2 ring-primary ring-offset-1 md:ring-offset-2'
+                    : 'gradient-secondary'
                 )}
               >
                 {table}
@@ -166,8 +166,8 @@ const PrintResources = () => {
                   'rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex flex-col items-center justify-center text-center font-bold transition-all',
                   'hover:scale-[1.02] active:scale-[0.98]',
                   operation === op.id
-                    ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
-                    : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
+                    ? 'gradient-primary'
+                    : 'gradient-secondary'
                 )}
               >
                 <span className="text-[13px] md:text-[16px]">{op.label}</span>
@@ -187,8 +187,8 @@ const PrintResources = () => {
                 className={cn(
                   'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
                   questionCount === count
-                    ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl'
-                    : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
+                    ? 'gradient-primary'
+                    : 'gradient-secondary'
                 )}
               >
                 {count}
@@ -201,7 +201,7 @@ const PrintResources = () => {
         <Button
           onClick={handleGenerate}
           disabled={selectedTables.length === 0}
-          className="w-full h-[42px] md:h-[54px] text-[16px] md:text-[22px] font-bold shadow-button transition-all hover:translate-y-[-2px] active:translate-y-0 active:shadow-none disabled:opacity-50 bg-gradient-to-b from-primary via-primary/90 to-primary/70"
+          className="w-full h-[42px] md:h-[54px] text-[16px] md:text-[22px] font-bold shadow-button transition-all hover:translate-y-[-2px] active:translate-y-0 active:shadow-none disabled:opacity-50 gradient-primary"
           size="lg"
         >
           {selectedTables.length === 0 ? 'Select at least one table' : 'Generate Worksheet'}

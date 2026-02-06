@@ -1,0 +1,21 @@
+/* Custom gradient classes for buttons */
+.gradient-primary {
+  background: linear-gradient(to bottom, hsl(var(--primary)), hsl(var(--primary) / 0.9), hsl(var(--primary) / 0.7));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.gradient-primary:hover {
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.gradient-secondary {
+  background: linear-gradient(to bottom, hsl(var(--secondary) / 0.85), hsl(var(--secondary) / 0.75), hsl(var(--secondary) / 0.65));
+  color: hsl(var(--muted-foreground));
+  border: 1px solid hsl(var(--card-border));
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.gradient-secondary:hover {
+  background: linear-gradient(to bottom, hsl(var(--secondary) / 0.8), hsl(var(--secondary) / 0.7), hsl(var(--secondary) / 0.6));
+}
