@@ -136,12 +136,11 @@ const PrintResources = () => {
                 key={table}
                 onClick={() => toggleTable(table)}
                 className={cn(
-                  'flex h-10 md:h-14 w-full items-center justify-center rounded-lg md:rounded-xl transition-all font-extrabold',
+                  'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
                   'hover:scale-105 active:scale-95',
-                  setupTypography.tableNumber,
                   selectedTables.includes(table)
-                    ? 'gradient-primary translate-y-[-2px] ring-2 ring-primary ring-offset-1 md:ring-offset-2'
-                    : 'gradient-secondary'
+                    ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
+                    : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                 )}
               >
                 {table}
