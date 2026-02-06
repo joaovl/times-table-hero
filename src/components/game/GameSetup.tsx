@@ -434,7 +434,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
 
         {/* Version */}
         <p className="mt-4 text-center text-[10px] text-muted-foreground/50">
-          v0.1.0
+          v0.1.0-{(globalThis as any).__GIT_HASH__ || 'dev'}
         </p>
       </div>
     </div>
