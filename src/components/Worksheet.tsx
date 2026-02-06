@@ -17,18 +17,18 @@ interface Question {
 
 // Layout specifications based on A4 calculations:
 // A4: 210mm × 297mm, Left margin: 17.5mm, Right margin: 7mm, Printable: 185.5mm × 277mm
-// Header: 18mm, Footer: 15mm, Available for questions: 234mm
+// Header: 16mm, Footer: 12mm, Available for questions: 225mm
 // 5 columns × 37mm each evenly distributed
 function getLayoutSpec(count: number): { fontSize: string; rowHeight: string; columns: number } {
   const rows = Math.ceil(count / 5);
 
-  // 234mm available (with footer), calculate row height based on rows needed
-  if (rows <= 4) return { fontSize: '16pt', rowHeight: '58.5mm', columns: 5 };      // 20 questions
-  if (rows <= 8) return { fontSize: '15pt', rowHeight: '29.25mm', columns: 5 };     // 40 questions
-  if (rows <= 12) return { fontSize: '14pt', rowHeight: '19.5mm', columns: 5 };     // 60 questions
-  if (rows <= 16) return { fontSize: '13pt', rowHeight: '14.625mm', columns: 5 };   // 80 questions
-  if (rows <= 20) return { fontSize: '12pt', rowHeight: '11.7mm', columns: 5 };     // 100 questions
-  return { fontSize: '11pt', rowHeight: '9.36mm', columns: 5 };                     // 125 questions max
+  // 225mm available (with footer), calculate row height based on rows needed
+  if (rows <= 4) return { fontSize: '15pt', rowHeight: '56.25mm', columns: 5 };     // 20 questions
+  if (rows <= 8) return { fontSize: '14pt', rowHeight: '28.125mm', columns: 5 };    // 40 questions
+  if (rows <= 12) return { fontSize: '13pt', rowHeight: '18.75mm', columns: 5 };    // 60 questions
+  if (rows <= 16) return { fontSize: '12pt', rowHeight: '14.0625mm', columns: 5 };  // 80 questions
+  if (rows <= 20) return { fontSize: '11pt', rowHeight: '11.25mm', columns: 5 };    // 100 questions
+  return { fontSize: '10pt', rowHeight: '9mm', columns: 5 };                        // 125 questions max
 }
 
 function generateQuestions(
@@ -160,21 +160,23 @@ export function Worksheet({
             left: 0;
             top: 0;
             width: 185.5mm !important;
-            height: 267mm !important;
-            max-width: none !important;
-            max-height: 267mm !important;
+            height: 253mm !important;
+            max-width: 185.5mm !important;
+            max-height: 253mm !important;
             padding: 0 !important;
             margin: 0 !important;
             font-family: Arial, sans-serif;
             overflow: hidden !important;
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
+            break-after: avoid !important;
+            break-inside: avoid !important;
             background: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
           .worksheet-header {
-            height: 18mm;
+            height: 16mm;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
@@ -204,25 +206,32 @@ export function Worksheet({
             display: grid;
             grid-template-columns: repeat(5, 37mm) !important;
             grid-auto-flow: row;
-            height: 234mm;
-            margin-bottom: 0;
+            height: 225mm;
+            max-height: 225mm;
+            margin: 0;
+            padding: 0;
             gap: 0;
             background: #ffffff !important;
+            overflow: hidden;
           }
           .question {
             font-size: ${layout.fontSize};
             height: ${layout.rowHeight};
+            max-height: ${layout.rowHeight};
             display: flex;
             align-items: center;
             font-family: Arial, sans-serif;
             background: #ffffff !important;
+            margin: 0;
+            padding: 0;
           }
           .footer {
-            height: 15mm;
+            height: 12mm;
+            max-height: 12mm;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18pt;
+            font-size: 16pt;
             font-weight: bold;
             color: #000;
             margin: 0;
