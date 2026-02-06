@@ -5,19 +5,49 @@ export default {
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   safelist: [
-    // Pattern-based safelist for gradients
-    {
-      pattern: /^bg-gradient-to-(t|b|l|r|tl|tr|bl|br)$/,
-    },
-    {
-      pattern: /^(from|via|to)-(primary|secondary|accent|muted)(\/\d+)?$/,
-    },
-    {
-      pattern: /^hover:(from|via|to)-(primary|secondary)(\/\d+)?$/,
-    },
+    // Explicit gradient classes - force generation
+    'bg-gradient-to-b',
+    'bg-gradient-to-t',
+    'bg-gradient-to-r',
+    'bg-gradient-to-l',
+    // Primary gradient stops
+    'from-primary',
+    'from-primary/90',
+    'from-primary/80',
+    'from-primary/70',
+    'via-primary',
+    'via-primary/90',
+    'via-primary/80',
+    'to-primary',
+    'to-primary/90',
+    'to-primary/80',
+    'to-primary/70',
+    // Secondary gradient stops
+    'from-secondary',
+    'from-secondary/90',
+    'from-secondary/85',
+    'from-secondary/80',
+    'from-secondary/65',
+    'from-secondary/60',
+    'via-secondary',
+    'via-secondary/90',
+    'via-secondary/85',
+    'via-secondary/80',
+    'to-secondary',
+    'to-secondary/90',
+    'to-secondary/80',
+    'to-secondary/70',
+    'to-secondary/65',
+    'to-secondary/60',
+    // Hover variants
+    'hover:from-secondary/80',
+    'hover:via-secondary/80',
+    'hover:to-secondary/60',
+    'hover:shadow-2xl',
+    // Shadows and borders
     'shadow-xl',
     'shadow-2xl',
-    'hover:shadow-2xl',
+    'shadow-lg',
     'border-card-border',
   ],
   theme: {
