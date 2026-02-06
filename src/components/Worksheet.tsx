@@ -123,13 +123,13 @@ export function Worksheet({
       <style>{`
         /* Screen styles */
         .worksheet-header .header-title {
-          font-size: 14px;
+          font-size: 18px;
         }
         .worksheet-header .header-name {
-          font-size: 8px;
+          font-size: 12px;
         }
         .worksheet-header .header-meta {
-          font-size: 6px;
+          font-size: 10px;
         }
         .questions-grid {
           display: grid;
@@ -137,10 +137,10 @@ export function Worksheet({
           gap: 0.5rem;
         }
         .question {
-          font-size: calc(${layout.fontSize} - 6pt);
+          font-size: calc(${layout.fontSize} - 2pt);
         }
         .footer {
-          font-size: 12px;
+          font-size: 16px;
         }
 
         @media print {
