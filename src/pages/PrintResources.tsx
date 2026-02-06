@@ -108,9 +108,9 @@ const PrintResources = () => {
         </div>
 
         {/* Table Selection */}
-        <Card className="mb-3 md:mb-6 p-3 md:p-6 shadow-card">
-          <div className="mb-2 md:mb-4 flex items-center justify-between">
-            <h2 className={cn("font-bold", setupTypography.cardHeading)}>Choose Tables</h2>
+        <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+          <div className="mb-2 md:mb-3 flex items-center justify-between">
+            <h2 className={cn("font-semibold text-foreground", setupTypography.cardHeading)}>Choose Tables</h2>
             <div className="flex gap-1 md:gap-2">
               <Button
                 variant="outline"
@@ -136,11 +136,12 @@ const PrintResources = () => {
                 key={table}
                 onClick={() => toggleTable(table)}
                 className={cn(
-                  'flex h-10 md:h-14 w-full items-center justify-center rounded-lg md:rounded-xl transition-all',
+                  'flex h-10 md:h-14 w-full items-center justify-center rounded-lg md:rounded-xl transition-all font-extrabold',
                   'hover:scale-105 active:scale-95',
+                  setupTypography.tableNumber,
                   selectedTables.includes(table)
-                    ? `bg-primary text-primary-foreground ${setupTypography.tableNumber} font-extrabold shadow-button translate-y-[-2px] ring-2 ring-primary ring-offset-1 md:ring-offset-2`
-                    : `bg-muted/50 text-muted-foreground ${setupTypography.tableNumber} font-medium hover:bg-muted`
+                    ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl translate-y-[-2px] ring-2 ring-primary ring-offset-1 md:ring-offset-2'
+                    : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                 )}
               >
                 {table}
@@ -150,8 +151,8 @@ const PrintResources = () => {
         </Card>
 
         {/* Operation */}
-        <Card className="mb-3 md:mb-6 p-3 md:p-6 shadow-card">
-          <h2 className={cn("mb-2 md:mb-4 font-bold", setupTypography.cardHeading)}>Operation</h2>
+        <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+          <h2 className={cn("mb-2 md:mb-3 font-semibold text-foreground", setupTypography.cardHeading)}>Operation</h2>
           <div className="grid grid-cols-3 gap-2">
             {([
               { id: 'multiply', label: 'Multiply', symbol: '×' },
@@ -162,34 +163,32 @@ const PrintResources = () => {
                 key={op.id}
                 onClick={() => setOperation(op.id)}
                 className={cn(
-                  'rounded-lg py-2 md:py-3 text-center font-bold transition-all',
+                  'rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex flex-col items-center justify-center text-center font-bold transition-all',
                   'hover:scale-[1.02] active:scale-[0.98]',
                   operation === op.id
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
+                    : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                 )}
               >
-                <span className="text-xl md:text-2xl">{op.symbol}</span>
-                <div className="text-xs md:text-sm mt-1">{op.label}</div>
+                <span className="text-[13px] md:text-[16px]">{op.label}</span>
               </button>
             ))}
           </div>
         </Card>
 
         {/* Question Count */}
-        <Card className="mb-3 md:mb-6 p-3 md:p-6 shadow-card">
-          <h2 className={cn("mb-2 md:mb-4 font-bold", setupTypography.cardHeading)}>Number of Questions</h2>
+        <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+          <h2 className={cn("mb-2 md:mb-3 font-semibold text-foreground", setupTypography.cardHeading)}>Number of Questions</h2>
           <div className="grid grid-cols-5 gap-2">
             {QUESTION_COUNTS.map(count => (
               <button
                 key={count}
                 onClick={() => setQuestionCount(count)}
                 className={cn(
-                  'rounded-lg py-2 md:py-3 text-center font-bold transition-all',
-                  'hover:scale-[1.02] active:scale-[0.98]',
+                  'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
                   questionCount === count
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl'
+                    : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                 )}
               >
                 {count}
@@ -202,7 +201,7 @@ const PrintResources = () => {
         <Button
           onClick={handleGenerate}
           disabled={selectedTables.length === 0}
-          className="w-full py-4 md:py-8 text-lg md:text-2xl font-bold shadow-button transition-all hover:translate-y-[-2px] active:translate-y-0 active:shadow-none disabled:opacity-50"
+          className="w-full h-[42px] md:h-[54px] text-[16px] md:text-[22px] font-bold shadow-button transition-all hover:translate-y-[-2px] active:translate-y-0 active:shadow-none disabled:opacity-50 bg-gradient-to-b from-primary via-primary/90 to-primary/70"
           size="lg"
         >
           {selectedTables.length === 0 ? 'Select at least one table' : 'Generate Worksheet'}
