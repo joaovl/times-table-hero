@@ -16,19 +16,19 @@ interface Question {
 }
 
 // Layout specifications based on A4 calculations:
-// A4: 210mm × 297mm, Left margin: 17.5mm, Right margin: 7mm, Printable: 185.5mm × 277mm
-// Header: 16mm, Footer: 12mm, Available for questions: 225mm
-// 5 columns × 37mm each evenly distributed
+// A4: 210mm × 297mm, Left margin: 12mm, Right margin: 3mm, Printable: 195mm × 277mm
+// Header: 16mm, Footer: 12mm, Available for questions: 235mm
+// 5 columns × 39mm each evenly distributed
 function getLayoutSpec(count: number): { fontSize: string; rowHeight: string; columns: number } {
   const rows = Math.ceil(count / 5);
 
-  // 225mm available (with footer), calculate row height based on rows needed
-  if (rows <= 4) return { fontSize: '15pt', rowHeight: '56.25mm', columns: 5 };     // 20 questions
-  if (rows <= 8) return { fontSize: '14pt', rowHeight: '28.125mm', columns: 5 };    // 40 questions
-  if (rows <= 12) return { fontSize: '13pt', rowHeight: '18.75mm', columns: 5 };    // 60 questions
-  if (rows <= 16) return { fontSize: '12pt', rowHeight: '14.0625mm', columns: 5 };  // 80 questions
-  if (rows <= 20) return { fontSize: '11pt', rowHeight: '11.25mm', columns: 5 };    // 100 questions
-  return { fontSize: '10pt', rowHeight: '9mm', columns: 5 };                        // 125 questions max
+  // 235mm available (with footer), calculate row height based on rows needed
+  if (rows <= 4) return { fontSize: '16pt', rowHeight: '58.75mm', columns: 5 };     // 20 questions
+  if (rows <= 8) return { fontSize: '15pt', rowHeight: '29.375mm', columns: 5 };    // 40 questions
+  if (rows <= 12) return { fontSize: '14pt', rowHeight: '19.583mm', columns: 5 };   // 60 questions
+  if (rows <= 16) return { fontSize: '13pt', rowHeight: '14.6875mm', columns: 5 };  // 80 questions
+  if (rows <= 20) return { fontSize: '12pt', rowHeight: '11.75mm', columns: 5 };    // 100 questions
+  return { fontSize: '11pt', rowHeight: '9.4mm', columns: 5 };                      // 125 questions max
 }
 
 function generateQuestions(
@@ -131,7 +131,7 @@ export function Worksheet({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm 7mm 10mm 17.5mm;
+            margin: 10mm 3mm 10mm 12mm;
           }
           * {
             -webkit-print-color-adjust: exact !important;
@@ -159,10 +159,10 @@ export function Worksheet({
             position: absolute;
             left: 0;
             top: 0;
-            width: 185.5mm !important;
-            height: 253mm !important;
-            max-width: 185.5mm !important;
-            max-height: 253mm !important;
+            width: 195mm !important;
+            height: 263mm !important;
+            max-width: 195mm !important;
+            max-height: 263mm !important;
             padding: 0 !important;
             margin: 0 !important;
             font-family: Arial, sans-serif;
@@ -204,10 +204,10 @@ export function Worksheet({
           }
           .questions-grid {
             display: grid;
-            grid-template-columns: repeat(5, 37mm) !important;
+            grid-template-columns: repeat(5, 39mm) !important;
             grid-auto-flow: row;
-            height: 225mm;
-            max-height: 225mm;
+            height: 235mm;
+            max-height: 235mm;
             margin: 0;
             padding: 0;
             gap: 0;
