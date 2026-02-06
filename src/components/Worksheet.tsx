@@ -17,18 +17,18 @@ interface Question {
 
 // Layout specifications based on A4 calculations:
 // A4: 210mm × 297mm, Margins: 15mm, Printable: 180mm × 267mm
-// Header: 23mm, Available for questions: 244mm
-// 5 columns × 36mm each (fits "12 × 12 = _____" at ~32mm)
+// Header: 23mm, Footer: 10mm, Available for questions: 234mm
+// 5 columns × 36mm each evenly distributed
 function getLayoutSpec(count: number): { fontSize: string; rowHeight: string; columns: number } {
   const rows = Math.ceil(count / 5);
 
-  // 244mm available, calculate row height based on rows needed
-  if (rows <= 4) return { fontSize: '14pt', rowHeight: '61mm', columns: 5 };       // 20 questions
-  if (rows <= 8) return { fontSize: '13pt', rowHeight: '30.5mm', columns: 5 };     // 40 questions
-  if (rows <= 12) return { fontSize: '12pt', rowHeight: '20.3mm', columns: 5 };    // 60 questions
-  if (rows <= 16) return { fontSize: '11pt', rowHeight: '15.25mm', columns: 5 };   // 80 questions
-  if (rows <= 20) return { fontSize: '11pt', rowHeight: '12.2mm', columns: 5 };    // 100 questions
-  return { fontSize: '10pt', rowHeight: '9.76mm', columns: 5 };                    // 125 questions max
+  // 234mm available (with footer), calculate row height based on rows needed
+  if (rows <= 4) return { fontSize: '14pt', rowHeight: '58.5mm', columns: 5 };     // 20 questions
+  if (rows <= 8) return { fontSize: '13pt', rowHeight: '29.25mm', columns: 5 };    // 40 questions
+  if (rows <= 12) return { fontSize: '12pt', rowHeight: '19.5mm', columns: 5 };    // 60 questions
+  if (rows <= 16) return { fontSize: '11pt', rowHeight: '14.6mm', columns: 5 };    // 80 questions
+  if (rows <= 20) return { fontSize: '11pt', rowHeight: '11.7mm', columns: 5 };    // 100 questions
+  return { fontSize: '10pt', rowHeight: '9.4mm', columns: 5 };                     // 125 questions max
 }
 
 function generateQuestions(
@@ -126,15 +126,12 @@ export function Worksheet({
             size: A4 portrait;
             margin: 15mm;
           }
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
           html, body {
             width: 210mm;
             height: 297mm;
             margin: 0;
             padding: 0;
+            background: white !important;
           }
           .no-print {
             display: none !important;
@@ -146,6 +143,8 @@ export function Worksheet({
             margin: 0;
             font-family: Arial, sans-serif;
             overflow: hidden;
+            page-break-after: avoid;
+            background: white !important;
           }
           .worksheet-header {
             height: 23mm;
@@ -174,8 +173,9 @@ export function Worksheet({
           }
           .questions-grid {
             display: grid;
-            grid-template-columns: 41mm 41mm 41mm 41mm 16mm;
-            height: 244mm;
+            grid-template-columns: repeat(5, 36mm);
+            height: 234mm;
+            margin-bottom: 10mm;
           }
           .question {
             font-size: ${layout.fontSize};
@@ -183,6 +183,15 @@ export function Worksheet({
             display: flex;
             align-items: center;
             font-family: Arial, sans-serif;
+          }
+          .footer {
+            height: 10mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14pt;
+            font-weight: bold;
+            color: #666;
           }
         }
       `}</style>
@@ -217,7 +226,7 @@ export function Worksheet({
           </div>
         </div>
 
-        {/* Questions grid - 244mm available, 5 columns */}
+        {/* Questions grid - 234mm available, 5 columns evenly distributed */}
         <div
           className="questions-grid grid"
           style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}
@@ -233,6 +242,11 @@ export function Worksheet({
               </span>
             </div>
           ))}
+        </div>
+
+        {/* Footer - 10mm */}
+        <div className="footer text-center text-lg font-bold text-gray-500">
+          Good luck!
         </div>
       </div>
     </div>
