@@ -272,8 +272,8 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                     'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
                     'hover:scale-105 active:scale-95',
                     selectedTables.includes(table)
-                      ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
-                      : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                      ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
+                      : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                   )}
                 >
                   {table}
@@ -289,8 +289,8 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                     'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
                     'hover:scale-105 active:scale-95',
                     selectedTables.includes(table)
-                      ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
-                      : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                      ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
+                      : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                   )}
                 >
                   {table}
@@ -316,8 +316,8 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   'rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
                   'hover:scale-[1.02] active:scale-[0.98]',
                   operation === op.id
-                    ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
-                    : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                    ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
+                    : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                 )}
               >
                 <span className="text-[13px] md:text-[16px]">{op.label}</span>
@@ -342,8 +342,8 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                     'rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
                     'hover:scale-[1.02] active:scale-[0.98]',
                     difficulty === diff.id
-                      ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
-                      : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                      ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
+                      : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                   )}
                 >
                   <span className="text-[13px] md:text-[16px]">{diff.label}</span>
@@ -364,8 +364,8 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 'flex-1 rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
                 'hover:scale-[1.02] active:scale-[0.98]',
                 gameMode === 'questions'
-                  ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
-                  : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                  ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
+                  : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
               )}
             >
               <span className="text-[13px] md:text-[16px]">Questions</span>
@@ -376,8 +376,8 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 'flex-1 rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
                 'hover:scale-[1.02] active:scale-[0.98]',
                 gameMode === 'time'
-                  ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl hover:shadow-2xl'
-                  : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                  ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
+                  : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
               )}
             >
               <span className="text-[13px] md:text-[16px]">Timed</span>
@@ -394,8 +394,8 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   className={cn(
                     'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
                     questionCount === count
-                      ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl'
-                      : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                      ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl'
+                      : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                   )}
                 >
                   {count}
@@ -411,8 +411,8 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   className={cn(
                     'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
                     timeLimit === value
-                      ? 'bg-gradient-to-b from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-xl'
-                      : 'bg-gradient-to-b from-secondary via-secondary/90 to-secondary/80 text-muted-foreground hover:from-secondary/85 hover:to-secondary/75 border border-card-border shadow-lg'
+                      ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl'
+                      : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                   )}
                 >
                   {label}
@@ -426,7 +426,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
         <Button
           onClick={handleStart}
           disabled={selectedTables.length === 0}
-          className="w-full py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary to-primary/90 shadow-button transition-all hover:translate-y-[-2px] hover:shadow-xl active:translate-y-0 active:shadow-md disabled:opacity-50 disabled:from-muted disabled:to-muted"
+          className="w-full py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px] hover:shadow-xl active:translate-y-0 active:shadow-md disabled:opacity-50 disabled:from-muted disabled:to-muted"
           size="lg"
         >
           {selectedTables.length === 0 ? 'Select at least one table' : "Let's Go!"}
