@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { getWorksheetPrintFontSize } from '@/lib/typography';
 
 interface WorksheetProps {
   tables: number[];
@@ -19,16 +20,18 @@ interface Question {
 // A4: 210mm × 297mm, Left margin: 12mm, Right margin: 3mm, Printable: 195mm × 277mm
 // Header: 16mm, Footer: 12mm, Available for questions: 235mm
 // 5 columns × 39mm each evenly distributed
+// Font sizes derived from shared typography config (main game baseline)
 function getLayoutSpec(count: number): { fontSize: string; rowHeight: string; columns: number } {
   const rows = Math.ceil(count / 5);
+  const fontSize = getWorksheetPrintFontSize(count);
 
   // 235mm available (with footer), calculate row height based on rows needed
-  if (rows <= 4) return { fontSize: '18pt', rowHeight: '58.75mm', columns: 5 };     // 20 questions
-  if (rows <= 8) return { fontSize: '17pt', rowHeight: '29.375mm', columns: 5 };    // 40 questions
-  if (rows <= 12) return { fontSize: '16pt', rowHeight: '19.583mm', columns: 5 };   // 60 questions
-  if (rows <= 16) return { fontSize: '15pt', rowHeight: '14.6875mm', columns: 5 };  // 80 questions
-  if (rows <= 20) return { fontSize: '14pt', rowHeight: '11.75mm', columns: 5 };    // 100 questions
-  return { fontSize: '13pt', rowHeight: '9.4mm', columns: 5 };                      // 125 questions max
+  if (rows <= 4) return { fontSize, rowHeight: '58.75mm', columns: 5 };     // 20 questions
+  if (rows <= 8) return { fontSize, rowHeight: '29.375mm', columns: 5 };    // 40 questions
+  if (rows <= 12) return { fontSize, rowHeight: '19.583mm', columns: 5 };   // 60 questions
+  if (rows <= 16) return { fontSize, rowHeight: '14.6875mm', columns: 5 };  // 80 questions
+  if (rows <= 20) return { fontSize, rowHeight: '11.75mm', columns: 5 };    // 100 questions
+  return { fontSize, rowHeight: '9.4mm', columns: 5 };                      // 125 questions max
 }
 
 function generateQuestions(
@@ -121,26 +124,11 @@ export function Worksheet({
   return (
     <div className="min-h-screen bg-white">
       <style>{`
-        /* Screen styles */
-        .worksheet-header .header-title {
-          font-size: 18px;
-        }
-        .worksheet-header .header-name {
-          font-size: 12px;
-        }
-        .worksheet-header .header-meta {
-          font-size: 10px;
-        }
+        /* Screen styles - derived from shared typography config */
         .questions-grid {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
           gap: 0.5rem;
-        }
-        .question {
-          font-size: calc(${layout.fontSize} - 2pt);
-        }
-        .footer {
-          font-size: 16px;
         }
 
         @media print {
@@ -275,24 +263,23 @@ export function Worksheet({
 
       {/* Worksheet preview */}
       <div className="worksheet p-8 max-w-3xl mx-auto">
-        {/* Header - 23mm */}
+        {/* Header - derived from typography config */}
         <div className="worksheet-header mb-4">
           <div className="header-top flex justify-between items-center border-b border-black pb-2 mb-2">
-            <div className="header-title text-xl font-bold">Maths Challenge</div>
-            <div className="header-name text-sm">
+            <div className="header-title text-xl md:text-2xl font-bold">Maths Challenge</div>
+            <div className="header-name text-sm md:text-base">
               Name: <span className="inline-block border-b border-black w-44">{studentName || ''}</span>
             </div>
           </div>
-          <div className="header-meta text-xs text-gray-600">
+          <div className="header-meta text-sm md:text-base text-gray-600">
             <strong>{actualCount} Questions</strong> — Testing: {tablesLabel}
           </div>
         </div>
 
-        {/* Questions grid - 234mm available, 5 columns evenly distributed */}
-        <div className="questions-grid"
-        >
+        {/* Questions grid - uses typography config (40% of game baseline) */}
+        <div className="questions-grid">
           {questions.map((q, idx) => (
-            <div key={idx} className="question">
+            <div key={idx} className="question text-lg md:text-xl">
               {q.operand1} {getSymbol(q.operation)} {q.operand2} = _____
             </div>
           ))}
