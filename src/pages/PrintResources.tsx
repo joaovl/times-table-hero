@@ -87,7 +87,7 @@ const PrintResources = () => {
             >
               ← Menu
             </button>
-            <h1 className="text-[26px] font-extrabold text-primary md:text-[50px]">
+            <h1 className="text-2xl font-extrabold text-primary md:text-5xl">
               Print Worksheets
             </h1>
             <div className="absolute right-0">
@@ -98,7 +98,7 @@ const PrintResources = () => {
               />
             </div>
           </div>
-          <p className="mt-1 text-center text-[16px] md:text-[20px] text-muted-foreground">
+          <p className="mt-1 text-center text-sm md:text-lg text-muted-foreground">
             Create printable practice sheets
           </p>
         </div>
@@ -106,7 +106,7 @@ const PrintResources = () => {
         {/* Table Selection */}
         <Card className="mb-3 md:mb-6 p-3 md:p-6 shadow-card">
           <div className="mb-2 md:mb-4 flex items-center justify-between">
-            <h2 className="text-[18px] md:text-[22px] font-bold">Choose Tables</h2>
+            <h2 className="text-base md:text-xl font-bold">Choose Tables</h2>
             <div className="flex gap-1 md:gap-2">
               <Button
                 variant="outline"
@@ -147,7 +147,7 @@ const PrintResources = () => {
 
         {/* Operation */}
         <Card className="mb-3 md:mb-6 p-3 md:p-6 shadow-card">
-          <h2 className="mb-2 md:mb-4 text-[18px] md:text-[22px] font-bold">Operation</h2>
+          <h2 className="mb-2 md:mb-4 text-base md:text-xl font-bold">Operation</h2>
           <div className="grid grid-cols-3 gap-2">
             {([
               { id: 'multiply', label: 'Multiply', symbol: '×' },
@@ -174,7 +174,7 @@ const PrintResources = () => {
 
         {/* Question Count */}
         <Card className="mb-3 md:mb-6 p-3 md:p-6 shadow-card">
-          <h2 className="mb-2 md:mb-4 text-[18px] md:text-[22px] font-bold">Number of Questions</h2>
+          <h2 className="mb-2 md:mb-4 text-base md:text-xl font-bold">Number of Questions</h2>
           <div className="grid grid-cols-5 gap-2">
             {QUESTION_COUNTS.map(count => (
               <button

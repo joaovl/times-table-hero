@@ -23,12 +23,12 @@ function getLayoutSpec(count: number): { fontSize: string; rowHeight: string; co
   const rows = Math.ceil(count / 5);
 
   // 235mm available (with footer), calculate row height based on rows needed
-  if (rows <= 4) return { fontSize: '16pt', rowHeight: '58.75mm', columns: 5 };     // 20 questions
-  if (rows <= 8) return { fontSize: '15pt', rowHeight: '29.375mm', columns: 5 };    // 40 questions
-  if (rows <= 12) return { fontSize: '14pt', rowHeight: '19.583mm', columns: 5 };   // 60 questions
-  if (rows <= 16) return { fontSize: '13pt', rowHeight: '14.6875mm', columns: 5 };  // 80 questions
-  if (rows <= 20) return { fontSize: '12pt', rowHeight: '11.75mm', columns: 5 };    // 100 questions
-  return { fontSize: '11pt', rowHeight: '9.4mm', columns: 5 };                      // 125 questions max
+  if (rows <= 4) return { fontSize: '18pt', rowHeight: '58.75mm', columns: 5 };     // 20 questions
+  if (rows <= 8) return { fontSize: '17pt', rowHeight: '29.375mm', columns: 5 };    // 40 questions
+  if (rows <= 12) return { fontSize: '16pt', rowHeight: '19.583mm', columns: 5 };   // 60 questions
+  if (rows <= 16) return { fontSize: '15pt', rowHeight: '14.6875mm', columns: 5 };  // 80 questions
+  if (rows <= 20) return { fontSize: '14pt', rowHeight: '11.75mm', columns: 5 };    // 100 questions
+  return { fontSize: '13pt', rowHeight: '9.4mm', columns: 5 };                      // 125 questions max
 }
 
 function generateQuestions(
@@ -122,10 +122,25 @@ export function Worksheet({
     <div className="min-h-screen bg-white">
       <style>{`
         /* Screen styles */
+        .worksheet-header .header-title {
+          font-size: 14px;
+        }
+        .worksheet-header .header-name {
+          font-size: 8px;
+        }
+        .worksheet-header .header-meta {
+          font-size: 6px;
+        }
         .questions-grid {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
           gap: 0.5rem;
+        }
+        .question {
+          font-size: calc(${layout.fontSize} - 6pt);
+        }
+        .footer {
+          font-size: 12px;
         }
 
         @media print {
