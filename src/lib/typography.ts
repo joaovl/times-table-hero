@@ -23,6 +23,31 @@ export const typography = {
     },
   },
 
+  // Setup screens (GameSetup and PrintResources) - SHARED
+  // Mobile-optimized with knowledge from GameSetup
+  setup: {
+    title: {
+      mobile: 'text-[28px]',     // 28px mobile
+      tablet: 'md:text-[40px]',  // 40px desktop
+    },
+    subtitle: {
+      mobile: 'text-[13px]',     // 13px mobile
+      tablet: 'md:text-[16px]',  // 16px desktop
+    },
+    cardHeading: {
+      mobile: 'text-[14px]',     // 14px mobile
+      tablet: 'md:text-[20px]',  // 20px desktop
+    },
+    tableNumber: {
+      mobile: 'text-base',       // 16px mobile
+      tablet: 'md:text-xl',      // 20px desktop
+    },
+    button: {
+      mobile: 'text-xs',         // 12px mobile
+      tablet: 'md:text-sm',      // 14px desktop
+    },
+  },
+
   // Worksheet derives from game baseline
   // Using proportional scaling: ~40% of game size for compact grid
   worksheet: {
@@ -63,4 +88,15 @@ export function getWorksheetPrintFontSize(questionCount: number): string {
   if (rows <= 16) return typography.worksheet.question.print[80];
   if (rows <= 20) return typography.worksheet.question.print[100];
   return typography.worksheet.question.print[125];
+}
+
+// Helper to get combined setup screen class strings
+export function getSetupClasses() {
+  return {
+    title: `${typography.setup.title.mobile} ${typography.setup.title.tablet}`,
+    subtitle: `${typography.setup.subtitle.mobile} ${typography.setup.subtitle.tablet}`,
+    cardHeading: `${typography.setup.cardHeading.mobile} ${typography.setup.cardHeading.tablet}`,
+    tableNumber: `${typography.setup.tableNumber.mobile} ${typography.setup.tableNumber.tablet}`,
+    button: `${typography.setup.button.mobile} ${typography.setup.button.tablet}`,
+  };
 }
