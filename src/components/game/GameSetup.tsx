@@ -431,6 +431,11 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
         >
           {selectedTables.length === 0 ? 'Select at least one table' : "Let's Go!"}
         </Button>
+
+        {/* Version */}
+        <p className="mt-4 text-center text-[10px] text-muted-foreground/50">
+          v0.1.0
+        </p>
       </div>
     </div>
   );
