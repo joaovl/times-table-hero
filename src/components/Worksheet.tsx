@@ -6,7 +6,6 @@ interface WorksheetProps {
   tables: number[];
   operation: 'multiply' | 'divide' | 'both';
   questionCount: number;
-  pageCount?: number;
   studentName?: string;
   onBack: () => void;
 }
@@ -100,20 +99,15 @@ export function Worksheet({
   tables,
   operation,
   questionCount,
-  pageCount = 1,
   studentName,
   onBack,
 }: WorksheetProps) {
   // Cap at 100 for even columns (100 / 5 = 20 rows)
   const actualCount = Math.min(questionCount, 100);
-  const actualPages = Math.max(1, Math.min(pageCount, 20));
 
-  const pages = useMemo(
-    () =>
-      Array.from({ length: actualPages }, () =>
-        generateQuestions(tables, operation, actualCount)
-      ),
-    [tables, operation, actualCount, actualPages]
+  const questions = useMemo(
+    () => generateQuestions(tables, operation, actualCount),
+    [tables, operation, actualCount]
   );
 
   const layout = getLayoutSpec(actualCount);
@@ -184,15 +178,10 @@ export function Worksheet({
           .no-print {
             display: none !important;
           }
-          .worksheet-stack {
+          .worksheet {
             position: absolute;
             left: 0;
             top: 0;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-          }
-          .worksheet {
             width: 195mm !important;
             height: 263mm !important;
             max-width: 195mm !important;
@@ -201,17 +190,13 @@ export function Worksheet({
             margin: 0 !important;
             font-family: Arial, sans-serif;
             overflow: hidden !important;
-            page-break-after: always !important;
+            page-break-after: avoid !important;
             page-break-inside: avoid !important;
-            break-after: page !important;
+            break-after: avoid !important;
             break-inside: avoid !important;
             background: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-          }
-          .worksheet:last-child {
-            page-break-after: auto !important;
-            break-after: auto !important;
           }
           .worksheet-header {
             height: 16mm;
@@ -288,7 +273,7 @@ export function Worksheet({
             ← Back
           </Button>
           <div className="text-sm text-muted-foreground">
-            {actualPages} {actualPages === 1 ? 'page' : 'pages'} • {actualCount} questions • {Math.ceil(actualCount / 5)} rows × 5 cols • Font: {layout.fontSize}
+            {actualCount} questions • {Math.ceil(actualCount / 5)} rows × 5 cols • Font: {layout.fontSize}
           </div>
           <Button onClick={handlePrint}>
             Print Worksheet
@@ -297,37 +282,33 @@ export function Worksheet({
       </div>
 
       {/* Worksheet preview */}
-      <div className="worksheet-stack max-w-3xl mx-auto">
-        {pages.map((questions, pageIdx) => (
-          <div key={pageIdx} className="worksheet p-8">
-            {/* Header - matches main area baseline */}
-            <div className="worksheet-header mb-4">
-              <div className="header-top flex justify-between items-center border-b border-black pb-2 mb-2">
-                <div className="header-title text-lg font-bold">Maths Challenge</div>
-                <div className="header-name text-xs">
-                  Name: <span className="inline-block border-b border-black w-44">{studentName || ''}</span>
-                </div>
-              </div>
-              <div className="header-meta text-xs text-gray-600">
-                <strong>{actualCount} Questions</strong> — Testing: {tablesLabel}
-              </div>
-            </div>
-
-            {/* Questions grid - matches main area baseline */}
-            <div className="questions-grid">
-              {questions.map((q, idx) => (
-                <div key={idx} className="question text-sm">
-                  {q.operand1} {getSymbol(q.operation)} {q.operand2} = _____
-                </div>
-              ))}
-            </div>
-
-            {/* Footer - 10mm */}
-            <div className="footer text-center text-lg font-bold text-gray-500">
-              Good luck!
+      <div className="worksheet p-8 max-w-3xl mx-auto">
+        {/* Header - matches main area baseline */}
+        <div className="worksheet-header mb-4">
+          <div className="header-top flex justify-between items-center border-b border-black pb-2 mb-2">
+            <div className="header-title text-lg font-bold">Maths Challenge</div>
+            <div className="header-name text-xs">
+              Name: <span className="inline-block border-b border-black w-44">{studentName || ''}</span>
             </div>
           </div>
-        ))}
+          <div className="header-meta text-xs text-gray-600">
+            <strong>{actualCount} Questions</strong> — Testing: {tablesLabel}
+          </div>
+        </div>
+
+        {/* Questions grid - matches main area baseline */}
+        <div className="questions-grid">
+          {questions.map((q, idx) => (
+            <div key={idx} className="question text-sm">
+              {q.operand1} {getSymbol(q.operation)} {q.operand2} = _____
+            </div>
+          ))}
+        </div>
+
+        {/* Footer - 10mm */}
+        <div className="footer text-center text-lg font-bold text-gray-500">
+          Good luck!
+        </div>
       </div>
     </div>
   );
