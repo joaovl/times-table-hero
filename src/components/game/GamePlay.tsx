@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ interface GamePlayProps {
 export interface GameResults {
   score: number;
   total: number;
+  bestStreak: number;
   incorrectQuestions: Array<{
     operand1: number;
     operand2: number;
@@ -46,6 +48,8 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
   const [typedAnswer, setTypedAnswer] = useState('');
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const getOperationSymbol = (op: 'multiply' | 'divide') => op === 'multiply' ? '×' : '÷';
@@ -98,11 +102,12 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
       onComplete({
         score,
         total: questionsAnswered,
+        bestStreak,
         incorrectQuestions,
         settings,
       });
     }
-  }, [isComplete, score, questionsAnswered, incorrectQuestions, settings, onComplete]);
+  }, [isComplete, score, questionsAnswered, bestStreak, incorrectQuestions, settings, onComplete]);
 
   const handleAnswer = useCallback((userAnswer: number | null) => {
     const currentQuestion = questions[currentIndex];
@@ -117,9 +122,15 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
 
     if (isCorrect) {
       setScore(prev => prev + 1);
+      setStreak(prev => {
+        const next = prev + 1;
+        setBestStreak(b => Math.max(b, next));
+        return next;
+      });
       setFeedback('correct');
       setFeedbackMessage(getRandomPositiveMessage());
     } else {
+      setStreak(0);
       setFeedback('incorrect');
       setFeedbackMessage(`${currentQuestion.operand1} ${symbol} ${currentQuestion.operand2} = ${currentQuestion.answer}`);
       setIncorrectQuestions(prev => [
@@ -134,7 +145,8 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
       ]);
     }
 
-    // Move to next question after delay
+    // Move to next question after delay (longer for incorrect so kid reads correct answer)
+    const delay = isCorrect ? 800 : 1400;
     setTimeout(() => {
       setFeedback('none');
       const nextIndex = currentIndex + 1;
@@ -146,7 +158,7 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
       } else {
         setCurrentIndex(nextIndex);
       }
-    }, 1200);
+    }, delay);
   }, [currentIndex, questions, settings]);
 
   const handleSubmitTyped = (e: React.FormEvent) => {
@@ -181,7 +193,7 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
         {/* Header with progress */}
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
-            <Button variant="ghost" onClick={onQuit} className="text-muted-foreground">
+            <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">
               ← Quit
             </Button>
             <div className="text-center">
@@ -209,6 +221,21 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
               style={{ width: `${progress}%` }}
             />
           </div>
+          {streak >= 3 && (
+            <div
+              className="mt-2 flex justify-center"
+              role="status"
+              aria-live="polite"
+            >
+              <span
+                key={streak}
+                className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
+              >
+                <Flame className="w-4 h-4" aria-hidden="true" />
+                {streak} in a row!
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Question Card */}

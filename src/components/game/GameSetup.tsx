@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Menu, Printer, Palette, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
   const [isLoaded, setIsLoaded] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const desktopMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [currentTheme, setCurrentTheme] = useState(getTheme());
@@ -148,9 +150,11 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
           <div className="relative" ref={desktopMenuRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="text-muted-foreground hover:text-foreground transition-colors text-base flex items-center gap-1"
+              aria-label="Open menu"
+              aria-expanded={showMenu}
+              className="text-muted-foreground hover:text-foreground transition-colors text-base flex items-center gap-1.5 min-h-[44px] px-2 -ml-2"
             >
-              ☰ Menu
+              <Menu className="w-5 h-5" aria-hidden="true" /> Menu
             </button>
             {showMenu && (
               <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
@@ -158,8 +162,10 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 <div className="px-2">
                   <button
                     onClick={() => setShowColorPicker(!showColorPicker)}
-                    className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2"
+                    aria-expanded={showColorPicker}
+                    className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2 min-h-[44px]"
                   >
+                    <Palette className="w-4 h-4" aria-hidden="true" />
                     <div
                       className="w-4 h-4 rounded-full border border-card-border"
                       style={{
@@ -186,7 +192,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                             )}
                           >
                             <div
-                              className="w-8 h-8 rounded-full border border-card-border"
+                              className="w-11 h-11 rounded-full border border-card-border"
                               style={{
                                 backgroundColor: theme.customColors?.primary
                                   ? `hsl(${theme.customColors.primary})`
@@ -219,11 +225,17 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                       setShowMenu(false);
                       onNavigateToPrint();
                     }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors"
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 min-h-[44px]"
                   >
-                    🖨️ Print Worksheets
+                    <Printer className="w-4 h-4" aria-hidden="true" />
+                    Print Worksheets
                   </button>
                 )}
+
+                {/* Version */}
+                <div className="border-t mt-1 pt-1.5 px-4 pb-1 text-[10px] text-muted-foreground/60">
+                  v0.1.0-{(globalThis as any).__GIT_HASH__ || 'dev'}
+                </div>
               </div>
             )}
           </div>
@@ -248,7 +260,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 variant="outline"
                 size="sm"
                 onClick={selectAll}
-                className="text-xs md:text-sm h-7 md:h-9 px-2 md:px-3"
+                className="text-xs md:text-sm h-11 md:h-9 px-3"
               >
                 All
               </Button>
@@ -256,7 +268,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 variant="outline"
                 size="sm"
                 onClick={clearAll}
-                className="text-xs md:text-sm h-7 md:h-9 px-2 md:px-3"
+                className="text-xs md:text-sm h-11 md:h-9 px-3"
               >
                 Clear
               </Button>
@@ -269,7 +281,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   key={table}
                   onClick={() => toggleTable(table)}
                   className={cn(
-                    'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
+                    'rounded-[10px] md:rounded-[14px] min-h-[44px] md:min-h-[40px] py-2 text-[15px] md:text-[16px] font-bold transition-all',
                     'hover:scale-105 active:scale-95',
                     selectedTables.includes(table)
                       ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -286,7 +298,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   key={table}
                   onClick={() => toggleTable(table)}
                   className={cn(
-                    'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
+                    'rounded-[10px] md:rounded-[14px] min-h-[44px] md:min-h-[40px] py-2 text-[15px] md:text-[16px] font-bold transition-all',
                     'hover:scale-105 active:scale-95',
                     selectedTables.includes(table)
                       ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -313,7 +325,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 key={op.id}
                 onClick={() => setOperation(op.id)}
                 className={cn(
-                  'rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
+                  'rounded-lg md:rounded-xl min-h-[44px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
                   'hover:scale-[1.02] active:scale-[0.98]',
                   operation === op.id
                     ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -326,20 +338,32 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
           </div>
         </Card>
 
-        {/* Difficulty */}
+        {/* More options toggle */}
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(v => !v)}
+          aria-expanded={showAdvanced}
+          className="mb-2 md:mb-4 w-full flex items-center justify-center gap-1.5 text-sm md:text-base text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
+        >
+          {showAdvanced ? 'Hide' : 'More'} options
+          <ChevronDown className={cn('w-4 h-4 transition-transform', showAdvanced && 'rotate-180')} aria-hidden="true" />
+        </button>
+
+        {showAdvanced && (
+          <>{/* Difficulty */}
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Difficulty</h2>
           <div className="grid grid-cols-3 gap-2">
             {([
-              { id: 'easy', label: 'Easy', desc: 'far apart' },
-              { id: 'medium', label: 'Medium', desc: 'closer together' },
-              { id: 'hard', label: 'Hard', desc: 'type your answer' },
+              { id: 'easy', label: 'Easy', desc: '3 very different choices' },
+              { id: 'medium', label: 'Medium', desc: '3 close choices' },
+              { id: 'hard', label: 'Hard', desc: 'type the answer' },
             ] as const).map(diff => (
               <div key={diff.id} className="flex flex-col gap-1 md:gap-1.5">
                 <button
                   onClick={() => setDifficulty(diff.id)}
                   className={cn(
-                    'rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
+                    'rounded-lg md:rounded-xl min-h-[44px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
                     'hover:scale-[1.02] active:scale-[0.98]',
                     difficulty === diff.id
                       ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -348,7 +372,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                 >
                   <span className="text-[13px] md:text-[16px]">{diff.label}</span>
                 </button>
-                <p className="text-[9px] md:text-[11px] text-muted-foreground text-center">{diff.desc}</p>
+                <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">{diff.desc}</p>
               </div>
             ))}
           </div>
@@ -361,7 +385,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
             <button
               onClick={() => setGameMode('questions')}
               className={cn(
-                'flex-1 rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
+                'flex-1 rounded-lg md:rounded-xl min-h-[44px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
                 'hover:scale-[1.02] active:scale-[0.98]',
                 gameMode === 'questions'
                   ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -373,7 +397,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
             <button
               onClick={() => setGameMode('time')}
               className={cn(
-                'flex-1 rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
+                'flex-1 rounded-lg md:rounded-xl min-h-[44px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
                 'hover:scale-[1.02] active:scale-[0.98]',
                 gameMode === 'time'
                   ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -392,7 +416,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   key={count}
                   onClick={() => setQuestionCount(count)}
                   className={cn(
-                    'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
+                    'rounded-[10px] md:rounded-[14px] min-h-[44px] md:min-h-[40px] py-2 text-[15px] md:text-[16px] font-bold transition-all',
                     questionCount === count
                       ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl'
                       : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
@@ -409,7 +433,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                   key={value}
                   onClick={() => setTimeLimit(value)}
                   className={cn(
-                    'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
+                    'rounded-[10px] md:rounded-[14px] min-h-[44px] md:min-h-[40px] py-2 text-[13px] md:text-[16px] font-bold transition-all',
                     timeLimit === value
                       ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl'
                       : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
@@ -422,6 +446,9 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
           )}
         </Card>
 
+          </>
+        )}
+
         {/* Start Button */}
         <Button
           onClick={handleStart}
@@ -432,10 +459,6 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
           {selectedTables.length === 0 ? 'Select at least one table' : "Let's Go!"}
         </Button>
 
-        {/* Version */}
-        <p className="mt-4 text-center text-[10px] text-muted-foreground/50">
-          v0.1.0-{(globalThis as any).__GIT_HASH__ || 'dev'}
-        </p>
       </div>
     </div>
   );

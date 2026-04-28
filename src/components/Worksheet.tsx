@@ -167,7 +167,7 @@ export function Worksheet({
             print-color-adjust: exact !important;
           }
           html, body {
-            width: 210mm;
+            width: auto !important;
             height: auto !important;
             min-height: 0 !important;
             margin: 0 !important;

@@ -119,7 +119,7 @@ const PrintResources = () => {
                 variant="outline"
                 size="sm"
                 onClick={selectAll}
-                className={cn("h-7 md:h-9 px-2 md:px-3", setupTypography.button)}
+                className={cn("h-11 md:h-9 px-3", setupTypography.button)}
               >
                 All
               </Button>
@@ -127,7 +127,7 @@ const PrintResources = () => {
                 variant="outline"
                 size="sm"
                 onClick={clearAll}
-                className={cn("h-7 md:h-9 px-2 md:px-3", setupTypography.button)}
+                className={cn("h-11 md:h-9 px-3", setupTypography.button)}
               >
                 Clear
               </Button>
@@ -139,7 +139,7 @@ const PrintResources = () => {
                 key={table}
                 onClick={() => toggleTable(table)}
                 className={cn(
-                  'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
+                  'rounded-[10px] md:rounded-[14px] min-h-[44px] md:min-h-[40px] py-2 text-[15px] md:text-[16px] font-bold transition-all',
                   'hover:scale-105 active:scale-95',
                   selectedTables.includes(table)
                     ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -165,7 +165,7 @@ const PrintResources = () => {
                 key={op.id}
                 onClick={() => setOperation(op.id)}
                 className={cn(
-                  'rounded-lg md:rounded-xl h-[32px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
+                  'rounded-lg md:rounded-xl min-h-[44px] md:h-[42px] flex items-center justify-center text-center font-bold transition-all',
                   'hover:scale-[1.02] active:scale-[0.98]',
                   operation === op.id
                     ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl hover:shadow-2xl'
@@ -187,7 +187,7 @@ const PrintResources = () => {
                 key={count}
                 onClick={() => setQuestionCount(count)}
                 className={cn(
-                  'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
+                  'rounded-[10px] md:rounded-[14px] min-h-[44px] md:min-h-[40px] py-2 text-[15px] md:text-[16px] font-bold transition-all',
                   questionCount === count
                     ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl'
                     : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
@@ -208,7 +208,7 @@ const PrintResources = () => {
                 key={count}
                 onClick={() => setPageCount(count)}
                 className={cn(
-                  'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
+                  'rounded-[10px] md:rounded-[14px] min-h-[44px] md:min-h-[40px] py-2 text-[15px] md:text-[16px] font-bold transition-all',
                   'hover:scale-105 active:scale-95',
                   pageCount === count
                     ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl'
