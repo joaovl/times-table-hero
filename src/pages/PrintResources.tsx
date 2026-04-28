@@ -13,6 +13,7 @@ type Operation = 'multiply' | 'divide' | 'both';
 
 const TABLES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const QUESTION_COUNTS = [20, 40, 60, 80, 100];
+const PAGE_COUNTS = Array.from({ length: 20 }, (_, i) => i + 1);
 
 const PrintResources = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const PrintResources = () => {
   const [selectedTables, setSelectedTables] = useState<number[]>([2, 3, 4, 5]);
   const [operation, setOperation] = useState<Operation>('multiply');
   const [questionCount, setQuestionCount] = useState(40);
+  const [pageCount, setPageCount] = useState(1);
   const [showWorksheet, setShowWorksheet] = useState(false);
 
   // Use shared typography from GameSetup
@@ -73,6 +75,7 @@ const PrintResources = () => {
         tables={selectedTables}
         operation={operation}
         questionCount={questionCount}
+        pageCount={pageCount}
         studentName={currentUser?.name}
         onBack={() => setShowWorksheet(false)}
       />
@@ -186,6 +189,28 @@ const PrintResources = () => {
                 className={cn(
                   'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
                   questionCount === count
+                    ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl'
+                    : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
+                )}
+              >
+                {count}
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        {/* Page Count */}
+        <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+          <h2 className={cn("mb-2 md:mb-3 font-semibold text-foreground", setupTypography.cardHeading)}>Number of Pages</h2>
+          <div className="grid grid-cols-10 gap-1 md:gap-2">
+            {PAGE_COUNTS.map(count => (
+              <button
+                key={count}
+                onClick={() => setPageCount(count)}
+                className={cn(
+                  'rounded-[10px] md:rounded-[14px] py-1 md:py-2 text-[13px] md:text-[16px] font-bold transition-all',
+                  'hover:scale-105 active:scale-95',
+                  pageCount === count
                     ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-xl'
                     : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                 )}
