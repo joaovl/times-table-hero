@@ -18,9 +18,9 @@ interface Question {
 }
 
 // Layout specifications based on A4 calculations:
-// A4: 210mm × 297mm, Left margin: 12mm, Right margin: 3mm, Printable: 195mm × 277mm
+// A4: 210mm × 297mm, Margins: 15mm all sides, Printable: 180mm × 267mm
 // Header: 16mm, Footer: 12mm, Available for questions: 235mm
-// 5 columns × 39mm each evenly distributed
+// 5 columns × 36mm each evenly distributed
 // Font sizes derived from shared typography config (main game baseline)
 function getLayoutSpec(count: number): { fontSize: string; rowHeight: string; columns: number } {
   const rows = Math.ceil(count / 5);
@@ -160,7 +160,7 @@ export function Worksheet({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm 3mm 10mm 12mm;
+            margin: 15mm 15mm 15mm 15mm;
           }
           * {
             -webkit-print-color-adjust: exact !important;
@@ -190,9 +190,9 @@ export function Worksheet({
             background: #ffffff !important;
           }
           .worksheet {
-            width: 195mm !important;
+            width: 180mm !important;
             height: 263mm !important;
-            max-width: 195mm !important;
+            max-width: 180mm !important;
             max-height: 263mm !important;
             padding: 0 !important;
             margin: 0 !important;
@@ -239,7 +239,7 @@ export function Worksheet({
           }
           .questions-grid {
             display: grid;
-            grid-template-columns: repeat(5, 39mm) !important;
+            grid-template-columns: repeat(5, 36mm) !important;
             grid-auto-flow: row;
             height: 235mm;
             max-height: 235mm;
