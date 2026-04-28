@@ -71,6 +71,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
 
   // Load saved settings on mount or when user changes
   useEffect(() => {
+    setIsLoaded(false);
     const saved = getSavedSettings(currentUser?.id);
     setSelectedTables(saved.tables);
     setDifficulty(saved.difficulty as Difficulty);
@@ -80,6 +81,19 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
     setTimeLimit(saved.timeLimit);
     setIsLoaded(true);
   }, [currentUser?.id]);
+
+  // Auto-save any change so choices persist without needing to start a game
+  useEffect(() => {
+    if (!isLoaded) return;
+    saveSettings({
+      tables: selectedTables,
+      difficulty,
+      gameMode,
+      operation,
+      questionCount,
+      timeLimit,
+    }, currentUser?.id);
+  }, [isLoaded, selectedTables, difficulty, gameMode, operation, questionCount, timeLimit, currentUser?.id]);
 
   const toggleTable = (table: number) => {
     setSelectedTables(prev =>

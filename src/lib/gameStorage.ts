@@ -165,3 +165,39 @@ export function saveSettings(settings: SavedSettings, userId?: string): void {
     // Ignore storage errors
   }
 }
+
+export interface PrintSavedSettings {
+  tables: number[];
+  operation: string;
+  questionCount: number;
+  pageCount: number;
+}
+
+const DEFAULT_PRINT_SETTINGS: PrintSavedSettings = {
+  tables: [2, 3, 4, 5],
+  operation: 'multiply',
+  questionCount: 40,
+  pageCount: 1,
+};
+
+export function getSavedPrintSettings(userId?: string): PrintSavedSettings {
+  try {
+    const key = getStorageKey('printSettings', userId);
+    const data = localStorage.getItem(key);
+    if (data) {
+      return { ...DEFAULT_PRINT_SETTINGS, ...JSON.parse(data) };
+    }
+    return DEFAULT_PRINT_SETTINGS;
+  } catch {
+    return DEFAULT_PRINT_SETTINGS;
+  }
+}
+
+export function savePrintSettings(settings: PrintSavedSettings, userId?: string): void {
+  try {
+    const key = getStorageKey('printSettings', userId);
+    localStorage.setItem(key, JSON.stringify(settings));
+  } catch {
+    // Ignore storage errors
+  }
+}

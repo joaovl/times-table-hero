@@ -8,6 +8,7 @@ import { NewUserModal } from '@/components/NewUserModal';
 import { UserProfile, getCurrentUser, getUserById } from '@/lib/userStorage';
 import { Worksheet } from '@/components/Worksheet';
 import { getSetupClasses } from '@/lib/typography';
+import { getSavedPrintSettings, savePrintSettings } from '@/lib/gameStorage';
 
 type Operation = 'multiply' | 'divide' | 'both';
 
@@ -24,6 +25,7 @@ const PrintResources = () => {
   const [questionCount, setQuestionCount] = useState(40);
   const [pageCount, setPageCount] = useState(1);
   const [showWorksheet, setShowWorksheet] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Use shared typography from GameSetup
   const setupTypography = getSetupClasses();
@@ -32,6 +34,28 @@ const PrintResources = () => {
     const user = getCurrentUser();
     setCurrentUser(user);
   }, []);
+
+  // Load saved print settings on mount or when user changes
+  useEffect(() => {
+    setIsLoaded(false);
+    const saved = getSavedPrintSettings(currentUser?.id);
+    setSelectedTables(saved.tables);
+    setOperation(saved.operation as Operation);
+    setQuestionCount(saved.questionCount);
+    setPageCount(saved.pageCount);
+    setIsLoaded(true);
+  }, [currentUser?.id]);
+
+  // Auto-save print settings on every change
+  useEffect(() => {
+    if (!isLoaded) return;
+    savePrintSettings({
+      tables: selectedTables,
+      operation,
+      questionCount,
+      pageCount,
+    }, currentUser?.id);
+  }, [isLoaded, selectedTables, operation, questionCount, pageCount, currentUser?.id]);
 
   const toggleTable = (table: number) => {
     setSelectedTables(prev =>
