@@ -151,6 +151,14 @@ export function Worksheet({
           }
           .question {
             font-size: 1rem !important;
+            white-space: nowrap;
+          }
+          .answer-blank {
+            display: inline-block;
+            width: 2.5em;
+            border-bottom: 1px solid #000;
+            margin-left: 0.25em;
+            vertical-align: baseline;
           }
           .footer {
             font-size: 1rem !important;
@@ -259,6 +267,15 @@ export function Worksheet({
             background: #ffffff !important;
             margin: 0;
             padding: 0;
+            white-space: nowrap;
+            overflow: hidden;
+          }
+          .answer-blank {
+            display: inline-block;
+            width: 10mm;
+            border-bottom: 0.3mm solid #000;
+            margin-left: 1mm;
+            vertical-align: baseline;
           }
           .footer {
             height: 12mm;
@@ -314,7 +331,7 @@ export function Worksheet({
             <div className="questions-grid">
               {questions.map((q, idx) => (
                 <div key={idx} className="question text-sm">
-                  {q.operand1} {getSymbol(q.operation)} {q.operand2} = _____
+                  {q.operand1} {getSymbol(q.operation)} {q.operand2} =<span className="answer-blank">&nbsp;</span>
                 </div>
               ))}
             </div>
