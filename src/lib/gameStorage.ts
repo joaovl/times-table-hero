@@ -137,8 +137,8 @@ export interface SavedSettings {
 
 const DEFAULT_SETTINGS: SavedSettings = {
   tables: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-  difficulty: 'easy',
-  gameMode: 'questions',
+  difficulty: 'medium',
+  gameMode: 'time',
   operation: 'multiply',
   questionCount: 10,
   timeLimit: 180,

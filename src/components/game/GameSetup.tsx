@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Printer, Palette, ChevronDown } from 'lucide-react';
+import { Menu, Printer, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -32,15 +32,14 @@ const TIME_LIMITS = [
 
 export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNavigateToPrint }: GameSetupProps) {
   const [selectedTables, setSelectedTables] = useState<number[]>(TABLES);
-  const [difficulty, setDifficulty] = useState<Difficulty>('easy');
-  const [gameMode, setGameMode] = useState<GameMode>('questions');
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
+  const [gameMode, setGameMode] = useState<GameMode>('time');
   const [operation, setOperation] = useState<Operation>('multiply');
   const [questionCount, setQuestionCount] = useState(10);
   const [timeLimit, setTimeLimit] = useState(180);
   const [isLoaded, setIsLoaded] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const desktopMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [currentTheme, setCurrentTheme] = useState(getTheme());
@@ -338,19 +337,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
           </div>
         </Card>
 
-        {/* More options toggle */}
-        <button
-          type="button"
-          onClick={() => setShowAdvanced(v => !v)}
-          aria-expanded={showAdvanced}
-          className="mb-2 md:mb-4 w-full flex items-center justify-center gap-1.5 text-sm md:text-base text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
-        >
-          {showAdvanced ? 'Hide' : 'More'} options
-          <ChevronDown className={cn('w-4 h-4 transition-transform', showAdvanced && 'rotate-180')} aria-hidden="true" />
-        </button>
-
-        {showAdvanced && (
-          <>{/* Difficulty */}
+        {/* Difficulty */}
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Difficulty</h2>
           <div className="grid grid-cols-3 gap-2">
@@ -445,9 +432,6 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
             </div>
           )}
         </Card>
-
-          </>
-        )}
 
         {/* Start Button */}
         <Button
