@@ -148,7 +148,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
 
         {/* Subtitle */}
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-1">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick your tables and let\'s practise!
+          {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick your tables and let's practise!
         </p>
 
         {/* Stats */}
