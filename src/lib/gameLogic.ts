@@ -132,9 +132,6 @@ export function shuffleOptions(correct: number, wrong: number[]): number[] {
 export const POSITIVE_MESSAGES = [
   "Brilliant!",
   "Well done!",
-  "Gabbylastic!",
-  "Gabbymazing!",
-  "Gabby Rules!!",
   "Fantastic!",
   "Superb!",
   "Amazing!",
