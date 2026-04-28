@@ -18,9 +18,9 @@ interface Question {
 }
 
 // Layout specifications based on A4 calculations:
-// A4: 210mm × 297mm, Margins: 15mm all sides, Printable: 180mm × 267mm
+// A4: 210mm × 297mm, Left margin: 12mm, Right margin: 3mm, Printable: 195mm × 277mm
 // Header: 16mm, Footer: 12mm, Available for questions: 235mm
-// 5 columns × 36mm each evenly distributed
+// 5 columns × 39mm each evenly distributed
 // Font sizes derived from shared typography config (main game baseline)
 function getLayoutSpec(count: number): { fontSize: string; rowHeight: string; columns: number } {
   const rows = Math.ceil(count / 5);
@@ -151,14 +151,6 @@ export function Worksheet({
           }
           .question {
             font-size: 1rem !important;
-            white-space: nowrap;
-          }
-          .answer-blank {
-            display: inline-block;
-            width: 2.5em;
-            border-bottom: 1px solid #000;
-            margin-left: 0.25em;
-            vertical-align: baseline;
           }
           .footer {
             font-size: 1rem !important;
@@ -168,39 +160,42 @@ export function Worksheet({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 15mm 15mm 15mm 15mm;
+            margin: 10mm 3mm 10mm 12mm;
           }
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
           html, body {
-            width: auto !important;
-            height: auto !important;
-            min-height: 0 !important;
+            width: 210mm;
+            height: 297mm;
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .min-h-screen {
-            min-height: 0 !important;
-            height: auto !important;
+          body * {
+            visibility: hidden;
+          }
+          .worksheet, .worksheet * {
+            visibility: visible;
           }
           .no-print {
             display: none !important;
           }
           .worksheet-stack {
+            position: absolute;
+            left: 0;
+            top: 0;
             margin: 0 !important;
             padding: 0 !important;
-            max-width: none !important;
             background: #ffffff !important;
           }
           .worksheet {
-            width: 180mm !important;
+            width: 195mm !important;
             height: 263mm !important;
-            max-width: 180mm !important;
+            max-width: 195mm !important;
             max-height: 263mm !important;
             padding: 0 !important;
             margin: 0 !important;
@@ -247,7 +242,7 @@ export function Worksheet({
           }
           .questions-grid {
             display: grid;
-            grid-template-columns: repeat(5, 36mm) !important;
+            grid-template-columns: repeat(5, 39mm) !important;
             grid-auto-flow: row;
             height: 235mm;
             max-height: 235mm;
@@ -267,15 +262,6 @@ export function Worksheet({
             background: #ffffff !important;
             margin: 0;
             padding: 0;
-            white-space: nowrap;
-            overflow: hidden;
-          }
-          .answer-blank {
-            display: inline-block;
-            width: 10mm;
-            border-bottom: 0.3mm solid #000;
-            margin-left: 1mm;
-            vertical-align: baseline;
           }
           .footer {
             height: 12mm;
@@ -331,7 +317,7 @@ export function Worksheet({
             <div className="questions-grid">
               {questions.map((q, idx) => (
                 <div key={idx} className="question text-sm">
-                  {q.operand1} {getSymbol(q.operation)} {q.operand2} =<span className="answer-blank">&nbsp;</span>
+                  {q.operand1} {getSymbol(q.operation)} {q.operand2} = _____
                 </div>
               ))}
             </div>
