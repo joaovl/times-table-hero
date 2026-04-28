@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { getWorksheetPrintFontSize } from '@/lib/typography';
+import { generateWorksheetPdf } from '@/lib/worksheetPdf';
 
 interface WorksheetProps {
   tables: number[];
   operation: 'multiply' | 'divide' | 'both';
   questionCount: number;
+  pageCount?: number;
   studentName?: string;
   onBack: () => void;
 }
@@ -99,27 +101,40 @@ export function Worksheet({
   tables,
   operation,
   questionCount,
+  pageCount = 1,
   studentName,
   onBack,
 }: WorksheetProps) {
   // Cap at 100 for even columns (100 / 5 = 20 rows)
   const actualCount = Math.min(questionCount, 100);
+  const actualPages = Math.max(1, Math.min(pageCount, 20));
 
-  const questions = useMemo(
-    () => generateQuestions(tables, operation, actualCount),
-    [tables, operation, actualCount]
+  const pages = useMemo(
+    () =>
+      Array.from({ length: actualPages }, () =>
+        generateQuestions(tables, operation, actualCount)
+      ),
+    [tables, operation, actualCount, actualPages]
   );
+  const previewQuestions = pages[0];
 
   const layout = getLayoutSpec(actualCount);
 
+  const sortedTables = [...tables].sort((a, b) => a - b);
+  const tableSuffix = operation === 'divide' ? '÷' : operation === 'both' ? '×÷' : '×';
+  const tablesLabel = sortedTables.map(t => `${t}${tableSuffix}`).join(', ');
+
   const handlePrint = () => {
-    window.print();
+    const doc = generateWorksheetPdf({
+      pages,
+      tablesLabel,
+      questionCount: actualCount,
+      studentName,
+    });
+    doc.save('maths-challenge.pdf');
   };
 
   const getSymbol = (op: 'multiply' | 'divide') => op === 'multiply' ? '×' : '÷';
-
-  const sortedTables = [...tables].sort((a, b) => a - b);
-  const tablesLabel = sortedTables.map(t => `${t}${operation === 'divide' ? '÷' : '×'}`).join(', ');
 
   return (
     <div className="min-h-screen bg-white">
@@ -145,6 +160,14 @@ export function Worksheet({
           }
           .question {
             font-size: 1rem !important;
+            white-space: nowrap;
+          }
+          .answer-blank {
+            display: inline-block;
+            width: 2.5em;
+            border-bottom: 1px solid #000;
+            margin-left: 0.25em;
+            vertical-align: baseline;
           }
           .footer {
             font-size: 1rem !important;
@@ -247,6 +270,15 @@ export function Worksheet({
             background: #ffffff !important;
             margin: 0;
             padding: 0;
+            white-space: nowrap;
+            overflow: hidden;
+          }
+          .answer-blank {
+            display: inline-block;
+            width: 10mm;
+            border-bottom: 0.3mm solid #000;
+            margin-left: 1mm;
+            vertical-align: baseline;
           }
           .footer {
             height: 12mm;
@@ -273,10 +305,10 @@ export function Worksheet({
             ← Back
           </Button>
           <div className="text-sm text-muted-foreground">
-            {actualCount} questions • {Math.ceil(actualCount / 5)} rows × 5 cols • Font: {layout.fontSize}
+            {actualPages} {actualPages === 1 ? 'page' : 'pages'} • {actualCount} questions
           </div>
           <Button onClick={handlePrint}>
-            Print Worksheet
+            Download PDF
           </Button>
         </div>
       </div>
@@ -298,9 +330,9 @@ export function Worksheet({
 
         {/* Questions grid - matches main area baseline */}
         <div className="questions-grid">
-          {questions.map((q, idx) => (
+          {previewQuestions.map((q, idx) => (
             <div key={idx} className="question text-sm">
-              {q.operand1} {getSymbol(q.operation)} {q.operand2} = _____
+              {q.operand1} {getSymbol(q.operation)} {q.operand2} =<span className="answer-blank">&nbsp;</span>
             </div>
           ))}
         </div>
