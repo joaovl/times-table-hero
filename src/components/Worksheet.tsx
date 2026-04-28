@@ -168,28 +168,25 @@ export function Worksheet({
           }
           html, body {
             width: 210mm;
-            height: 297mm;
+            height: auto !important;
+            min-height: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          body * {
-            visibility: hidden;
-          }
-          .worksheet, .worksheet * {
-            visibility: visible;
+          .min-h-screen {
+            min-height: 0 !important;
+            height: auto !important;
           }
           .no-print {
             display: none !important;
           }
           .worksheet-stack {
-            position: absolute;
-            left: 0;
-            top: 0;
             margin: 0 !important;
             padding: 0 !important;
+            max-width: none !important;
             background: #ffffff !important;
           }
           .worksheet {
