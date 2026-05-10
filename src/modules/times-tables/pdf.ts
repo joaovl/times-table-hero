@@ -104,25 +104,35 @@ function drawPage(
       doc.text(eqStr, cellX + 1 + baseW + 0.4 + supW + 0.5, baselineY);
       eqEndX = cellX + 1 + baseW + 0.4 + supW + 0.5 + doc.getTextWidth(eqStr);
     } else {
+      // sqrt: draw the radical as a small descender tick + main diagonal + overbar.
       const radicandStr = `${q.operand}`;
       const radicandW = doc.getTextWidth(radicandStr);
-      const hookHeight = fs * 0.4;
-      const hookWidth = fs * 0.18;
-      const overbarPadding = 0.6;
 
-      const hookBottomX = cellX + 1;
-      const hookBottomY = baselineY;
-      const hookTopX = hookBottomX + hookWidth;
-      const hookTopY = baselineY - hookHeight;
-      const overbarStartX = hookTopX;
-      const overbarEndX = hookTopX + radicandW + overbarPadding * 2;
-      const overbarY = hookTopY;
+      // 3mm left padding inside the cell so consumer printer hardware margins
+      // (typically 4-6mm) don't clip the radical at column 0.
+      const radicalLeft = cellX + 3;
+      const ascentHeight = fs * 0.5;
+      const tickLength = fs * 0.18;
+      const overbarPadding = 0.8;
 
-      doc.setLineWidth(0.3);
-      doc.line(hookBottomX, hookBottomY, hookTopX, hookTopY);
-      doc.line(overbarStartX, overbarY, overbarEndX, overbarY);
+      const peakX = radicalLeft + tickLength;
+      const peakY = baselineY + tickLength * 0.4;       // peak slightly below baseline
+      const tickStartX = radicalLeft;
+      const tickStartY = baselineY - 0.5;                // tick starts just above baseline
+      const topX = peakX + fs * 0.32;
+      const topY = baselineY - ascentHeight;
 
-      doc.text(radicandStr, hookTopX + overbarPadding, baselineY);
+      // Thicker stroke than 0.3mm so the diagonal stays visible at small font sizes.
+      doc.setLineWidth(0.5);
+      // Short tick (peak → up-left)
+      doc.line(peakX, peakY, tickStartX, tickStartY);
+      // Main diagonal (peak → up-right to overbar level)
+      doc.line(peakX, peakY, topX, topY);
+      // Overbar across the radicand
+      const overbarEndX = topX + radicandW + overbarPadding * 2;
+      doc.line(topX, topY, overbarEndX, topY);
+
+      doc.text(radicandStr, topX + overbarPadding, baselineY);
       const eqStr = ' =';
       doc.text(eqStr, overbarEndX + 0.5, baselineY);
       eqEndX = overbarEndX + 0.5 + doc.getTextWidth(eqStr);
