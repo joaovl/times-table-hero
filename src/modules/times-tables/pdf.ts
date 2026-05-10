@@ -76,6 +76,14 @@ function drawPage(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(fs);
 
+  // Common left padding inside every cell so all four op kinds align on the
+  // same vertical line and column-0 cells clear typical printer hardware margins.
+  const LEFT_PAD = 3;
+
+  // Stroke weight tuned to roughly match Helvetica body text at this font size,
+  // so the radical doesn't read as bolder than the surrounding numerals.
+  const radicalStrokeWidth = Math.max(0.22, fs * 0.025);
+
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
     const col = i % cols;
@@ -83,54 +91,48 @@ function drawPage(
     const cellX = left + col * colW;
     const cellCenterY = gridTop + row * rowH + rowH / 2;
     const baselineY = cellCenterY + (fs * 0.352778) * 0.35;
+    const startX = cellX + LEFT_PAD;
 
     let eqEndX: number;
 
     if (q.kind === 'binary') {
       const symbol = q.op === 'multiply' ? '×' : '÷';
       const eq = `${q.operand1} ${symbol} ${q.operand2} =`;
-      doc.text(eq, cellX + 1, baselineY);
-      eqEndX = cellX + 1 + doc.getTextWidth(eq);
+      doc.text(eq, startX, baselineY);
+      eqEndX = startX + doc.getTextWidth(eq);
     } else if (q.op === 'square') {
       const baseStr = `${q.operand}`;
-      doc.text(baseStr, cellX + 1, baselineY);
+      doc.text(baseStr, startX, baselineY);
       const baseW = doc.getTextWidth(baseStr);
       const supSize = fs * 0.6;
       doc.setFontSize(supSize);
-      doc.text('2', cellX + 1 + baseW + 0.4, baselineY - fs * 0.3);
+      doc.text('2', startX + baseW + 0.4, baselineY - fs * 0.3);
       const supW = doc.getTextWidth('2');
       doc.setFontSize(fs);
       const eqStr = ' =';
-      doc.text(eqStr, cellX + 1 + baseW + 0.4 + supW + 0.5, baselineY);
-      eqEndX = cellX + 1 + baseW + 0.4 + supW + 0.5 + doc.getTextWidth(eqStr);
+      doc.text(eqStr, startX + baseW + 0.4 + supW + 0.5, baselineY);
+      eqEndX = startX + baseW + 0.4 + supW + 0.5 + doc.getTextWidth(eqStr);
     } else {
       // sqrt: draw the radical as a small descender tick + main diagonal + overbar.
       const radicandStr = `${q.operand}`;
       const radicandW = doc.getTextWidth(radicandStr);
 
-      // 3mm left padding inside the cell so consumer printer hardware margins
-      // (typically 4-6mm) don't clip the radical at column 0.
-      const radicalLeft = cellX + 3;
       const ascentHeight = fs * 0.5;
       const tickLength = fs * 0.18;
       const overbarPadding = 0.8;
 
-      const peakX = radicalLeft + tickLength;
-      const peakY = baselineY + tickLength * 0.4;       // peak slightly below baseline
-      const tickStartX = radicalLeft;
-      const tickStartY = baselineY - 0.5;                // tick starts just above baseline
+      const peakX = startX + tickLength;
+      const peakY = baselineY + tickLength * 0.4;     // peak slightly below baseline
+      const tickStartX = startX;
+      const tickStartY = baselineY - 0.5;             // tick starts just above baseline
       const topX = peakX + fs * 0.32;
       const topY = baselineY - ascentHeight;
 
-      // Thicker stroke than 0.3mm so the diagonal stays visible at small font sizes.
-      doc.setLineWidth(0.5);
-      // Short tick (peak → up-left)
-      doc.line(peakX, peakY, tickStartX, tickStartY);
-      // Main diagonal (peak → up-right to overbar level)
-      doc.line(peakX, peakY, topX, topY);
-      // Overbar across the radicand
+      doc.setLineWidth(radicalStrokeWidth);
+      doc.line(peakX, peakY, tickStartX, tickStartY);  // short tick up-left
+      doc.line(peakX, peakY, topX, topY);              // main diagonal up-right
       const overbarEndX = topX + radicandW + overbarPadding * 2;
-      doc.line(topX, topY, overbarEndX, topY);
+      doc.line(topX, topY, overbarEndX, topY);         // overbar
 
       doc.text(radicandStr, topX + overbarPadding, baselineY);
       const eqStr = ' =';
