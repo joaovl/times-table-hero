@@ -1,13 +1,21 @@
-import type { TimeSettings, TimePrecision, TimeFormat } from './logic';
-import { TIME_PRECISION_OPTIONS } from './logic';
+import type {
+  TimeSettings,
+  TimePrecision,
+  TimeFormat,
+  TimeSkill,
+  TimeArithDifficulty,
+} from './logic';
+import { TIME_PRECISION_OPTIONS, TIME_SKILL_OPTIONS } from './logic';
 
 function key(base: string, userId?: string): string {
   return userId ? `time-${base}-${userId}` : `time-${base}`;
 }
 
 const DEFAULT_SETTINGS: TimeSettings = {
+  skills: ['read'],
   precisions: ['hour'],
   format: '12h',
+  arithDifficulty: 'easy',
   gameMode: 'questions',
   questionCount: 10,
   timeLimit: 180,
@@ -31,14 +39,41 @@ function normaliseFormat(value: unknown): TimeFormat {
   return DEFAULT_SETTINGS.format;
 }
 
+/**
+ * Accept the new array shape and any legacy shapes. Legacy data has no
+ * `skills` key at all → fall back to `['read']` so existing users see no
+ * behavioural change after upgrading.
+ */
+function normaliseSkills(value: unknown): Array<Exclude<TimeSkill, 'all'>> {
+  const valid = new Set<string>(TIME_SKILL_OPTIONS);
+  if (Array.isArray(value)) {
+    const cleaned = value.filter(
+      (v): v is Exclude<TimeSkill, 'all'> => typeof v === 'string' && valid.has(v)
+    );
+    const deduped = Array.from(new Set(cleaned));
+    return deduped.length > 0 ? deduped : DEFAULT_SETTINGS.skills;
+  }
+  if (typeof value === 'string' && valid.has(value)) {
+    return [value as Exclude<TimeSkill, 'all'>];
+  }
+  return DEFAULT_SETTINGS.skills;
+}
+
+function normaliseArithDifficulty(value: unknown): TimeArithDifficulty {
+  if (value === 'easy' || value === 'medium' || value === 'hard') return value;
+  return DEFAULT_SETTINGS.arithDifficulty;
+}
+
 export function getSavedTimeSettings(userId?: string): TimeSettings {
   try {
     const data = localStorage.getItem(key('settings', userId));
     if (!data) return DEFAULT_SETTINGS;
-    const parsed = JSON.parse(data) as Partial<TimeSettings>;
+    const parsed = JSON.parse(data) as Partial<TimeSettings> & Record<string, unknown>;
     return {
+      skills: normaliseSkills(parsed.skills),
       precisions: normalisePrecisions(parsed.precisions),
       format: normaliseFormat(parsed.format),
+      arithDifficulty: normaliseArithDifficulty(parsed.arithDifficulty),
       gameMode: parsed.gameMode === 'time' ? 'time' : 'questions',
       questionCount: typeof parsed.questionCount === 'number'
         ? parsed.questionCount
@@ -98,6 +133,7 @@ export interface TimeSession {
   date: string;
   score: number;
   total: number;
+  skills: Array<Exclude<TimeSkill, 'all'>>;
   precisions: TimePrecision[];
   format: TimeFormat;
 }

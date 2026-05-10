@@ -60,4 +60,23 @@ describe('buildTimeSummary', () => {
   it('falls back to "hour" label when precisions is empty', () => {
     expect(buildTimeSummary([], '12h')).toBe('hour • 12h');
   });
+
+  it('prefixes the skill segment when skills are provided', () => {
+    expect(buildTimeSummary(['hour'], '12h', ['read'])).toBe(
+      'Read clock • hour • 12h'
+    );
+    expect(buildTimeSummary(['hour'], '12h', ['arith'])).toBe(
+      'Time arithmetic • hour • 12h'
+    );
+  });
+
+  it('joins multiple skills with " + " in canonical order', () => {
+    expect(buildTimeSummary(['quarter'], '24h', ['arith', 'read'])).toBe(
+      'Read clock + Time arithmetic • quarter • 24h'
+    );
+  });
+
+  it('omits the skill segment when skills are not provided (backwards-compatible)', () => {
+    expect(buildTimeSummary(['hour'], '12h')).toBe('hour • 12h');
+  });
 });

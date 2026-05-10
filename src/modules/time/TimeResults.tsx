@@ -30,6 +30,7 @@ export function TimeResults({ result, onPlayAgain, onNewGame, userId }: Props) {
         date: new Date().toISOString(),
         score: result.score,
         total: result.total,
+        skills: result.settings.skills,
         precisions: result.settings.precisions,
         format: result.settings.format,
       },
@@ -94,12 +95,17 @@ export function TimeResults({ result, onPlayAgain, onNewGame, userId }: Props) {
               {result.incorrectQuestions.map((q, idx) => (
                 <div key={idx} className="flex items-center justify-between rounded-lg bg-muted px-4 py-2">
                   <span className="font-medium">
-                    {q.correctAnswer}
-                    <span className="ml-2 text-xs text-muted-foreground">({q.format})</span>
+                    {q.prompt}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({q.skill === 'arith' ? 'arith' : 'read'} · {q.format})
+                    </span>
                   </span>
-                  {q.userAnswer !== null && (
-                    <span className="text-sm text-destructive">You said: {q.userAnswer}</span>
-                  )}
+                  <span className="flex items-center gap-2 text-sm">
+                    <span className="font-semibold text-success">{q.correctAnswer}</span>
+                    {q.userAnswer !== null && (
+                      <span className="text-destructive">(you: {q.userAnswer})</span>
+                    )}
+                  </span>
                 </div>
               ))}
             </div>

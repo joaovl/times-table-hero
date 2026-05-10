@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
-import type { TimeQuestion } from './logic';
+import type { TimeQuestion, TimeReadQuestion, TimeArithQuestion } from './logic';
+import { expectedAnswerString, formatArithEquation } from './logic';
 
 export interface TimePdfOptions {
   pages: TimeQuestion[][];
@@ -21,10 +22,6 @@ const FOOTER_H = 12;
 // Grid layout: 4 columns, capacity tuned to 10/15/20 questions per page.
 const COLS = 4;
 
-function expectedString(q: TimeQuestion): string {
-  return q.format === '24h' ? q.answer24h : q.answer12h;
-}
-
 /**
  * Draw an analog clock using only jsPDF primitives (no SVG embedding).
  * Coordinates are in mm. centerX/centerY is the centre of the clock face;
@@ -32,7 +29,7 @@ function expectedString(q: TimeQuestion): string {
  */
 function drawClock(
   doc: jsPDF,
-  q: TimeQuestion,
+  q: TimeReadQuestion,
   centerX: number,
   centerY: number,
   radius: number
@@ -93,13 +90,13 @@ function drawClock(
   );
 
   // Center pin.
-  doc.setFillColor(0);
+  doc.setFillColor(0, 0, 0);
   doc.circle(centerX, centerY, 0.7, 'F');
 }
 
-function drawCell(
+function drawReadCell(
   doc: jsPDF,
-  q: TimeQuestion,
+  q: TimeReadQuestion,
   cellX: number,
   cellY: number,
   cellW: number,
@@ -127,6 +124,64 @@ function drawCell(
   const lineX2 = centerX + lineW / 2;
   doc.setLineWidth(0.3);
   doc.line(lineX1, lineY, lineX2, lineY);
+}
+
+function drawArithCell(
+  doc: jsPDF,
+  q: TimeArithQuestion,
+  cellX: number,
+  cellY: number,
+  cellW: number,
+  cellH: number,
+  num: number
+) {
+  // Question number at the top-left of the cell.
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(`${num}.`, cellX + 2, cellY + 5);
+
+  // Equation rendered as plain text, centred horizontally in the cell.
+  // Helvetica WinAnsi covers all glyphs used here (digits, ':', '+', '-',
+  // letters, space) — encoding-safe.
+  const centerX = cellX + cellW / 2;
+  const eqY = cellY + cellH / 2 - 2;
+
+  // Scale font size to keep the equation inside the cell. Start at 11 and
+  // shrink in 1pt steps if it overflows.
+  const eq = formatArithEquation(q);
+  let fs = 11;
+  doc.setFont('helvetica', 'bold');
+  while (fs > 7) {
+    doc.setFontSize(fs);
+    if (doc.getTextWidth(eq) <= cellW - 4) break;
+    fs -= 1;
+  }
+  doc.setFontSize(fs);
+  doc.text(eq, centerX, eqY, { align: 'center', baseline: 'middle' });
+
+  // Answer line below the equation.
+  const lineY = cellY + cellH - 3;
+  const lineW = Math.min(cellW * 0.6, 30);
+  const lineX1 = centerX - lineW / 2;
+  const lineX2 = centerX + lineW / 2;
+  doc.setLineWidth(0.3);
+  doc.line(lineX1, lineY, lineX2, lineY);
+}
+
+function drawCell(
+  doc: jsPDF,
+  q: TimeQuestion,
+  cellX: number,
+  cellY: number,
+  cellW: number,
+  cellH: number,
+  num: number
+) {
+  if (q.skill === 'arith') {
+    drawArithCell(doc, q, cellX, cellY, cellW, cellH, num);
+  } else {
+    drawReadCell(doc, q, cellX, cellY, cellW, cellH, num);
+  }
 }
 
 function drawPage(
@@ -217,7 +272,10 @@ function drawAnswerKeyPage(
   const allQuestions: TimeQuestion[] = pages.flat();
   const total = allQuestions.length;
 
-  const cols = 5;
+  // Time-arith answers ("4:05 PM") are wider than read-clock ones ("3:45")
+  // so we drop from 5 columns to 4 when any arith question is present.
+  const hasArith = allQuestions.some(q => q.skill === 'arith');
+  const cols = hasArith ? 4 : 5;
   const colW = PRINT_W / cols;
   const gridTop = top + HEADER_H;
   const gridH = PRINT_H - HEADER_H - FOOTER_H;
@@ -234,7 +292,7 @@ function drawAnswerKeyPage(
     const row = Math.floor(i / cols);
     const x = left + col * colW + 2;
     const y = gridTop + row * rowH + rowH / 2 + (fs * 0.352778) * 0.35;
-    doc.text(`${i + 1}) ${expectedString(q)}`, x, y);
+    doc.text(`${i + 1}) ${expectedAnswerString(q)}`, x, y);
   }
 }
 

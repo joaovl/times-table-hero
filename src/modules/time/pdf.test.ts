@@ -39,8 +39,13 @@ vi.mock('jspdf', () => {
 });
 
 import { generateTimePdf } from './pdf';
-import { generateTimeQuestions } from './logic';
-import type { TimeQuestion, TimeSettings } from './logic';
+import { generateTimeQuestions, expectedAnswerString } from './logic';
+import type {
+  TimeQuestion,
+  TimeReadQuestion,
+  TimeArithQuestion,
+  TimeSettings,
+} from './logic';
 
 beforeEach(() => {
   capturedTextCalls.length = 0;
@@ -55,7 +60,8 @@ const render = (qs: TimeQuestion[]) =>
 // in Helvetica's WinAnsi encoding — would mis-render in jsPDF.
 const MATH_OPERATORS_BLOCK = /[∀-⋿]/u;
 
-const q12h = (hours: number, minutes: number): TimeQuestion => ({
+const q12h = (hours: number, minutes: number): TimeReadQuestion => ({
+  skill: 'read',
   hours,
   minutes,
   answer12h: `${((hours % 12) || 12)}:${minutes.toString().padStart(2, '0')}`,
@@ -63,12 +69,39 @@ const q12h = (hours: number, minutes: number): TimeQuestion => ({
   format: '12h',
 });
 
-const q24h = (hours: number, minutes: number): TimeQuestion => ({
+const q24h = (hours: number, minutes: number): TimeReadQuestion => ({
+  skill: 'read',
   hours,
   minutes,
   answer12h: `${((hours % 12) || 12)}:${minutes.toString().padStart(2, '0')}`,
   answer24h: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
   format: '24h',
+});
+
+// Helper to build a TimeArithQuestion with sensible defaults.
+const arith = (over: Partial<TimeArithQuestion>): TimeArithQuestion => ({
+  skill: 'arith',
+  startHour: 3,
+  startMinute: 45,
+  deltaMinutes: 20,
+  sign: '+',
+  format: '12h',
+  answer: '4:05 AM',
+  resultHour: 4,
+  resultMinute: 5,
+  crossesMidnight: false,
+  ...over,
+});
+
+const baseSettings = (over: Partial<TimeSettings>): TimeSettings => ({
+  skills: ['read'],
+  precisions: ['hour'],
+  format: '12h',
+  arithDifficulty: 'easy',
+  gameMode: 'questions',
+  questionCount: 10,
+  timeLimit: 0,
+  ...over,
 });
 
 describe('generateTimePdf — question numbering', () => {
@@ -96,7 +129,7 @@ describe('generateTimePdf — question numbering', () => {
   });
 });
 
-describe('generateTimePdf — clock primitives', () => {
+describe('generateTimePdf — clock primitives (read-clock)', () => {
   it('draws at least one circle (the face) for every question', () => {
     render([q12h(3, 45), q12h(6, 0), q12h(9, 30)]);
     // Each clock has at least face + center pin = 2 circles. With 3
@@ -119,7 +152,7 @@ describe('generateTimePdf — clock primitives', () => {
   });
 });
 
-describe('generateTimePdf — answer key', () => {
+describe('generateTimePdf — answer key (read-clock)', () => {
   it('does not include answer strings when includeAnswerKey is unset', () => {
     render([q12h(3, 45)]);
     expect(capturedTextCalls).not.toContain('1) 3:45');
@@ -162,6 +195,63 @@ describe('generateTimePdf — answer key', () => {
   });
 });
 
+describe('generateTimePdf — time-arith rendering', () => {
+  it('renders the equation text for an arith question', () => {
+    render([arith({})]);
+    expect(capturedTextCalls).toContain('3:45 AM + 20 minutes =');
+  });
+
+  it('does NOT draw a clock figure for an arith cell', () => {
+    // Read-clock alone produces ~24+ extra lines per cell (ticks + hands)
+    // and 2 circles. Arith-only must produce only the answer-line + chrome.
+    render([arith({})]);
+    // Two cells worth of clock circles would be 2 (face+pin). For arith-only,
+    // expect zero face circles. Page chrome adds zero circles.
+    expect(capturedCircles.length).toBe(0);
+  });
+
+  it('answer key shows arith result (with AM/PM in 12h mode)', () => {
+    generateTimePdf({
+      pages: [[arith({})]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 4:05 AM');
+  });
+
+  it('answer key shows arith result without AM/PM in 24h mode', () => {
+    generateTimePdf({
+      pages: [
+        [
+          arith({
+            startHour: 14,
+            startMinute: 0,
+            deltaMinutes: 30,
+            sign: '+',
+            format: '24h',
+            answer: '14:30',
+            resultHour: 14,
+            resultMinute: 30,
+          }),
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 14:30');
+  });
+
+  it('mixed-skill page: read-clock and arith cells coexist', () => {
+    render([q12h(3, 45), arith({})]);
+    // Clock primitives from the read cell are present.
+    expect(capturedCircles.length).toBeGreaterThanOrEqual(2);
+    // Arith equation is also present.
+    expect(capturedTextCalls).toContain('3:45 AM + 20 minutes =');
+  });
+});
+
 describe('generateTimePdf — no answer leak on question pages', () => {
   it("the digital time string never appears in the question page's text", () => {
     // Without includeAnswerKey, the rendered text must NOT contain the
@@ -176,6 +266,11 @@ describe('generateTimePdf — no answer leak on question pages', () => {
     expect(capturedTextCalls).not.toContain('14:30');
     expect(capturedTextCalls).not.toContain('2:30');
   });
+
+  it('arith answer never appears on the question page', () => {
+    render([arith({})]);
+    expect(capturedTextCalls).not.toContain('4:05 AM');
+  });
 });
 
 describe('generateTimePdf — encoding safety', () => {
@@ -187,13 +282,31 @@ describe('generateTimePdf — encoding safety', () => {
   });
 
   it('no Math Operators block chars across the full grid + answer key', () => {
-    const settings: TimeSettings = {
+    const settings: TimeSettings = baseSettings({
       precisions: ['hour', 'half', 'quarter', '5min', '1min'],
       format: 'both',
-      gameMode: 'questions',
       questionCount: 20,
-      timeLimit: 0,
-    };
+    });
+    const qs = generateTimeQuestions(settings, 20);
+    generateTimePdf({
+      pages: [qs],
+      title: 'Maths',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    capturedTextCalls.forEach(t => {
+      expect(MATH_OPERATORS_BLOCK.test(t), `unsafe char in "${t}"`).toBe(false);
+    });
+  });
+
+  it('no Math Operators block chars across mixed-skill questions + answer key', () => {
+    const settings: TimeSettings = baseSettings({
+      skills: ['read', 'arith'],
+      precisions: ['5min'],
+      format: 'both',
+      arithDifficulty: 'medium',
+      questionCount: 20,
+    });
     const qs = generateTimeQuestions(settings, 20);
     generateTimePdf({
       pages: [qs],
@@ -209,13 +322,11 @@ describe('generateTimePdf — encoding safety', () => {
 
 describe('generateTimePdf — round-trip with generateTimeQuestions', () => {
   it('every generated question appears in the answer key in order', () => {
-    const settings: TimeSettings = {
+    const settings: TimeSettings = baseSettings({
       precisions: ['quarter'],
       format: '12h',
-      gameMode: 'questions',
       questionCount: 10,
-      timeLimit: 0,
-    };
+    });
     const qs = generateTimeQuestions(settings, 10);
     generateTimePdf({
       pages: [qs],
@@ -224,7 +335,7 @@ describe('generateTimePdf — round-trip with generateTimeQuestions', () => {
       includeAnswerKey: true,
     });
     qs.forEach((q, i) => {
-      expect(capturedTextCalls).toContain(`${i + 1}) ${q.answer12h}`);
+      expect(capturedTextCalls).toContain(`${i + 1}) ${expectedAnswerString(q)}`);
     });
   });
 
@@ -238,13 +349,12 @@ describe('generateTimePdf — round-trip with generateTimeQuestions', () => {
         capturedTextCalls.length = 0;
         capturedCircles.length = 0;
         capturedLines.length = 0;
-        const settings: TimeSettings = {
+        const settings: TimeSettings = baseSettings({
+          skills: ['read'],
           precisions: [p],
           format: fmt,
-          gameMode: 'questions',
           questionCount: 10,
-          timeLimit: 0,
-        };
+        });
         const qs = generateTimeQuestions(settings, 10);
         generateTimePdf({
           pages: [qs],
@@ -258,11 +368,37 @@ describe('generateTimePdf — round-trip with generateTimeQuestions', () => {
         });
         // Answer-key entries are present.
         qs.forEach((q, i) => {
-          const expected = q.format === '24h' ? q.answer24h : q.answer12h;
-          expect(capturedTextCalls).toContain(`${i + 1}) ${expected}`);
+          expect(capturedTextCalls).toContain(`${i + 1}) ${expectedAnswerString(q)}`);
         });
       }
     }
     expect(combos).toBe(15);
+  });
+
+  it('arith × difficulty × format matrix: every arith answer-key entry is present', () => {
+    const difficulties = ['easy', 'medium', 'hard'] as const;
+    const formats = ['12h', '24h'] as const;
+    for (const d of difficulties) {
+      for (const fmt of formats) {
+        capturedTextCalls.length = 0;
+        const settings: TimeSettings = baseSettings({
+          skills: ['arith'],
+          precisions: ['5min'],
+          format: fmt,
+          arithDifficulty: d,
+          questionCount: 5,
+        });
+        const qs = generateTimeQuestions(settings, 5);
+        generateTimePdf({
+          pages: [qs],
+          title: 'T',
+          subtitle: '',
+          includeAnswerKey: true,
+        });
+        qs.forEach((q, i) => {
+          expect(capturedTextCalls).toContain(`${i + 1}) ${expectedAnswerString(q)}`);
+        });
+      }
+    }
   });
 });

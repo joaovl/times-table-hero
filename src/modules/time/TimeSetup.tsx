@@ -1,15 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
 import { PrintWorksheetModal } from '@/components/PrintWorksheetModal';
 import type { UserProfile } from '@/lib/userStorage';
-import type { TimeFormat, TimePrecision, TimeSettings } from './logic';
+import type {
+  TimeArithDifficulty,
+  TimeFormat,
+  TimePrecision,
+  TimeSettings,
+  TimeSkill,
+} from './logic';
 import {
   generateTimeQuestions,
   TIME_PRECISION_LABEL,
   TIME_PRECISION_OPTIONS,
+  TIME_SKILL_LABEL,
+  TIME_SKILL_OPTIONS,
 } from './logic';
 import { generateTimePdf } from './pdf';
 import {
@@ -40,6 +48,15 @@ const TIME_LIMITS = [
   { label: '5 min', value: 300 },
   { label: '10 min', value: 600 },
 ];
+
+const ARITH_DIFFICULTY_HINTS: Record<TimeArithDifficulty, string> = {
+  easy: 'Within the same hour',
+  medium: 'Crosses the hour',
+  hard: 'Crosses midnight',
+};
+
+type SkillId = Exclude<TimeSkill, 'all'>;
+type SkillSelection = SkillId | 'all';
 
 const buttonClass = (active: boolean) =>
   cn(
@@ -92,6 +109,50 @@ function PrecisionChipPicker({ selected, onChange }: PrecisionChipPickerProps) {
   );
 }
 
+// Skill picker. Mirrors the arithmetic "Operation" card pattern: three chip
+// buttons {Read clock, Time arithmetic, All}. "All" is a shortcut that
+// selects both individual skills; clicking an individual chip narrows to
+// just that skill. Selection is always non-empty.
+interface SkillPickerProps {
+  selected: SkillId[];
+  onChange: (next: SkillId[]) => void;
+}
+
+function SkillPicker({ selected, onChange }: SkillPickerProps) {
+  const isAll = selected.length === TIME_SKILL_OPTIONS.length;
+  const handleClick = (id: SkillSelection) => {
+    if (id === 'all') {
+      onChange([...TIME_SKILL_OPTIONS]);
+      return;
+    }
+    onChange([id]);
+  };
+  const isActive = (id: SkillSelection): boolean => {
+    if (id === 'all') return isAll;
+    return !isAll && selected.includes(id);
+  };
+  const items: Array<{ id: SkillSelection; label: string }> = [
+    { id: 'read', label: TIME_SKILL_LABEL.read },
+    { id: 'arith', label: TIME_SKILL_LABEL.arith },
+    { id: 'all', label: 'All' },
+  ];
+  return (
+    <div className="grid grid-cols-3 gap-1 md:gap-2">
+      {items.map(it => (
+        <button
+          key={it.id}
+          type="button"
+          onClick={() => handleClick(it.id)}
+          aria-pressed={isActive(it.id)}
+          className={buttonClass(isActive(it.id))}
+        >
+          <span className="text-[13px] md:text-[15px]">{it.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function TimeSetup({
   onStart,
   currentUser,
@@ -100,8 +161,10 @@ export function TimeSetup({
   onNavigateToHub,
   autoOpenPrint = false,
 }: Props) {
+  const [skills, setSkills] = useState<SkillId[]>(['read']);
   const [precisions, setPrecisions] = useState<TimePrecision[]>(['hour']);
   const [format, setFormat] = useState<TimeFormat>('12h');
+  const [arithDifficulty, setArithDifficulty] = useState<TimeArithDifficulty>('easy');
   const [gameMode, setGameMode] = useState<'questions' | 'time'>('questions');
   const [questionCount, setQuestionCount] = useState(10);
   const [timeLimit, setTimeLimit] = useState(180);
@@ -112,8 +175,10 @@ export function TimeSetup({
   useEffect(() => {
     setIsLoaded(false);
     const s = getSavedTimeSettings(currentUser?.id);
+    setSkills(s.skills);
     setPrecisions(s.precisions);
     setFormat(s.format);
+    setArithDifficulty(s.arithDifficulty);
     setGameMode(s.gameMode);
     setQuestionCount(s.questionCount);
     setTimeLimit(s.timeLimit);
@@ -125,15 +190,27 @@ export function TimeSetup({
     if (!isLoaded) return;
     saveTimeSettings(
       {
+        skills,
         precisions,
         format,
+        arithDifficulty,
         gameMode,
         questionCount,
         timeLimit,
       },
       currentUser?.id
     );
-  }, [isLoaded, precisions, format, gameMode, questionCount, timeLimit, currentUser?.id]);
+  }, [
+    isLoaded,
+    skills,
+    precisions,
+    format,
+    arithDifficulty,
+    gameMode,
+    questionCount,
+    timeLimit,
+    currentUser?.id,
+  ]);
 
   useEffect(() => {
     if (autoOpenPrint && isLoaded) setPrintOpen(true);
@@ -141,23 +218,30 @@ export function TimeSetup({
 
   const start = () =>
     onStart({
+      skills,
       precisions,
       format,
+      arithDifficulty,
       gameMode,
       questionCount,
       timeLimit,
     });
 
+  // Visibility for the arith-only difficulty card.
+  const showArithDifficulty = skills.includes('arith');
+
   const handlePrintDownload = (pages: number, perPage: number, name: string) => {
     const settings: TimeSettings = {
+      skills,
       precisions,
       format,
+      arithDifficulty,
       gameMode: 'questions',
       questionCount: perPage,
       timeLimit: 0,
     };
     const pagesArr = Array.from({ length: pages }, () => generateTimeQuestions(settings, perPage));
-    const subtitle = `${perPage} Questions per page — ${buildTimeSummary(precisions, format)}`;
+    const subtitle = `${perPage} Questions per page — ${buildTimeSummary(precisions, format, skills)}`;
     const doc = generateTimePdf({
       pages: pagesArr,
       title: 'Maths Challenge — Time',
@@ -170,6 +254,11 @@ export function TimeSetup({
     setPrintConfig(next);
     saveTimePrintConfig(next, currentUser?.id);
   };
+
+  const summaryLine = useMemo(
+    () => buildTimeSummary(precisions, format, skills),
+    [precisions, format, skills]
+  );
 
   return (
     <div className="min-h-screen bg-background p-7">
@@ -185,12 +274,17 @@ export function TimeSetup({
           Time Practice
         </h1>
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Read the clock, type the time
+          {currentUser ? `Hi ${currentUser.name}! ` : ''}Read the clock or add minutes
         </p>
 
         <div className="mb-3 md:mb-6 flex items-center justify-end">
           <UserSelector currentUser={currentUser} onUserChange={onUserChange} onNewUser={onNewUser} />
         </div>
+
+        <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Skill</h2>
+          <SkillPicker selected={skills} onChange={setSkills} />
+        </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Precision</h2>
@@ -211,6 +305,31 @@ export function TimeSetup({
             ))}
           </div>
         </Card>
+
+        {showArithDifficulty && (
+          <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+            <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
+              Time arithmetic difficulty
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              {(['easy', 'medium', 'hard'] as const).map(d => (
+                <div key={d} className="flex flex-col gap-1 md:gap-1.5">
+                  <button
+                    onClick={() => setArithDifficulty(d)}
+                    className={buttonClass(arithDifficulty === d)}
+                  >
+                    <span className="text-[13px] md:text-[16px]">
+                      {d.charAt(0).toUpperCase() + d.slice(1)}
+                    </span>
+                  </button>
+                  <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">
+                    {ARITH_DIFFICULTY_HINTS[d]}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Game Mode</h2>
@@ -263,7 +382,7 @@ export function TimeSetup({
         initialQuestionsPerPage={printConfig.questionsPerPage}
         pageCountOptions={PRINT_PAGE_OPTIONS}
         questionsPerPageOptions={PRINT_PER_PAGE_OPTIONS}
-        summary={buildTimeSummary(precisions, format)}
+        summary={summaryLine}
         onDownload={handlePrintDownload}
       />
     </div>

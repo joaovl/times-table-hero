@@ -1,10 +1,14 @@
-// Time module — read-analog-clock practice.
+// Time module — multi-skill practice (read-analog-clock + time arithmetic).
 //
-// v1 scope: kid reads an analog clock and types the digital time. Time
-// arithmetic, draw-the-hands, and matching skills are deferred to v2.
+// v2 adds a "time arithmetic" skill ("3:45 + 20 minutes = ?") alongside the
+// original read-clock flow. Questions are a discriminated union over the
+// `skill` field; legacy read-clock questions retain their original shape so
+// the existing UI, PDF, and tests keep working unchanged.
 
 export type TimePrecision = 'hour' | 'half' | 'quarter' | '5min' | '1min';
 export type TimeFormat = '12h' | '24h' | 'both';
+export type TimeSkill = 'read' | 'arith' | 'all';
+export type TimeArithDifficulty = 'easy' | 'medium' | 'hard';
 
 export const TIME_PRECISION_OPTIONS: ReadonlyArray<TimePrecision> = [
   'hour',
@@ -22,30 +26,72 @@ export const TIME_PRECISION_LABEL: Record<TimePrecision, string> = {
   '1min': '1-min',
 };
 
-export interface TimeQuestion {
-  // Hours stored in 24h form (0..23); minutes 0..59. The picked display
-  // format determines which string the kid is expected to type.
-  hours: number;
-  minutes: number;
-  /** "h:mm" — 12h form. Hour always 1..12. */
+export const TIME_SKILL_OPTIONS: ReadonlyArray<Exclude<TimeSkill, 'all'>> = [
+  'read',
+  'arith',
+];
+
+export const TIME_SKILL_LABEL: Record<Exclude<TimeSkill, 'all'>, string> = {
+  read: 'Read clock',
+  arith: 'Time arithmetic',
+};
+
+/**
+ * Read-clock question — kid sees an analog clock and types the digital time.
+ * Field names match the v1 shape so existing tests, UI, and PDF code keep
+ * working without changes.
+ */
+export interface TimeReadQuestion {
+  skill: 'read';
+  hours: number;   // 24h-form (0..23)
+  minutes: number; // 0..59
+  /** "h:mm" — 12h form. */
   answer12h: string;
-  /** "hh:mm" — 24h form. Hour always 0..23, two-digit padded. */
+  /** "hh:mm" — 24h form. */
   answer24h: string;
-  /** The format chosen for this question's display & expected answer. */
+  /** Display & expected-answer format. */
   format: '12h' | '24h';
 }
 
+/**
+ * Time-arithmetic question — kid sees "3:45 + 20 minutes =" and types the
+ * resulting time. `startHour` is stored in 24h form (0..23). `deltaMinutes`
+ * is always positive; `sign` decides direction.
+ */
+export interface TimeArithQuestion {
+  skill: 'arith';
+  startHour: number;        // 0..23
+  startMinute: number;      // 0..59
+  deltaMinutes: number;     // > 0
+  sign: '+' | '-';
+  format: '12h' | '24h';
+  /** Pre-computed result string in the chosen `format`. */
+  answer: string;
+  /** Pre-computed result hour (0..23) and minute (0..59), for UI helpers. */
+  resultHour: number;
+  resultMinute: number;
+  /** True iff the result crosses midnight relative to the start. */
+  crossesMidnight: boolean;
+}
+
+export type TimeQuestion = TimeReadQuestion | TimeArithQuestion;
+
 export interface TimeSettings {
-  /** Non-empty subset of TimePrecision. Default ['hour']. */
+  /** Active skills. Non-empty. Default ['read']. */
+  skills: Array<Exclude<TimeSkill, 'all'>>;
+  /** Non-empty subset of TimePrecision (used by read-clock). Default ['hour']. */
   precisions: TimePrecision[];
   /** '12h' / '24h' / 'both' — 'both' picks per question. */
   format: TimeFormat;
+  /** Difficulty for time-arithmetic. Ignored by read-clock. */
+  arithDifficulty: TimeArithDifficulty;
   gameMode: 'questions' | 'time';
   questionCount: number;
   timeLimit: number;
 }
 
-// Allowed minute values per precision.
+// Allowed minute values per precision (used by read-clock; also seeds the
+// minute granularity of time-arithmetic).
 export function allowedMinutes(p: TimePrecision): number[] {
   switch (p) {
     case 'hour':
@@ -84,59 +130,109 @@ export function format24h(hours24: number, minutes: number): string {
 }
 
 /**
- * Parse a digital-time string the kid typed. Accepts:
- *   "h:mm", "hh:mm", "h:m", "hh:m".
- * Returns null for unparseable input.
+ * 12h form with AM/PM suffix. Used for time-arith answers in 12-hour mode so
+ * the kid disambiguates "4:05 AM" from "4:05 PM" when arithmetic crosses
+ * midday or midnight. Format: "h:mm AM" / "h:mm PM".
  */
-export function parseTimeInput(raw: string): { hours: number; minutes: number } | null {
+export function format12hAmPm(hours24: number, minutes: number): string {
+  const suffix = hours24 < 12 ? 'AM' : 'PM';
+  return `${format12h(hours24, minutes)} ${suffix}`;
+}
+
+/**
+ * Parse a digital-time string the kid typed. Accepts:
+ *   "h:mm", "hh:mm", "h:m", "hh:m" — optionally followed by an AM/PM marker
+ * (case-insensitive, optional dots, optional space). Returns null for
+ * unparseable input.
+ */
+export function parseTimeInput(
+  raw: string
+): { hours: number; minutes: number; ampm: 'am' | 'pm' | null } | null {
   if (typeof raw !== 'string') return null;
   const trimmed = raw.trim();
   if (!trimmed) return null;
-  const m = trimmed.match(/^(\d{1,2}):(\d{1,2})$/);
+  // Allow optional AM/PM suffix: " am", " a.m.", "PM", "p.m." etc.
+  const m = trimmed.match(/^(\d{1,2}):(\d{1,2})\s*([aApP]\.?\s*[mM]\.?)?$/);
   if (!m) return null;
   const hours = parseInt(m[1], 10);
   const minutes = parseInt(m[2], 10);
   if (isNaN(hours) || isNaN(minutes)) return null;
   if (minutes < 0 || minutes > 59) return null;
-  // 12h: 1..12. 24h: 0..23. Caller decides which range to accept;
-  // we accept the union (0..23) and let the matcher handle equivalence.
   if (hours < 0 || hours > 23) return null;
-  return { hours, minutes };
+  let ampm: 'am' | 'pm' | null = null;
+  if (m[3]) {
+    const letter = m[3].trim().toLowerCase().charAt(0);
+    ampm = letter === 'a' ? 'am' : 'pm';
+  }
+  return { hours, minutes, ampm };
 }
 
 /**
- * True iff `typed` matches the expected answer string for the given question.
- * Equivalence rules:
- *   - 12h answer "3:45" matches "3:45" or "03:45".
- *   - 24h answer "03:45" matches "03:45" or "3:45".
- *   - When `format` is '12h' the typed hour is interpreted as 1..12 and must
- *     equal the question's 12h hour; when '24h', typed must equal the 24h hour.
+ * True iff `typed` matches the expected digital-time answer for a read-clock
+ * question. AM/PM markers — if present in the typed string — are ignored
+ * for read-clock (the clock face does not disambiguate AM/PM).
+ *
+ *   - 12h: typed hour must be 1..12 and equal the 12h face hour.
+ *   - 24h: typed hour must be 0..23 and equal the 24h hour.
+ *   - "3:45" and "03:45" both accepted.
  */
-export function isAnswerCorrect(q: TimeQuestion, typed: string): boolean {
+export function isReadAnswerCorrect(q: TimeReadQuestion, typed: string): boolean {
   const parsed = parseTimeInput(typed);
   if (!parsed) return false;
   if (parsed.minutes !== q.minutes) return false;
 
   if (q.format === '12h') {
-    // Typed hour interpreted as 12h face hour. Reject 0 and >12.
     if (parsed.hours < 1 || parsed.hours > 12) return false;
     return parsed.hours === to12hHour(q.hours);
   }
-  // 24h
   return parsed.hours === q.hours;
 }
 
-function buildQuestion(format: '12h' | '24h', precision: TimePrecision): TimeQuestion {
+/**
+ * True iff `typed` matches the expected answer for a time-arith question.
+ * In 12-hour mode the expected answer carries an AM/PM marker — the typed
+ * string must also include one (case-insensitive). In 24-hour mode AM/PM
+ * is rejected (24-hour is unambiguous).
+ */
+export function isArithAnswerCorrect(q: TimeArithQuestion, typed: string): boolean {
+  const parsed = parseTimeInput(typed);
+  if (!parsed) return false;
+  if (parsed.minutes !== q.resultMinute) return false;
+
+  if (q.format === '12h') {
+    // Require AM/PM and the right hour.
+    if (parsed.ampm === null) return false;
+    if (parsed.hours < 1 || parsed.hours > 12) return false;
+    if (parsed.hours !== to12hHour(q.resultHour)) return false;
+    const expectedAmpm = q.resultHour < 12 ? 'am' : 'pm';
+    return parsed.ampm === expectedAmpm;
+  }
+  // 24h: reject AM/PM, require 0..23 match.
+  if (parsed.ampm !== null) return false;
+  return parsed.hours === q.resultHour;
+}
+
+/**
+ * True iff `typed` matches the expected answer for any TimeQuestion.
+ * Dispatches on the question's `skill`.
+ */
+export function isAnswerCorrect(q: TimeQuestion, typed: string): boolean {
+  if (q.skill === 'arith') return isArithAnswerCorrect(q, typed);
+  return isReadAnswerCorrect(q, typed);
+}
+
+function buildReadQuestion(format: '12h' | '24h', precision: TimePrecision): TimeReadQuestion {
   const minutes = pick(allowedMinutes(precision));
   let hours: number;
   if (format === '12h') {
-    // 12h clock face: kid sees 1..12, but we store the hour as a 24h value
-    // (1..12 — AM half is fine for v1; midnight handling deferred).
+    // 12h clock face: kid sees 1..12, stored as a 24h hour in the 1..12 range
+    // so the AM half is unambiguous for v1.
     hours = randInt(1, 12);
   } else {
     hours = randInt(0, 23);
   }
   return {
+    skill: 'read',
     hours,
     minutes,
     answer12h: format12h(hours, minutes),
@@ -145,14 +241,202 @@ function buildQuestion(format: '12h' | '24h', precision: TimePrecision): TimeQue
   };
 }
 
+/**
+ * Add a positive minute delta to a 24h time, wrapping modulo 1440 (24h).
+ * Returns the new hour/minute and a flag indicating whether the operation
+ * crossed midnight (the day boundary).
+ */
+function addMinutes(
+  hour: number,
+  minute: number,
+  delta: number
+): { hour: number; minute: number; crossed: boolean } {
+  const totalStart = hour * 60 + minute;
+  const totalEnd = totalStart + delta;
+  const wrapped = ((totalEnd % 1440) + 1440) % 1440;
+  const crossed = Math.floor(totalEnd / 1440) !== Math.floor(totalStart / 1440);
+  return {
+    hour: Math.floor(wrapped / 60),
+    minute: wrapped % 60,
+    crossed,
+  };
+}
+
+/** Pick a granularity for the time-arith delta. 5-minute steps feel natural
+ *  for kids; we use the chosen precision set to seed the step size, falling
+ *  back to 5 if only 'hour' / 'half' are selected. */
+function arithStepMinutes(precisions: TimePrecision[]): number {
+  if (precisions.includes('1min')) return 1;
+  if (precisions.includes('5min')) return 5;
+  if (precisions.includes('quarter')) return 15;
+  if (precisions.includes('half')) return 30;
+  return 60;
+}
+
+function buildArithQuestion(
+  format: '12h' | '24h',
+  precisions: TimePrecision[],
+  difficulty: TimeArithDifficulty
+): TimeArithQuestion {
+  const step = arithStepMinutes(precisions);
+  // Start time always uses an allowed minute from the chosen precisions so
+  // the picker shows times the kid recognises.
+  const minuteChoices = precisions.flatMap(p => allowedMinutes(p));
+  const dedupedMinutes = Array.from(new Set(minuteChoices));
+  const startMinute = pick(dedupedMinutes.length > 0 ? dedupedMinutes : [0]);
+
+  // Start hour bounds depend on difficulty so we can guarantee the result
+  // crosses (or does not cross) the relevant boundary.
+  let startHour: number;
+  let delta: number;
+  let sign: '+' | '-';
+
+  if (difficulty === 'easy') {
+    // Same-hour: the delta must keep us inside the same hour. Choose a
+    // delta strictly less than (60 - startMinute) for '+' or <= startMinute
+    // for '-'.
+    sign = Math.random() < 0.5 ? '+' : '-';
+    // Pick start hour anywhere; for 12h mode keep 1..12 for clarity.
+    startHour = format === '12h' ? randInt(1, 12) : randInt(0, 23);
+    if (sign === '+') {
+      const maxDelta = 59 - startMinute;
+      if (maxDelta < step) {
+        // No room — flip to '-' or shrink delta to 1.
+        sign = '-';
+        const cap = Math.max(1, startMinute);
+        delta = Math.max(1, Math.min(cap, step));
+      } else {
+        const maxSteps = Math.floor(maxDelta / step);
+        delta = step * randInt(1, Math.max(1, maxSteps));
+      }
+    } else {
+      const maxDelta = startMinute;
+      if (maxDelta < step) {
+        sign = '+';
+        const cap = Math.max(1, 59 - startMinute);
+        delta = Math.max(1, Math.min(cap, step));
+      } else {
+        const maxSteps = Math.floor(maxDelta / step);
+        delta = step * randInt(1, Math.max(1, maxSteps));
+      }
+    }
+  } else if (difficulty === 'medium') {
+    // Crosses at least one hour boundary but stays in-day.
+    sign = Math.random() < 0.5 ? '+' : '-';
+    // Delta 60..240 mins, snapped to step.
+    const stepsInRange = Math.max(1, Math.floor((240 - 60) / step));
+    delta = 60 + step * randInt(0, stepsInRange);
+    // Pick start hour with enough headroom to avoid crossing midnight.
+    if (sign === '+') {
+      // total = startHour*60 + startMinute + delta < 1440
+      const maxStartTotal = 1440 - delta - 1;
+      const minStartTotal = 60; // give space after midnight for the boundary to matter
+      const maxStartHour = Math.min(format === '12h' ? 12 : 23, Math.floor(maxStartTotal / 60));
+      const minStartHour = format === '12h' ? 1 : Math.max(0, Math.floor(minStartTotal / 60));
+      startHour = randInt(Math.min(minStartHour, maxStartHour), maxStartHour);
+    } else {
+      // total = startHour*60 + startMinute - delta >= 0
+      const minStartTotal = delta;
+      const minStartHour = Math.ceil(minStartTotal / 60);
+      const maxStartHour = format === '12h' ? 12 : 23;
+      startHour = randInt(Math.min(minStartHour, maxStartHour), maxStartHour);
+    }
+  } else {
+    // hard: crosses midnight. Bound delta to [60..360] so we have room on
+    // both sides for the start hour to satisfy the constraint regardless of
+    // the picked startMinute.
+    sign = Math.random() < 0.5 ? '+' : '-';
+    const stepsInRange = Math.max(1, Math.floor((360 - 60) / step));
+    delta = 60 + step * randInt(0, stepsInRange);
+    if (sign === '+') {
+      // Need startTotal + delta >= 1440, so
+      //   startHour*60 + startMinute >= 1440 - delta
+      //   startHour >= ceil((1440 - delta - startMinute) / 60).
+      const minStartHour = Math.max(
+        0,
+        Math.ceil((1440 - delta - startMinute) / 60)
+      );
+      const maxStartHour = 23;
+      startHour = randInt(Math.min(minStartHour, maxStartHour), maxStartHour);
+    } else {
+      // Need startTotal - delta < 0, so
+      //   startHour*60 + startMinute < delta
+      //   startHour < (delta - startMinute) / 60.
+      // delta is >= 60 so even startMinute=59 gives at least startHour=0 valid.
+      const maxStartHour = Math.max(
+        0,
+        Math.floor((delta - startMinute - 1) / 60)
+      );
+      startHour = randInt(0, maxStartHour);
+    }
+  }
+
+  // Compute the result, applying sign.
+  const signedDelta = sign === '+' ? delta : -delta;
+  const totalStart = startHour * 60 + startMinute;
+  const totalEnd = totalStart + signedDelta;
+  const wrapped = ((totalEnd % 1440) + 1440) % 1440;
+  const resultHour = Math.floor(wrapped / 60);
+  const resultMinute = wrapped % 60;
+  const crossesMidnight =
+    Math.floor(totalEnd / 1440) !== Math.floor(totalStart / 1440);
+
+  const answer =
+    format === '12h'
+      ? format12hAmPm(resultHour, resultMinute)
+      : format24h(resultHour, resultMinute);
+
+  return {
+    skill: 'arith',
+    startHour,
+    startMinute,
+    deltaMinutes: delta,
+    sign,
+    format,
+    answer,
+    resultHour,
+    resultMinute,
+    crossesMidnight,
+  };
+}
+
 export function generateTimeQuestions(settings: TimeSettings, count: number): TimeQuestion[] {
-  const precisions = settings.precisions.length > 0 ? settings.precisions : ['hour' as TimePrecision];
+  const precisions =
+    settings.precisions.length > 0 ? settings.precisions : ['hour' as TimePrecision];
+  const skills =
+    settings.skills && settings.skills.length > 0 ? settings.skills : ['read' as const];
   const out: TimeQuestion[] = [];
   for (let i = 0; i < count; i++) {
-    const precision = pick(precisions);
+    const skill = pick(skills);
     const fmt: '12h' | '24h' =
       settings.format === 'both' ? (Math.random() < 0.5 ? '12h' : '24h') : settings.format;
-    out.push(buildQuestion(fmt, precision));
+    if (skill === 'arith') {
+      out.push(buildArithQuestion(fmt, precisions, settings.arithDifficulty));
+    } else {
+      const precision = pick(precisions);
+      out.push(buildReadQuestion(fmt, precision));
+    }
   }
   return out;
 }
+
+/** Human-readable equation for a time-arith question, e.g. "3:45 + 20 minutes =". */
+export function formatArithEquation(q: TimeArithQuestion): string {
+  const start =
+    q.format === '12h'
+      ? format12hAmPm(q.startHour, q.startMinute)
+      : format24h(q.startHour, q.startMinute);
+  const minLabel = q.deltaMinutes === 1 ? 'minute' : 'minutes';
+  return `${start} ${q.sign} ${q.deltaMinutes} ${minLabel} =`;
+}
+
+/** Expected answer string for any question — used by the play screen for
+ *  the "you said" hint and by the PDF answer key. */
+export function expectedAnswerString(q: TimeQuestion): string {
+  if (q.skill === 'arith') return q.answer;
+  return q.format === '24h' ? q.answer24h : q.answer12h;
+}
+
+// Re-exported helper for tests that exercise the internal arithmetic engine
+// without going through the public picker.
+export { addMinutes as _addMinutesForTests };

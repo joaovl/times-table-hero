@@ -5,20 +5,30 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { TimeQuestion, TimeSettings } from './logic';
-import { generateTimeQuestions, isAnswerCorrect } from './logic';
+import {
+  expectedAnswerString,
+  formatArithEquation,
+  generateTimeQuestions,
+  isAnswerCorrect,
+} from './logic';
 import { ClockDisplay } from './ClockDisplay';
+
+export interface TimeIncorrect {
+  skill: 'read' | 'arith';
+  /** Plain-text prompt shown in the "times to practise" list. For
+   *  read-clock this is e.g. "Clock shows 3:45"; for arith it's the
+   *  equation, e.g. "3:45 + 20 minutes". */
+  prompt: string;
+  format: '12h' | '24h';
+  userAnswer: string | null;
+  correctAnswer: string;
+}
 
 export interface TimeGameResult {
   score: number;
   total: number;
   bestStreak: number;
-  incorrectQuestions: Array<{
-    hours: number;
-    minutes: number;
-    format: '12h' | '24h';
-    userAnswer: string | null;
-    correctAnswer: string;
-  }>;
+  incorrectQuestions: TimeIncorrect[];
   settings: TimeSettings;
 }
 
@@ -28,8 +38,10 @@ interface Props {
   onQuit: () => void;
 }
 
-function expectedString(q: TimeQuestion): string {
-  return q.format === '24h' ? q.answer24h : q.answer12h;
+function promptString(q: TimeQuestion): string {
+  if (q.skill === 'arith') return formatArithEquation(q).replace(/\s*=\s*$/, '');
+  const t = q.format === '24h' ? q.answer24h : q.answer12h;
+  return `Clock shows ${t}`;
 }
 
 export function TimePlay({ settings, onComplete, onQuit }: Props) {
@@ -37,7 +49,7 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
-  const [incorrect, setIncorrect] = useState<TimeGameResult['incorrectQuestions']>([]);
+  const [incorrect, setIncorrect] = useState<TimeIncorrect[]>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [typed, setTyped] = useState('');
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
@@ -104,11 +116,11 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
       setIncorrect(prev => [
         ...prev,
         {
-          hours: q.hours,
-          minutes: q.minutes,
+          skill: q.skill,
+          prompt: promptString(q),
           format: q.format,
           userAnswer: value || null,
-          correctAnswer: expectedString(q),
+          correctAnswer: expectedAnswerString(q),
         },
       ]);
     }
@@ -152,7 +164,21 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
     return `${m}:${r.toString().padStart(2, '0')}`;
   };
 
-  const placeholder = q.format === '24h' ? 'e.g. 14:30' : 'e.g. 3:45';
+  // Placeholder hint for the input. 12h-arith answers include AM/PM so the
+  // hint sample also includes it.
+  const placeholder =
+    q.skill === 'arith'
+      ? q.format === '24h' ? 'e.g. 14:05' : 'e.g. 4:05 PM'
+      : q.format === '24h' ? 'e.g. 14:30' : 'e.g. 3:45';
+
+  const typeHint =
+    q.skill === 'arith'
+      ? q.format === '24h'
+        ? 'Type the time (24-hour)'
+        : 'Type the time with AM or PM'
+      : q.format === '24h'
+        ? 'Type the time (24-hour)'
+        : 'Type the time (12-hour)';
 
   return (
     <div className="min-h-screen bg-background py-2 px-3 md:py-[26px] md:px-8">
@@ -199,15 +225,21 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
-          <div className="flex justify-center text-foreground">
-            <ClockDisplay hours={q.hours} minutes={q.minutes} size={240} />
-          </div>
-          <p className="mt-3 text-sm md:text-base text-muted-foreground">
-            Type the time {q.format === '24h' ? '(24-hour)' : '(12-hour)'}
-          </p>
+          {q.skill === 'arith' ? (
+            <div className="flex flex-col items-center text-foreground">
+              <div className="text-3xl md:text-5xl font-extrabold tracking-tight">
+                {formatArithEquation(q)}
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-center text-foreground">
+              <ClockDisplay hours={q.hours} minutes={q.minutes} size={240} />
+            </div>
+          )}
+          <p className="mt-3 text-sm md:text-base text-muted-foreground">{typeHint}</p>
           {feedback === 'incorrect' && (
             <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">
-              {expectedString(q)}
+              {expectedAnswerString(q)}
             </div>
           )}
           {feedback === 'correct' && (
@@ -220,7 +252,10 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
             <Input
               ref={inputRef}
               type="text"
-              inputMode="numeric"
+              // 12h-arith answers include AM/PM letters — keep the input
+              // text-based rather than numeric so the on-screen keyboard
+              // shows letters by default.
+              inputMode={q.skill === 'arith' && q.format === '12h' ? 'text' : 'numeric'}
               value={typed}
               onChange={e => setTyped(e.target.value)}
               placeholder={placeholder}
