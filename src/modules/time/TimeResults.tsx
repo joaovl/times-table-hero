@@ -4,20 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
-import type { ArithGameResult } from './ArithmeticPlay';
-import { saveArithSession } from './storage';
+import type { TimeGameResult } from './TimePlay';
+import { saveTimeSession } from './storage';
 
 interface Props {
-  result: ArithGameResult;
+  result: TimeGameResult;
   onPlayAgain: () => void;
   onNewGame: () => void;
   userId?: string;
 }
 
-const symbol = (op: 'add' | 'subtract' | 'multiply' | 'divide') =>
-  op === 'add' ? '+' : op === 'subtract' ? '−' : op === 'multiply' ? '×' : '÷';
-
-export function ArithmeticResults({ result, onPlayAgain, onNewGame, userId }: Props) {
+export function TimeResults({ result, onPlayAgain, onNewGame, userId }: Props) {
   const percentage = result.total > 0 ? Math.round((result.score / result.total) * 100) : 0;
   const stars =
     percentage === 100 ? 5
@@ -28,15 +25,13 @@ export function ArithmeticResults({ result, onPlayAgain, onNewGame, userId }: Pr
       : 0;
 
   useEffect(() => {
-    saveArithSession(
+    saveTimeSession(
       {
         date: new Date().toISOString(),
         score: result.score,
         total: result.total,
-        operation: result.settings.operation,
-        difficulty: result.settings.difficulty,
-        addSubFirstDigits: result.settings.addSubFirstDigits,
-        addSubSecondDigits: result.settings.addSubSecondDigits,
+        precisions: result.settings.precisions,
+        format: result.settings.format,
       },
       userId
     );
@@ -94,12 +89,13 @@ export function ArithmeticResults({ result, onPlayAgain, onNewGame, userId }: Pr
 
         {result.incorrectQuestions.length > 0 && (
           <Card className="mb-4 p-4">
-            <h3 className="mb-3 font-bold text-foreground">Questions to practise:</h3>
+            <h3 className="mb-3 font-bold text-foreground">Times to practise:</h3>
             <div className="space-y-2">
               {result.incorrectQuestions.map((q, idx) => (
                 <div key={idx} className="flex items-center justify-between rounded-lg bg-muted px-4 py-2">
                   <span className="font-medium">
-                    {q.operand1} {symbol(q.op)} {q.operand2} = {q.correctAnswer}
+                    {q.correctAnswer}
+                    <span className="ml-2 text-xs text-muted-foreground">({q.format})</span>
                   </span>
                   {q.userAnswer !== null && (
                     <span className="text-sm text-destructive">You said: {q.userAnswer}</span>

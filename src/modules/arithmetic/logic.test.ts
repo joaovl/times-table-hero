@@ -9,6 +9,9 @@ const baseSettings = (over: Partial<ArithSettings>): ArithSettings => ({
   addSubSecondDigits: [2],
   multiplyFirstDigits: [2],
   multiplySecondDigits: [1],
+  divideFirstDigits: [2],
+  divideSecondDigits: [1],
+  allowRemainders: true,
   gameMode: 'questions',
   questionCount: 10,
   timeLimit: 60,
@@ -226,8 +229,112 @@ describe('generateArithQuestions — multiply uses two independent digit pickers
   });
 });
 
+describe('generateArithQuestions — divide', () => {
+  it('without remainders: exact division (operand1 === operand2 * answer, no remainder field)', () => {
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'divide',
+        allowRemainders: false,
+        divideFirstDigits: [3],
+        divideSecondDigits: [1],
+      }),
+      40
+    );
+    qs.forEach(q => {
+      expect(q.op).toBe('divide');
+      expect(q.operand1).toBe(q.operand2 * q.answer);
+      // No remainder when allowRemainders is false (or remainder is zero).
+      expect(q.remainder === undefined || q.remainder === 0).toBe(true);
+    });
+  });
+
+  it('with remainders: operand1 === operand2 * answer + remainder, 0 ≤ remainder < divisor', () => {
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'divide',
+        allowRemainders: true,
+        divideFirstDigits: [3],
+        divideSecondDigits: [1],
+      }),
+      80
+    );
+    qs.forEach(q => {
+      expect(q.op).toBe('divide');
+      const r = q.remainder ?? 0;
+      expect(q.operand1).toBe(q.operand2 * q.answer + r);
+      expect(r).toBeGreaterThanOrEqual(0);
+      expect(r).toBeLessThan(q.operand2);
+    });
+  });
+
+  it('honours digit-set pairs: 3-digit ÷ 1-digit', () => {
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'divide',
+        allowRemainders: false,
+        divideFirstDigits: [3],
+        divideSecondDigits: [1],
+      }),
+      40
+    );
+    qs.forEach(q => {
+      expect(digitsOf(q.operand1)).toBe(3);
+      expect(digitsOf(q.operand2)).toBe(1);
+    });
+  });
+
+  it('honours digit-set pairs: 4-digit ÷ 2-digit with remainders', () => {
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'divide',
+        allowRemainders: true,
+        divideFirstDigits: [4],
+        divideSecondDigits: [2],
+      }),
+      40
+    );
+    qs.forEach(q => {
+      expect(digitsOf(q.operand1)).toBe(4);
+      expect(digitsOf(q.operand2)).toBe(2);
+    });
+  });
+
+  it('multi-select divide: every operand digit count is in its selected set', () => {
+    const firstSet = [3, 4];
+    const secondSet = [1, 2];
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'divide',
+        allowRemainders: false,
+        divideFirstDigits: firstSet,
+        divideSecondDigits: secondSet,
+      }),
+      120
+    );
+    qs.forEach(q => {
+      expect(firstSet).toContain(digitsOf(q.operand1));
+      expect(secondSet).toContain(digitsOf(q.operand2));
+      // Still exact.
+      expect(q.operand1).toBe(q.operand2 * q.answer);
+    });
+  });
+
+  it('divisor is never zero', () => {
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'divide',
+        allowRemainders: true,
+        divideFirstDigits: [1],
+        divideSecondDigits: [1],
+      }),
+      40
+    );
+    qs.forEach(q => expect(q.operand2).toBeGreaterThan(0));
+  });
+});
+
 describe('generateArithQuestions — all', () => {
-  it('mixes add, subtract, and multiply', () => {
+  it('mixes add, subtract, multiply, and divide', () => {
     const qs = generateArithQuestions(
       baseSettings({
         operation: 'all',
@@ -241,9 +348,10 @@ describe('generateArithQuestions — all', () => {
     expect(ops.has('add')).toBe(true);
     expect(ops.has('subtract')).toBe(true);
     expect(ops.has('multiply')).toBe(true);
+    expect(ops.has('divide')).toBe(true);
   });
 
-  it('balances ops evenly when count is divisible by 3', () => {
+  it('balances ops evenly when count is divisible by 4', () => {
     const qs = generateArithQuestions(
       baseSettings({
         operation: 'all',
@@ -251,15 +359,16 @@ describe('generateArithQuestions — all', () => {
         addSubSecondDigits: [2],
         difficulty: 'easy',
       }),
-      30
+      40
     );
-    expect(qs).toHaveLength(30);
+    expect(qs).toHaveLength(40);
     expect(qs.filter(q => q.op === 'add')).toHaveLength(10);
     expect(qs.filter(q => q.op === 'subtract')).toHaveLength(10);
     expect(qs.filter(q => q.op === 'multiply')).toHaveLength(10);
+    expect(qs.filter(q => q.op === 'divide')).toHaveLength(10);
   });
 
-  it('distributes remainder to first ops when count is not divisible', () => {
+  it('distributes remainder to first ops when count is not divisible by 4', () => {
     const qs = generateArithQuestions(
       baseSettings({
         operation: 'all',
@@ -270,10 +379,11 @@ describe('generateArithQuestions — all', () => {
       10
     );
     expect(qs).toHaveLength(10);
-    // 10 / 3 = 3 each, remainder 1 → 4, 3, 3
-    expect(qs.filter(q => q.op === 'add')).toHaveLength(4);
+    // 10 / 4 = 2 each, remainder 2 → 3, 3, 2, 2
+    expect(qs.filter(q => q.op === 'add')).toHaveLength(3);
     expect(qs.filter(q => q.op === 'subtract')).toHaveLength(3);
-    expect(qs.filter(q => q.op === 'multiply')).toHaveLength(3);
+    expect(qs.filter(q => q.op === 'multiply')).toHaveLength(2);
+    expect(qs.filter(q => q.op === 'divide')).toHaveLength(2);
   });
 });
 

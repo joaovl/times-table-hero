@@ -42,8 +42,9 @@ const render = (qs: ArithQuestion[]) =>
   generateArithPdf({ pages: [qs], title: 'Test', subtitle: '' });
 
 // Mirror the PDF-safe glyph used by pdf.ts (hyphen-minus, not U+2212).
-const symbolFor = (op: 'add' | 'subtract' | 'multiply') =>
-  op === 'add' ? '+' : op === 'subtract' ? '-' : '×';
+// Divide uses '÷' (U+00F7, which IS in Helvetica's WinAnsi encoding).
+const symbolFor = (op: 'add' | 'subtract' | 'multiply' | 'divide') =>
+  op === 'add' ? '+' : op === 'subtract' ? '-' : op === 'multiply' ? '×' : '÷';
 
 // PDF prefixes equations with the question number ("1.  7 + 8 =") so we
 // match by suffix when we don't know what the running number is.
@@ -124,6 +125,45 @@ describe('generateArithPdf — answer key', () => {
     // Answer key has its own header
     expect(capturedTextCalls).toContain('Maths — Answer Key');
   });
+
+  it('formats a divide answer with no remainder as a plain integer', () => {
+    capturedTextCalls.length = 0;
+    generateArithPdf({
+      pages: [[{ op: 'divide', operand1: 672, operand2: 8, answer: 84 }]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 84');
+  });
+
+  it('formats a divide answer with a remainder as "84 r 3"', () => {
+    capturedTextCalls.length = 0;
+    generateArithPdf({
+      pages: [[{ op: 'divide', operand1: 675, operand2: 8, answer: 84, remainder: 3 }]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 84 r 3');
+  });
+
+  it('mixes plain and remainder answers in the same key', () => {
+    capturedTextCalls.length = 0;
+    generateArithPdf({
+      pages: [
+        [
+          { op: 'divide', operand1: 24, operand2: 6, answer: 4 },
+          { op: 'divide', operand1: 25, operand2: 6, answer: 4, remainder: 1 },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 4');
+    expect(capturedTextCalls).toContain('2) 4 r 1');
+  });
 });
 
 describe('generateArithPdf — horizontal layout (≤ 3 digits)', () => {
@@ -142,6 +182,16 @@ describe('generateArithPdf — horizontal layout (≤ 3 digits)', () => {
   it('renders a multiply question as "a × b ="', () => {
     render([{ op: 'multiply', operand1: 12, operand2: 9, answer: 108 }]);
     expect(someTextEndsWith('12 × 9 =')).toBe(true);
+  });
+
+  it('renders a divide question as "a ÷ b =" with the WinAnsi divide glyph', () => {
+    render([{ op: 'divide', operand1: 672, operand2: 8, answer: 84 }]);
+    expect(someTextEndsWith('672 ÷ 8 =')).toBe(true);
+  });
+
+  it('renders a single-digit divide ("8 ÷ 2 =")', () => {
+    render([{ op: 'divide', operand1: 8, operand2: 2, answer: 4 }]);
+    expect(someTextEndsWith('8 ÷ 2 =')).toBe(true);
   });
 
   it('does not leak the answer in the rendered text', () => {
@@ -174,6 +224,13 @@ describe('generateArithPdf — column layout (≥ 4 digits)', () => {
     expect(capturedTextCalls).toContain('×');
   });
 
+  it('column divide (4-digit dividend) draws the divide symbol on its own', () => {
+    render([{ op: 'divide', operand1: 1240, operand2: 8, answer: 155 }]);
+    expect(capturedTextCalls).toContain('1240');
+    expect(capturedTextCalls).toContain('8');
+    expect(capturedTextCalls).toContain('÷');
+  });
+
   it('does not leak the answer in column layout', () => {
     render([{ op: 'add', operand1: 1234, operand2: 5678, answer: 6912 }]);
     expect(capturedTextCalls.filter(s => s === '6912')).toHaveLength(0);
@@ -188,6 +245,9 @@ describe('generateArithPdf — round-trip with generateArithQuestions', () => {
     addSubSecondDigits: [2],
     multiplyFirstDigits: [2],
     multiplySecondDigits: [1],
+    divideFirstDigits: [2],
+    divideSecondDigits: [1],
+    allowRemainders: false,
     gameMode: 'questions',
     questionCount: 20,
     timeLimit: 0,
@@ -235,6 +295,36 @@ describe('generateArithPdf — round-trip with generateArithQuestions', () => {
     qs.forEach(q => expect(containsColumn(q)).toBe(true));
   });
 
+  it('every divide question (3-digit dividend horizontal) appears in PDF', () => {
+    const qs = generateArithQuestions(
+      {
+        ...baseSettings,
+        operation: 'divide',
+        allowRemainders: false,
+        divideFirstDigits: [3],
+        divideSecondDigits: [1],
+      },
+      15
+    );
+    render(qs);
+    qs.forEach(q => expect(containsHorizontal(q)).toBe(true));
+  });
+
+  it('every 4-digit divide question appears in column form', () => {
+    const qs = generateArithQuestions(
+      {
+        ...baseSettings,
+        operation: 'divide',
+        allowRemainders: false,
+        divideFirstDigits: [4],
+        divideSecondDigits: [1],
+      },
+      10
+    );
+    render(qs);
+    qs.forEach(q => expect(containsColumn(q)).toBe(true));
+  });
+
   it("'all' mode: every 2-digit question matches its rendered horizontal form", () => {
     const qs = generateArithQuestions(
       {
@@ -242,8 +332,9 @@ describe('generateArithPdf — round-trip with generateArithQuestions', () => {
         operation: 'all',
         addSubFirstDigits: [2],
         addSubSecondDigits: [2],
+        // Divide defaults to 2-digit / 1-digit so all ops stay horizontal.
       },
-      30
+      40
     );
     render(qs);
     qs.forEach(q => expect(containsHorizontal(q)).toBe(true));
@@ -318,6 +409,9 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
     addSubSecondDigits: [2],
     multiplyFirstDigits: [2],
     multiplySecondDigits: [1],
+    divideFirstDigits: [2],
+    divideSecondDigits: [1],
+    allowRemainders: false,
     gameMode: 'questions',
     questionCount: 20,
     timeLimit: 0,
@@ -359,7 +453,7 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
   // If any future change breaks the path from a modal selection to a
   // correctly-rendered PDF, this test catches it.
   it('end-to-end: every modal selection produces a correct PDF', () => {
-    const ops: ArithOp[] = ['add', 'subtract', 'multiply', 'all'];
+    const ops: ArithOp[] = ['add', 'subtract', 'multiply', 'divide', 'all'];
     const diffs: ArithSettings['difficulty'][] = ['easy', 'medium', 'hard'];
     // Matrix of digit-set fixtures mirroring the chip-picker UI: single
     // chips, contiguous "up to N" ranges, and a sparse pick.
@@ -389,6 +483,11 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
               addSubSecondDigits: digitSet,
               multiplyFirstDigits: [2],
               multiplySecondDigits: [1],
+              // Divide digit sets follow the same matrix so every divide
+              // combo from 1-digit through 1-5 digit dividend is exercised.
+              divideFirstDigits: digitSet,
+              divideSecondDigits: [1],
+              allowRemainders: false,
               gameMode: 'questions',
               questionCount: perPage,
               timeLimit: 0,
@@ -427,7 +526,10 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
               expect(MATH_OPERATORS_BLOCK.test(t), `unsafe char in "${t}"`).toBe(false);
             });
 
-            // 3. No answer leak.
+            // 3. No answer leak (divide questions with a remainder DO emit
+            //    "= ans" — sorry, no: the on-page form doesn't include the
+            //    answer at all, and the answer-key form is "1) <ans>" never
+            //    "= <ans>". So this assertion still holds.
             qs.forEach(q => {
               expect(capturedTextCalls).not.toContain(`= ${q.answer}`);
             });
@@ -440,7 +542,7 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
   });
 
   it('exhaustive: no op/difficulty/digit combo writes a Mathematical Operators block char', () => {
-    const ops: ArithSettings['operation'][] = ['add', 'subtract', 'multiply', 'all'];
+    const ops: ArithSettings['operation'][] = ['add', 'subtract', 'multiply', 'divide', 'all'];
     const diffs: ArithSettings['difficulty'][] = ['easy', 'medium', 'hard'];
     const digitSets: number[][] = [
       [1],
@@ -464,6 +566,7 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
               difficulty,
               addSubFirstDigits: digitSet,
               addSubSecondDigits: digitSet,
+              divideFirstDigits: digitSet,
             },
             20
           );

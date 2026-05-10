@@ -25,12 +25,16 @@ describe('perPageOptionsForOp', () => {
     expect(perPageOptionsForOp('multiply')).toEqual([5, 10, 15, 20]);
   });
 
-  it("'all' caps at 20 because the mix can include multiply", () => {
+  it('divide caps at 20 (kid needs vertical room for long-division working)', () => {
+    expect(perPageOptionsForOp('divide')).toEqual([5, 10, 15, 20]);
+  });
+
+  it("'all' caps at 20 because the mix can include multiply or divide", () => {
     expect(perPageOptionsForOp('all')).toEqual([5, 10, 15, 20]);
   });
 
   it('every option list is sorted ascending and starts with the smallest non-zero count', () => {
-    for (const op of ['add', 'subtract', 'multiply', 'all'] as const) {
+    for (const op of ['add', 'subtract', 'multiply', 'divide', 'all'] as const) {
       const opts = perPageOptionsForOp(op);
       expect(opts.length).toBeGreaterThanOrEqual(3);
       expect(opts[0]).toBeGreaterThan(0);
@@ -75,43 +79,79 @@ describe('formatDigitSet', () => {
 describe('buildArithSummary', () => {
   it('shows operation, digit-set summary, and difficulty for add', () => {
     expect(
-      buildArithSummary('add', 'medium', [3], [1], [2], [1])
+      buildArithSummary('add', 'medium', [3], [1], [2], [1], [2], [1], true)
     ).toBe('+ • 3-digit + 1-digit • medium');
   });
 
   it('uses range phrasing when add/subtract digit set is contiguous', () => {
     expect(
-      buildArithSummary('subtract', 'easy', [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [2], [1])
+      buildArithSummary('subtract', 'easy', [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [2], [1], [2], [1], true)
     ).toBe('− • 1-5 digit + 1-5 digit • easy');
   });
 
   it('multiply summary shows only operation + digit pair', () => {
     expect(
-      buildArithSummary('multiply', 'easy', [2], [2], [5], [1])
+      buildArithSummary('multiply', 'easy', [2], [2], [5], [1], [2], [1], true)
     ).toBe('× • multiply 5-digit × 1-digit');
   });
 
   it('multiply with 5x5 reflects the parent\'s exact pick', () => {
     expect(
-      buildArithSummary('multiply', 'easy', [2], [2], [5], [5])
+      buildArithSummary('multiply', 'easy', [2], [2], [5], [5], [2], [1], true)
     ).toBe('× • multiply 5-digit × 5-digit');
   });
 
-  it("'all' summary shows op mix, add/sub digits, difficulty, and multiply pair", () => {
+  it('divide summary with remainders shows the (with remainders) note', () => {
     expect(
-      buildArithSummary('all', 'hard', [2], [2], [2], [2])
-    ).toBe('All (+ − ×) • 2-digit + 2-digit • hard • multiply 2-digit × 2-digit');
+      buildArithSummary('divide', 'easy', [2], [2], [2], [1], [3], [1], true)
+    ).toBe('÷ • divide 3-digit ÷ 1-digit (with remainders)');
   });
 
-  it('summary stays compact (≤ 80 chars even for the longest case)', () => {
+  it('divide summary without remainders omits the note', () => {
+    expect(
+      buildArithSummary('divide', 'easy', [2], [2], [2], [1], [3], [1], false)
+    ).toBe('÷ • divide 3-digit ÷ 1-digit');
+  });
+
+  it('divide summary reflects the divisor digit-set picker', () => {
+    expect(
+      buildArithSummary('divide', 'easy', [2], [2], [2], [1], [4], [2], false)
+    ).toBe('÷ • divide 4-digit ÷ 2-digit');
+  });
+
+  it("'all' summary shows op mix, add/sub digits, difficulty, multiply pair, and divide pair", () => {
+    expect(
+      buildArithSummary('all', 'hard', [2], [2], [2], [2], [2], [1], true)
+    ).toBe('All (+ − × ÷) • 2-digit + 2-digit • hard • multiply 2-digit × 2-digit • divide 2-digit ÷ 1-digit (with remainders)');
+  });
+
+  it("'all' summary respects the no-remainder toggle", () => {
+    expect(
+      buildArithSummary('all', 'easy', [2], [2], [2], [2], [2], [1], false)
+    ).toBe('All (+ − × ÷) • 2-digit + 2-digit • easy • multiply 2-digit × 2-digit • divide 2-digit ÷ 1-digit');
+  });
+
+  it('default args (no divide overrides, default remainders) summarise add cleanly', () => {
+    expect(buildArithSummary('add', 'easy', [2], [2], [2], [1])).toBe(
+      '+ • 2-digit + 2-digit • easy'
+    );
+  });
+
+  it('summary stays compact (≤ 130 chars even for the longest "all" case with widest ranges)', () => {
+    // 'all' with widest possible digit-sets across every operation now adds
+    // multiply + divide tails, so the budget needs to be wider than the
+    // pre-division 80-char cap. Stay well under one printed line.
     const longest = buildArithSummary(
       'all',
       'medium',
       [1, 2, 3, 4, 5],
       [1, 2, 3, 4, 5],
       [1, 2, 3, 4, 5],
-      [1, 2, 3, 4, 5]
+      [1, 2, 3, 4, 5],
+      [1, 2, 3, 4, 5],
+      [1, 2, 3, 4, 5],
+      true
     );
-    expect(longest.length).toBeLessThanOrEqual(80);
+    expect(longest.length).toBeLessThanOrEqual(130);
   });
 });

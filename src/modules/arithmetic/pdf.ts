@@ -21,9 +21,12 @@ const FOOTER_H = 12;
 // PDF-safe operation glyph. Uses ASCII hyphen-minus (U+002D) for subtract
 // because Helvetica's WinAnsi encoding has no glyph for the math-minus
 // character U+2212 — it would otherwise render as a stray quote mark.
-// '×' (U+00D7) and '+' are both in WinAnsi.
-function symbol(op: 'add' | 'subtract' | 'multiply'): string {
-  return op === 'add' ? '+' : op === 'subtract' ? '-' : '×';
+// '×' (U+00D7) and '÷' (U+00F7) and '+' are all in WinAnsi.
+function symbol(op: 'add' | 'subtract' | 'multiply' | 'divide'): string {
+  if (op === 'add') return '+';
+  if (op === 'subtract') return '-';
+  if (op === 'multiply') return '×';
+  return '÷';
 }
 
 function maxOperandDigits(qs: ArithQuestion[]): number {
@@ -151,6 +154,15 @@ function drawPage(
   doc.text('Good luck!', A4_W / 2, top + PRINT_H - 3, { align: 'center' });
 }
 
+// Format a single answer for the answer-key page. Divide questions with a
+// non-zero remainder render as "84 r 3"; everything else is just the answer.
+function formatAnswer(q: ArithQuestion): string {
+  if (q.op === 'divide' && q.remainder && q.remainder > 0) {
+    return `${q.answer} r ${q.remainder}`;
+  }
+  return `${q.answer}`;
+}
+
 function drawAnswerKeyPage(
   doc: jsPDF,
   pages: ArithQuestion[][],
@@ -201,7 +213,7 @@ function drawAnswerKeyPage(
     const row = Math.floor(i / cols);
     const x = left + col * colW + 2;
     const y = gridTop + row * rowH + rowH / 2 + (fs * 0.352778) * 0.35;
-    doc.text(`${i + 1}) ${q.answer}`, x, y);
+    doc.text(`${i + 1}) ${formatAnswer(q)}`, x, y);
   }
 }
 

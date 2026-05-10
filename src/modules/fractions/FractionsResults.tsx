@@ -4,20 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
-import type { ArithGameResult } from './ArithmeticPlay';
-import { saveArithSession } from './storage';
+import type { FractionGameResult } from './FractionsPlay';
+import { saveFractionSession } from './storage';
+import { skillOp } from './logic';
+import { FractionDisplay } from './FractionDisplay';
 
 interface Props {
-  result: ArithGameResult;
+  result: FractionGameResult;
   onPlayAgain: () => void;
   onNewGame: () => void;
   userId?: string;
 }
 
-const symbol = (op: 'add' | 'subtract' | 'multiply' | 'divide') =>
-  op === 'add' ? '+' : op === 'subtract' ? '−' : op === 'multiply' ? '×' : '÷';
+const opGlyph = (op: 'add' | 'sub') => (op === 'add' ? '+' : '−');
 
-export function ArithmeticResults({ result, onPlayAgain, onNewGame, userId }: Props) {
+export function FractionsResults({ result, onPlayAgain, onNewGame, userId }: Props) {
   const percentage = result.total > 0 ? Math.round((result.score / result.total) * 100) : 0;
   const stars =
     percentage === 100 ? 5
@@ -28,20 +29,20 @@ export function ArithmeticResults({ result, onPlayAgain, onNewGame, userId }: Pr
       : 0;
 
   useEffect(() => {
-    saveArithSession(
+    saveFractionSession(
       {
         date: new Date().toISOString(),
         score: result.score,
         total: result.total,
-        operation: result.settings.operation,
-        difficulty: result.settings.difficulty,
-        addSubFirstDigits: result.settings.addSubFirstDigits,
-        addSubSecondDigits: result.settings.addSubSecondDigits,
+        skills: result.settings.skills,
+        denominators: result.settings.denominators,
+        simplify: result.settings.simplify,
       },
       userId
     );
 
-    const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const reduced =
+      typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (reduced || percentage < 80) return;
     if (percentage === 100) {
       confetti({ origin: { y: 0.7 }, spread: 90, particleCount: 120, startVelocity: 45 });
@@ -97,12 +98,21 @@ export function ArithmeticResults({ result, onPlayAgain, onNewGame, userId }: Pr
             <h3 className="mb-3 font-bold text-foreground">Questions to practise:</h3>
             <div className="space-y-2">
               {result.incorrectQuestions.map((q, idx) => (
-                <div key={idx} className="flex items-center justify-between rounded-lg bg-muted px-4 py-2">
-                  <span className="font-medium">
-                    {q.operand1} {symbol(q.op)} {q.operand2} = {q.correctAnswer}
-                  </span>
+                <div
+                  key={idx}
+                  className="flex items-center justify-between gap-3 rounded-lg bg-muted px-4 py-2"
+                >
+                  <div className="flex items-center gap-2 text-foreground">
+                    <FractionDisplay frac={q.a} size="sm" />
+                    <span className="font-bold text-base">{opGlyph(skillOp(q.skill))}</span>
+                    <FractionDisplay frac={q.b} size="sm" />
+                    <span className="font-bold text-base">=</span>
+                    <FractionDisplay frac={q.correctAnswer} size="sm" />
+                  </div>
                   {q.userAnswer !== null && (
-                    <span className="text-sm text-destructive">You said: {q.userAnswer}</span>
+                    <span className="text-sm text-destructive whitespace-nowrap">
+                      You said: {q.userAnswer.num}/{q.userAnswer.den}
+                    </span>
                   )}
                 </div>
               ))}
@@ -111,8 +121,12 @@ export function ArithmeticResults({ result, onPlayAgain, onNewGame, userId }: Pr
         )}
 
         <div className="space-y-3">
-          <Button onClick={onPlayAgain} className="w-full py-6 text-xl font-bold shadow-button">Play Again</Button>
-          <Button onClick={onNewGame} variant="outline" className="w-full py-4 font-bold">Change Settings</Button>
+          <Button onClick={onPlayAgain} className="w-full py-6 text-xl font-bold shadow-button">
+            Play Again
+          </Button>
+          <Button onClick={onNewGame} variant="outline" className="w-full py-4 font-bold">
+            Change Settings
+          </Button>
         </div>
       </div>
     </div>

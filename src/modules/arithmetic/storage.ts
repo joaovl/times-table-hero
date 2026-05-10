@@ -11,6 +11,9 @@ const DEFAULT_SETTINGS: ArithSettings = {
   addSubSecondDigits: [2],
   multiplyFirstDigits: [2],
   multiplySecondDigits: [1],
+  divideFirstDigits: [2],
+  divideSecondDigits: [1],
+  allowRemainders: true,
   gameMode: 'questions',
   questionCount: 10,
   timeLimit: 180,
@@ -66,6 +69,9 @@ export function getSavedArithSettings(userId?: string): ArithSettings {
       multiplySecondDigits?: unknown;
       addSubFirstDigits?: unknown;
       addSubSecondDigits?: unknown;
+      divideFirstDigits?: unknown;
+      divideSecondDigits?: unknown;
+      allowRemainders?: unknown;
     };
 
     const merged: ArithSettings = {
@@ -76,6 +82,14 @@ export function getSavedArithSettings(userId?: string): ArithSettings {
       addSubSecondDigits: normaliseSet(parsed.addSubSecondDigits, DEFAULT_SETTINGS.addSubSecondDigits),
       multiplyFirstDigits: normaliseSet(parsed.multiplyFirstDigits, DEFAULT_SETTINGS.multiplyFirstDigits),
       multiplySecondDigits: normaliseSet(parsed.multiplySecondDigits, DEFAULT_SETTINGS.multiplySecondDigits),
+      // Divide fields may be missing from older persisted state; normaliseSet
+      // falls back to the default when the field isn't an array.
+      divideFirstDigits: normaliseSet(parsed.divideFirstDigits, DEFAULT_SETTINGS.divideFirstDigits),
+      divideSecondDigits: normaliseSet(parsed.divideSecondDigits, DEFAULT_SETTINGS.divideSecondDigits),
+      allowRemainders:
+        typeof parsed.allowRemainders === 'boolean'
+          ? parsed.allowRemainders
+          : DEFAULT_SETTINGS.allowRemainders,
       gameMode: parsed.gameMode ?? DEFAULT_SETTINGS.gameMode,
       questionCount: parsed.questionCount ?? DEFAULT_SETTINGS.questionCount,
       timeLimit: parsed.timeLimit ?? DEFAULT_SETTINGS.timeLimit,

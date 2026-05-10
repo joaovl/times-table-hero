@@ -11,6 +11,7 @@ import {
   MULTIPLY_DIGIT_OPTIONS,
   multiplyExample,
   addSubExample,
+  divideExample,
 } from './logic';
 import { generateArithPdf } from './pdf';
 import {
@@ -47,6 +48,7 @@ const DIFFICULTY_HINTS: Record<ArithOp, [string, string, string]> = {
   add: ['No carry', '1 carry', 'Multiple carries'],
   subtract: ['No borrow', '1 borrow', 'Multiple borrows'],
   multiply: ['1 × 1 digit', '1 × 2 digit', '2 × 2 / up to 3 digits'],
+  divide: ['Easy', 'Medium', 'Hard'],
   all: ['Easy', 'Medium', 'Hard'],
 };
 
@@ -60,7 +62,15 @@ const buttonClass = (active: boolean) =>
   );
 
 const opLabel = (op: ArithOp): string =>
-  op === 'add' ? '+' : op === 'subtract' ? '−' : op === 'multiply' ? '×' : '+−×';
+  op === 'add'
+    ? '+'
+    : op === 'subtract'
+      ? '−'
+      : op === 'multiply'
+        ? '×'
+        : op === 'divide'
+          ? '÷'
+          : '+−×÷';
 
 // Multi-select chip picker over a digit set. Always non-empty: the last
 // selected chip refuses to deselect, so generation always has something to
@@ -119,6 +129,9 @@ export function ArithmeticSetup({
   const [addSubSecondDigits, setAddSubSecondDigits] = useState<number[]>([2]);
   const [multiplyFirstDigits, setMultiplyFirstDigits] = useState<number[]>([2]);
   const [multiplySecondDigits, setMultiplySecondDigits] = useState<number[]>([1]);
+  const [divideFirstDigits, setDivideFirstDigits] = useState<number[]>([2]);
+  const [divideSecondDigits, setDivideSecondDigits] = useState<number[]>([1]);
+  const [allowRemainders, setAllowRemainders] = useState<boolean>(true);
   const [gameMode, setGameMode] = useState<'questions' | 'time'>('questions');
   const [questionCount, setQuestionCount] = useState(10);
   const [timeLimit, setTimeLimit] = useState(180);
@@ -138,6 +151,9 @@ export function ArithmeticSetup({
     setAddSubSecondDigits(s.addSubSecondDigits);
     setMultiplyFirstDigits(s.multiplyFirstDigits);
     setMultiplySecondDigits(s.multiplySecondDigits);
+    setDivideFirstDigits(s.divideFirstDigits);
+    setDivideSecondDigits(s.divideSecondDigits);
+    setAllowRemainders(s.allowRemainders);
     setGameMode(s.gameMode);
     setQuestionCount(s.questionCount);
     setTimeLimit(s.timeLimit);
@@ -155,6 +171,9 @@ export function ArithmeticSetup({
         addSubSecondDigits,
         multiplyFirstDigits,
         multiplySecondDigits,
+        divideFirstDigits,
+        divideSecondDigits,
+        allowRemainders,
         gameMode,
         questionCount,
         timeLimit,
@@ -169,6 +188,9 @@ export function ArithmeticSetup({
     addSubSecondDigits,
     multiplyFirstDigits,
     multiplySecondDigits,
+    divideFirstDigits,
+    divideSecondDigits,
+    allowRemainders,
     gameMode,
     questionCount,
     timeLimit,
@@ -187,6 +209,9 @@ export function ArithmeticSetup({
       addSubSecondDigits,
       multiplyFirstDigits,
       multiplySecondDigits,
+      divideFirstDigits,
+      divideSecondDigits,
+      allowRemainders,
       gameMode,
       questionCount,
       timeLimit,
@@ -200,13 +225,16 @@ export function ArithmeticSetup({
       addSubSecondDigits,
       multiplyFirstDigits,
       multiplySecondDigits,
+      divideFirstDigits,
+      divideSecondDigits,
+      allowRemainders,
       gameMode: 'questions',
       questionCount: perPage,
       timeLimit: 0,
     };
     const pagesArr = Array.from({ length: pages }, () => generateArithQuestions(settings, perPage));
     const subtitleParts: string[] = [opLabel(operation)];
-    if (operation !== 'multiply') {
+    if (operation === 'add' || operation === 'subtract' || operation === 'all') {
       subtitleParts.push(difficulty);
       subtitleParts.push(
         `${formatDigitSet(addSubFirstDigits)} + ${formatDigitSet(addSubSecondDigits)}`
@@ -215,6 +243,12 @@ export function ArithmeticSetup({
     if (operation === 'multiply' || operation === 'all') {
       subtitleParts.push(
         `${formatDigitSet(multiplyFirstDigits)} × ${formatDigitSet(multiplySecondDigits)}`
+      );
+    }
+    if (operation === 'divide' || operation === 'all') {
+      const r = allowRemainders ? ' (with remainders)' : '';
+      subtitleParts.push(
+        `${formatDigitSet(divideFirstDigits)} ÷ ${formatDigitSet(divideSecondDigits)}${r}`
       );
     }
     const subtitle = subtitleParts.join(' • ');
@@ -246,6 +280,11 @@ export function ArithmeticSetup({
   // user sees "23 + 7" or "23 − 7" depending on the picker.
   const exampleOp: 'add' | 'subtract' = operation === 'subtract' ? 'subtract' : 'add';
 
+  // Visibility flags for op-specific cards. 'all' shows every op's controls.
+  const showAddSub = operation === 'add' || operation === 'subtract' || operation === 'all';
+  const showMultiply = operation === 'multiply' || operation === 'all';
+  const showDivide = operation === 'divide' || operation === 'all';
+
   return (
     <div className="min-h-screen bg-background p-7">
       <div className="mx-auto max-w-[600px]">
@@ -269,11 +308,12 @@ export function ArithmeticSetup({
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Operation</h2>
-          <div className="grid grid-cols-4 gap-1 md:gap-2">
+          <div className="grid grid-cols-5 gap-1 md:gap-2">
             {([
               { id: 'add', label: '+' },
               { id: 'subtract', label: '−' },
               { id: 'multiply', label: '×' },
+              { id: 'divide', label: '÷' },
               { id: 'all', label: 'All' },
             ] as const).map(op => (
               <button key={op.id} onClick={() => setOperation(op.id)} className={buttonClass(operation === op.id)}>
@@ -283,12 +323,11 @@ export function ArithmeticSetup({
           </div>
         </Card>
 
-        {/* Digits + Difficulty drive add/subtract. Hidden when only multiply
-            is selected — multiply has its own digit pickers. Shown for 'all'
-            because 'all' includes add/subtract. Header names the operations
-            it affects so 'all' mode doesn't leave the parent guessing which
+        {/* Digits + Difficulty drive add/subtract. Shown for 'all' because
+            'all' includes add/subtract. Header names the operations it
+            affects so 'all' mode doesn't leave the parent guessing which
             "Digits" card is which. */}
-        {operation !== 'multiply' && (
+        {showAddSub && (
           <>
             <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
               <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
@@ -333,7 +372,7 @@ export function ArithmeticSetup({
             any mix from 1×1 up to 5×5 is allowed. The example below the
             pickers updates live so the parent sees exactly what kind of
             problem will be generated. */}
-        {(operation === 'multiply' || operation === 'all') && (
+        {showMultiply && (
           <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
             <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
               Multiply digits
@@ -354,6 +393,60 @@ export function ArithmeticSetup({
               Example: {multiplyExample(multiplyFirstDigits, multiplySecondDigits)}
             </p>
           </Card>
+        )}
+
+        {/* Divide digits — mirrors Multiply. First number is the dividend
+            (e.g. 672 in "672 ÷ 8"), second is the divisor. */}
+        {showDivide && (
+          <>
+            <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+              <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
+                Divide digits
+              </h2>
+              <DigitChipPicker
+                label="First number"
+                options={DIGIT_CHIP_OPTIONS}
+                selected={divideFirstDigits}
+                onChange={setDivideFirstDigits}
+              />
+              <DigitChipPicker
+                label="Second number"
+                options={DIGIT_CHIP_OPTIONS}
+                selected={divideSecondDigits}
+                onChange={setDivideSecondDigits}
+              />
+              <p className="text-[12px] md:text-[14px] text-foreground/70 text-center mt-3">
+                Example: {divideExample(divideFirstDigits, divideSecondDigits)}
+              </p>
+            </Card>
+
+            <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+              <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
+                Allow remainders
+              </h2>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setAllowRemainders(true)}
+                  aria-pressed={allowRemainders}
+                  className={buttonClass(allowRemainders)}
+                >
+                  <span className="text-[13px] md:text-[16px]">On</span>
+                </button>
+                <button
+                  onClick={() => setAllowRemainders(false)}
+                  aria-pressed={!allowRemainders}
+                  className={buttonClass(!allowRemainders)}
+                >
+                  <span className="text-[13px] md:text-[16px]">Off</span>
+                </button>
+              </div>
+              <p className="text-[10px] md:text-[12px] text-foreground/70 text-center mt-2 leading-tight">
+                {allowRemainders
+                  ? 'Some answers will have a remainder (e.g. 25 ÷ 4 = 6 r 1).'
+                  : 'Only exact divisions (e.g. 24 ÷ 4 = 6).'}
+              </p>
+            </Card>
+          </>
         )}
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
@@ -413,7 +506,10 @@ export function ArithmeticSetup({
           addSubFirstDigits,
           addSubSecondDigits,
           multiplyFirstDigits,
-          multiplySecondDigits
+          multiplySecondDigits,
+          divideFirstDigits,
+          divideSecondDigits,
+          allowRemainders
         )}
         onDownload={handlePrintDownload}
       />

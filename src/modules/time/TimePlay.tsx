@@ -4,62 +4,40 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { ArithQuestion, ArithSettings } from './logic';
-import { generateArithQuestions } from './logic';
+import type { TimeQuestion, TimeSettings } from './logic';
+import { generateTimeQuestions, isAnswerCorrect } from './logic';
+import { ClockDisplay } from './ClockDisplay';
 
-export interface ArithGameResult {
+export interface TimeGameResult {
   score: number;
   total: number;
   bestStreak: number;
   incorrectQuestions: Array<{
-    op: 'add' | 'subtract' | 'multiply' | 'divide';
-    operand1: number;
-    operand2: number;
-    userAnswer: number | null;
-    correctAnswer: number;
+    hours: number;
+    minutes: number;
+    format: '12h' | '24h';
+    userAnswer: string | null;
+    correctAnswer: string;
   }>;
-  settings: ArithSettings;
+  settings: TimeSettings;
 }
 
 interface Props {
-  settings: ArithSettings;
-  onComplete: (r: ArithGameResult) => void;
+  settings: TimeSettings;
+  onComplete: (r: TimeGameResult) => void;
   onQuit: () => void;
 }
 
-const symbol = (op: 'add' | 'subtract' | 'multiply' | 'divide') =>
-  op === 'add' ? '+' : op === 'subtract' ? '−' : op === 'multiply' ? '×' : '÷';
-
-// Horizontal display for divide and other ≤3-digit single-row questions.
-function HorizontalDisplay({ q }: { q: ArithQuestion }) {
-  return (
-    <div className="font-mono text-5xl md:text-6xl font-extrabold text-foreground tracking-wider inline-block">
-      {q.operand1} {symbol(q.op)} {q.operand2} =
-    </div>
-  );
+function expectedString(q: TimeQuestion): string {
+  return q.format === '24h' ? q.answer24h : q.answer12h;
 }
 
-function ColumnDisplay({ q }: { q: ArithQuestion }) {
-  const a = String(q.operand1);
-  const b = String(q.operand2);
-  const width = Math.max(a.length, b.length);
-  return (
-    <div className="font-mono text-5xl md:text-6xl font-extrabold text-foreground tracking-wider inline-block">
-      <div className="text-right" style={{ minWidth: `${width + 1}ch` }}>{a}</div>
-      <div className="text-right" style={{ minWidth: `${width + 1}ch` }}>
-        <span className="mr-2">{symbol(q.op)}</span>{b}
-      </div>
-      <div className="border-t-[3px] border-current mt-1" style={{ minWidth: `${width + 1}ch` }} />
-    </div>
-  );
-}
-
-export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
-  const [questions, setQuestions] = useState<ArithQuestion[]>([]);
+export function TimePlay({ settings, onComplete, onQuit }: Props) {
+  const [questions, setQuestions] = useState<TimeQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
-  const [incorrect, setIncorrect] = useState<ArithGameResult['incorrectQuestions']>([]);
+  const [incorrect, setIncorrect] = useState<TimeGameResult['incorrectQuestions']>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [typed, setTyped] = useState('');
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
@@ -70,12 +48,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
 
   useEffect(() => {
     const count = settings.gameMode === 'questions' ? settings.questionCount : 200;
-    // Force allowRemainders=false in online play because the kid only has a
-    // single typed-number input — there's no remainder field in the UI. The
-    // print path keeps the user's setting. (If/when a `[q] r [r]` two-field
-    // input lands here, drop this override.)
-    const playSettings: ArithSettings = { ...settings, allowRemainders: false };
-    setQuestions(generateArithQuestions(playSettings, count));
+    setQuestions(generateTimeQuestions(settings, count));
   }, [settings]);
 
   useEffect(() => {
@@ -110,14 +83,14 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
     }
   }, [isComplete, score, questionsAnswered, bestStreak, incorrect, settings, onComplete]);
 
-  const submit = useCallback((value: number | null) => {
+  const submit = useCallback((value: string) => {
     if (questions.length === 0) return;
     const q = questions[currentIndex];
-    const isCorrect = value === q.answer;
+    const correct = isAnswerCorrect(q, value);
 
     setQuestionsAnswered(p => p + 1);
 
-    if (isCorrect) {
+    if (correct) {
       setScore(p => p + 1);
       setStreak(p => {
         const next = p + 1;
@@ -130,11 +103,17 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
       setFeedback('incorrect');
       setIncorrect(prev => [
         ...prev,
-        { op: q.op, operand1: q.operand1, operand2: q.operand2, userAnswer: value, correctAnswer: q.answer },
+        {
+          hours: q.hours,
+          minutes: q.minutes,
+          format: q.format,
+          userAnswer: value || null,
+          correctAnswer: expectedString(q),
+        },
       ]);
     }
 
-    const delay = isCorrect ? 800 : 1400;
+    const delay = correct ? 800 : 1400;
     setTimeout(() => {
       setFeedback('none');
       const next = currentIndex + 1;
@@ -150,8 +129,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const parsed = parseInt(typed, 10);
-    submit(isNaN(parsed) ? null : parsed);
+    submit(typed.trim());
   };
 
   if (questions.length === 0) {
@@ -174,10 +152,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
     return `${m}:${r.toString().padStart(2, '0')}`;
   };
 
-  // Divide questions render horizontally for ≤3-digit dividends so they look
-  // like "672 ÷ 8 ="; 4+ digit dividends fall through to column form.
-  const dividendDigits = String(q.operand1).length;
-  const useHorizontalForDivide = q.op === 'divide' && dividendDigits <= 3;
+  const placeholder = q.format === '24h' ? 'e.g. 14:30' : 'e.g. 3:45';
 
   return (
     <div className="min-h-screen bg-background py-2 px-3 md:py-[26px] md:px-8">
@@ -219,14 +194,21 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
 
         <Card
           className={cn(
-            'mb-3 md:mb-[19px] py-6 md:py-10 px-4 md:px-8 text-center shadow-card transition-all',
+            'mb-3 md:mb-[19px] py-4 md:py-6 px-4 md:px-8 text-center shadow-card transition-all',
             feedback === 'correct' && 'animate-pop bg-success/10',
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
-          {useHorizontalForDivide ? <HorizontalDisplay q={q} /> : <ColumnDisplay q={q} />}
+          <div className="flex justify-center text-foreground">
+            <ClockDisplay hours={q.hours} minutes={q.minutes} size={240} />
+          </div>
+          <p className="mt-3 text-sm md:text-base text-muted-foreground">
+            Type the time {q.format === '24h' ? '(24-hour)' : '(12-hour)'}
+          </p>
           {feedback === 'incorrect' && (
-            <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">= {q.answer}</div>
+            <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">
+              {expectedString(q)}
+            </div>
           )}
           {feedback === 'correct' && (
             <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
@@ -237,18 +219,18 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
           <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
             <Input
               ref={inputRef}
-              type="number"
+              type="text"
               inputMode="numeric"
               value={typed}
               onChange={e => setTyped(e.target.value)}
-              placeholder="Type the answer"
+              placeholder={placeholder}
               className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
               autoFocus
             />
             <Button
               type="submit"
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
-              disabled={typed === ''}
+              disabled={typed.trim() === ''}
             >
               Check
             </Button>
