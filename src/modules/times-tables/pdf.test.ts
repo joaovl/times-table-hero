@@ -128,3 +128,28 @@ describe('generateWorksheetPdf — round-trip with generateQuestions', () => {
     qs.forEach(q => expect(rendered(q)).toBe(true));
   });
 });
+
+describe('generateWorksheetPdf — encoding safety (no Math Operators block chars)', () => {
+  // Any char in U+2200..U+22FF is outside Helvetica's WinAnsi encoding
+  // and would mis-render in the PDF (e.g. √ as a stray quote).
+  const MATH_OPERATORS_BLOCK = /[∀-⋿]/u;
+
+  it("'all' mode with full table set never writes Math Operators block chars", () => {
+    const qs = generateQuestions([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 100, 'all');
+    render(qs);
+    capturedTextCalls.forEach(t => {
+      expect(MATH_OPERATORS_BLOCK.test(t), `unrenderable char in "${t}"`).toBe(false);
+    });
+  });
+
+  it('every operation alone never writes Math Operators block chars', () => {
+    for (const op of ['multiply', 'divide', 'square', 'sqrt', 'all'] as const) {
+      capturedTextCalls.length = 0;
+      const qs = generateQuestions([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 50, op);
+      render(qs);
+      capturedTextCalls.forEach(t => {
+        expect(MATH_OPERATORS_BLOCK.test(t), `unrenderable char in "${t}" for op=${op}`).toBe(false);
+      });
+    }
+  });
+});

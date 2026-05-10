@@ -16,8 +16,12 @@ const PRINT_H = A4_H - MARGIN * 2;
 const HEADER_H = 22;
 const FOOTER_H = 12;
 
+// PDF-safe operation glyph. Uses ASCII hyphen-minus (U+002D) for subtract
+// because Helvetica's WinAnsi encoding has no glyph for the math-minus
+// character U+2212 — it would otherwise render as a stray quote mark.
+// '×' (U+00D7) and '+' are both in WinAnsi.
 function symbol(op: 'add' | 'subtract' | 'multiply'): string {
-  return op === 'add' ? '+' : op === 'subtract' ? '−' : '×';
+  return op === 'add' ? '+' : op === 'subtract' ? '-' : '×';
 }
 
 function maxOperandDigits(qs: ArithQuestion[]): number {
