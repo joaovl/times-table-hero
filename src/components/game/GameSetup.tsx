@@ -328,11 +328,13 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
         {/* Operation */}
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Operation</h2>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-5 gap-1 md:gap-2">
             {([
-              { id: 'multiply', label: '× Multiply' },
-              { id: 'divide', label: '÷ Divide' },
-              { id: 'both', label: '×÷ Both' },
+              { id: 'multiply', label: '×' },
+              { id: 'divide',   label: '÷' },
+              { id: 'square',   label: 'x²' },
+              { id: 'sqrt',     label: '√' },
+              { id: 'all',      label: 'All' },
             ] as const).map(op => (
               <button
                 key={op.id}
@@ -345,7 +347,7 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
                     : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
                 )}
               >
-                <span className="text-[13px] md:text-[16px]">{op.label}</span>
+                <span className="text-[15px] md:text-[18px]">{op.label}</span>
               </button>
             ))}
           </div>
