@@ -32,21 +32,15 @@ function maxOperandDigits(qs: ArithQuestion[]): number {
   return max;
 }
 
-// cols depends on operand digit count (column-form needs more horizontal space).
-// rows is derived from count so every question gets a cell — never silently drop.
+// 4-col grid for every digit size; font shrinks as operand digits grow so
+// the question still fits its cell. Rows derive from count so every
+// requested question gets a cell — renderer never silently drops.
 function gridSpec(maxDigits: number, count: number): { cols: number; rows: number; fs: number } {
-  let cols: number;
+  const cols = 4;
   let fs: number;
-  if (maxDigits <= 2) {
-    cols = 4;
-    fs = 14;
-  } else if (maxDigits === 3) {
-    cols = 3;
-    fs = 14;
-  } else {
-    cols = 2;
-    fs = 13;
-  }
+  if (maxDigits <= 2) fs = 14;
+  else if (maxDigits === 3) fs = 13;
+  else fs = 11;          // 4-5 digit column form fits at fs=11 in a 4-col grid
   const rows = Math.max(1, Math.ceil(count / cols));
   return { cols, rows, fs };
 }
