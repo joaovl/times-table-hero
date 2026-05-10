@@ -78,7 +78,7 @@ function SkillChipPicker({ selected, onChange }: SkillChipPickerProps) {
     }
   };
   return (
-    <div className="grid grid-cols-3 gap-1 md:gap-2">
+    <div className="grid grid-cols-3 md:grid-cols-5 gap-1 md:gap-2">
       {CHART_SKILL_OPTIONS.map(s => (
         <button
           key={s}
@@ -87,7 +87,7 @@ function SkillChipPicker({ selected, onChange }: SkillChipPickerProps) {
           aria-pressed={isSelected(s)}
           className={buttonClass(isSelected(s))}
         >
-          <span className="text-[13px] md:text-[15px]">{CHART_SKILL_LABEL[s]}</span>
+          <span className="text-[12px] md:text-[13px]">{CHART_SKILL_LABEL[s]}</span>
         </button>
       ))}
     </div>

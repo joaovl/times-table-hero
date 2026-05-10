@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-const { capturedTextCalls, capturedRects, capturedLines } = vi.hoisted(() => ({
+const { capturedTextCalls, capturedRects, capturedLines, capturedPolygons } = vi.hoisted(() => ({
   capturedTextCalls: [] as string[],
   capturedRects: [] as Array<{ x: number; y: number; w: number; h: number }>,
   capturedLines: [] as Array<{ x1: number; y1: number; x2: number; y2: number }>,
+  capturedPolygons: [] as Array<{ x: number; y: number; segments: number; style: string; closed: boolean }>,
 }));
 
 vi.mock('jspdf', () => {
@@ -19,6 +20,22 @@ vi.mock('jspdf', () => {
     }
     rect(x: number, y: number, w: number, h: number) {
       capturedRects.push({ x, y, w, h });
+    }
+    lines(
+      linesArr: number[][],
+      x: number,
+      y: number,
+      _scale?: [number, number],
+      style?: string,
+      closed?: boolean,
+    ) {
+      capturedPolygons.push({
+        x,
+        y,
+        segments: Array.isArray(linesArr) ? linesArr.length : 0,
+        style: style ?? '',
+        closed: !!closed,
+      });
     }
     circle() {}
     addPage() {}
@@ -50,6 +67,7 @@ beforeEach(() => {
   capturedTextCalls.length = 0;
   capturedRects.length = 0;
   capturedLines.length = 0;
+  capturedPolygons.length = 0;
 });
 
 // Unicode Math Operators block (U+2200..U+22FF). No char in this block is
@@ -214,6 +232,89 @@ describe('generateChartsPdf — encoding safety', () => {
   });
 });
 
+describe('generateChartsPdf — pie skills', () => {
+  const piePool = (skill: 'read-pie' | 'pie-fraction') => {
+    const settings: ChartSettings = {
+      skills: [skill],
+      maxValue: 50,
+      numCategories: 5, // ignored for pie skills (always 4)
+      gameMode: 'questions',
+      questionCount: 4,
+      timeLimit: 0,
+    };
+    return generateChartQuestions(settings, 4);
+  };
+
+  it('renders at least one polygon per slice for read-pie', () => {
+    const qs = piePool('read-pie');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '' });
+    // 4 slices per pie x 4 questions = 16 polygon draws minimum.
+    expect(capturedPolygons.length).toBeGreaterThanOrEqual(qs.length * 4);
+    // Each polygon must be closed (sector path closes back to center).
+    capturedPolygons.forEach(p => expect(p.closed).toBe(true));
+    // jsPDF fill+stroke style for filled sectors.
+    capturedPolygons.forEach(p => expect(p.style).toBe('FD'));
+  });
+
+  it('emits each pie category label into the legend', () => {
+    const qs = piePool('read-pie');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '' });
+    qs.forEach(q => q.categories.forEach(c => expect(capturedTextCalls).toContain(c.label)));
+  });
+
+  it('answer key shows category label for read-pie', () => {
+    const qs = piePool('read-pie');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '', includeAnswerKey: true });
+    qs.forEach((q, i) => {
+      expect(capturedTextCalls).toContain(`${i + 1}) ${q.expectedLabel}`);
+    });
+  });
+
+  it('answer key shows reduced fraction for pie-fraction', () => {
+    const qs = piePool('pie-fraction');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '', includeAnswerKey: true });
+    qs.forEach((q, i) => {
+      const f = q.expectedFraction!;
+      expect(capturedTextCalls).toContain(`${i + 1}) ${f.num}/${f.den}`);
+    });
+  });
+
+  it('no Math Operators block chars on full pie worksheet', () => {
+    const settings: ChartSettings = {
+      skills: ['read-pie', 'pie-fraction'],
+      maxValue: 100,
+      numCategories: 5,
+      gameMode: 'questions',
+      questionCount: 8,
+      timeLimit: 0,
+    };
+    const qs = generateChartQuestions(settings, 8);
+    generateChartsPdf({ pages: [qs], title: 'M', subtitle: '', includeAnswerKey: true });
+    capturedTextCalls.forEach(t => {
+      expect(MATH_OPERATORS_BLOCK.test(t), `unsafe char in "${t}"`).toBe(false);
+    });
+  });
+
+  it('mixed bar + pie worksheet renders both shapes', () => {
+    const settings: ChartSettings = {
+      skills: ['read-bar', 'read-pie', 'pie-fraction'],
+      maxValue: 100,
+      numCategories: 5,
+      gameMode: 'questions',
+      questionCount: 10,
+      timeLimit: 0,
+    };
+    const qs = generateChartQuestions(settings, 10);
+    generateChartsPdf({ pages: [qs], title: 'Mix', subtitle: '', includeAnswerKey: true });
+    // Should have BOTH rect-bars (bar chart) AND closed polygons (pie sectors)
+    // somewhere in the captured output.
+    const hasBars = qs.some(q => q.skill === 'read-bar');
+    const hasPie = qs.some(q => q.skill === 'read-pie' || q.skill === 'pie-fraction');
+    if (hasBars) expect(capturedRects.length).toBeGreaterThan(0);
+    if (hasPie) expect(capturedPolygons.length).toBeGreaterThan(0);
+  });
+});
+
 describe('generateChartsPdf — round-trip', () => {
   it('every generated answer appears in the answer key in order', () => {
     const settings: ChartSettings = {
@@ -250,6 +351,7 @@ describe('generateChartsPdf — round-trip', () => {
         capturedTextCalls.length = 0;
         capturedRects.length = 0;
         capturedLines.length = 0;
+        capturedPolygons.length = 0;
         const settings: ChartSettings = {
           skills: [skill],
           maxValue: 100,

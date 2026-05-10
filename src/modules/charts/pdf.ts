@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import type { ChartQuestion } from './logic';
-import { axisMax, axisTickCount } from './logic';
+import { axisMax, axisTickCount, buildPieSlices, isPieSkill } from './logic';
 
 export interface ChartsPdfOptions {
   pages: ChartQuestion[][];
@@ -107,6 +107,120 @@ function drawBarChart(
   doc.setDrawColor(0);
 }
 
+// Grey palette — printer-friendly, alternating shades so adjacent slices are
+// distinguishable on a black-and-white printer. RGB triples; jsPDF interprets
+// 3-arg setFillColor as RGB 0..255.
+const PIE_SLICE_GREYS: Array<[number, number, number]> = [
+  [210, 210, 210], // light grey
+  [255, 255, 255], // white
+  [180, 180, 180], // medium grey
+  [235, 235, 235], // very light grey
+];
+
+// Number of straight segments used to approximate a circular arc over a full
+// circle. ~32 segments around the circle reads as a clean pie at the cell
+// sizes we use.
+const ARC_SEGMENTS_FULL = 32;
+
+/**
+ * Draw a single pie sector as a closed polygon using doc.lines(). jsPDF has
+ * no native arc primitive, so we approximate the arc with short line segments
+ * and let jsPDF fill+stroke the polygon. The polygon's path is:
+ *   center -> arc start -> ...arc samples... -> arc end -> (close back to center)
+ *
+ * Highlight gives the slice a thicker stroke — printer-safe (no extra glyphs).
+ */
+function drawPieSector(
+  doc: jsPDF,
+  cx: number,
+  cy: number,
+  r: number,
+  startAngle: number,
+  endAngle: number,
+  fill: [number, number, number],
+  highlight: boolean,
+) {
+  const span = endAngle - startAngle;
+  // Scale segments so smaller slices still get a few samples.
+  const segs = Math.max(2, Math.ceil((span / (Math.PI * 2)) * ARC_SEGMENTS_FULL));
+
+  // Build vectors as deltas in jsPDF's lines() convention. The starting point
+  // is (cx, cy) — passed as x/y args. The first delta moves to the arc start.
+  const lines: number[][] = [];
+  const x0 = r * Math.cos(startAngle);
+  const y0 = r * Math.sin(startAngle);
+  let prevX = x0;
+  let prevY = y0;
+  lines.push([prevX, prevY]);
+  for (let s = 1; s <= segs; s++) {
+    const t = startAngle + (span * s) / segs;
+    const ax = r * Math.cos(t);
+    const ay = r * Math.sin(t);
+    lines.push([ax - prevX, ay - prevY]);
+    prevX = ax;
+    prevY = ay;
+  }
+  // Final segment from arc end back to center is supplied by closed=true.
+
+  doc.setFillColor(fill[0], fill[1], fill[2]);
+  doc.setDrawColor(40);
+  doc.setLineWidth(highlight ? 0.9 : 0.25);
+  // jsPDF.lines(linesArr, x, y, scale, style, closed)
+  doc.lines(lines, cx, cy, [1, 1], 'FD', true);
+}
+
+function drawPieChart(
+  doc: jsPDF,
+  q: ChartQuestion,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  // Reserve a bottom strip for the 2-column legend.
+  const legendH = 14;
+  const pieAreaH = h - legendH - 4;
+  const pieAreaW = w;
+  const cx = x + pieAreaW / 2;
+  const cy = y + pieAreaH / 2 + 1;
+  const r = Math.max(8, Math.min(pieAreaW, pieAreaH) / 2 - 2);
+
+  const values = q.categories.map(c => c.value);
+  const total = values.reduce((a, b) => a + b, 0);
+  const slices = buildPieSlices(values, total);
+  const highlightSet = new Set(q.skill === 'pie-fraction' ? q.targets : []);
+
+  for (let i = 0; i < slices.length; i++) {
+    const s = slices[i];
+    const fill = PIE_SLICE_GREYS[i % PIE_SLICE_GREYS.length];
+    drawPieSector(doc, cx, cy, r, s.startAngle, s.endAngle, fill, highlightSet.has(i));
+  }
+
+  // Legend: two columns of swatch + label below the pie.
+  const legendTop = y + pieAreaH + 2;
+  const swatchW = 3;
+  const swatchH = 3;
+  const colW = w / 2;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(40);
+  for (let i = 0; i < q.categories.length; i++) {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const lx = x + col * colW + 2;
+    const ly = legendTop + row * (swatchH + 1.5);
+    const fill = PIE_SLICE_GREYS[i % PIE_SLICE_GREYS.length];
+    doc.setFillColor(fill[0], fill[1], fill[2]);
+    doc.setDrawColor(40);
+    doc.setLineWidth(highlightSet.has(i) ? 0.6 : 0.2);
+    doc.rect(lx, ly, swatchW, swatchH, 'FD');
+    doc.text(q.categories[i].label, lx + swatchW + 1.2, ly + swatchH - 0.5);
+  }
+
+  doc.setTextColor(0);
+  doc.setDrawColor(0);
+}
+
 function drawCell(
   doc: jsPDF,
   q: ChartQuestion,
@@ -126,7 +240,11 @@ function drawCell(
   const promptH = 12; // mm of vertical space for the prompt + answer line
   const chartTop = cellY + 6;
   const chartH = cellH - promptH - 8;
-  drawBarChart(doc, q, cellX + CELL_PAD, chartTop, cellW - CELL_PAD * 2, chartH);
+  if (isPieSkill(q.skill)) {
+    drawPieChart(doc, q, cellX + CELL_PAD, chartTop, cellW - CELL_PAD * 2, chartH);
+  } else {
+    drawBarChart(doc, q, cellX + CELL_PAD, chartTop, cellW - CELL_PAD * 2, chartH);
+  }
 
   // Prompt text. Helvetica + ASCII labels so encoding stays clean.
   doc.setFont('helvetica', 'normal');
@@ -213,6 +331,15 @@ function drawPage(
   doc.text('Good luck!', A4_W / 2, top + PRINT_H - 3, { align: 'center' });
 }
 
+function answerKeyText(q: ChartQuestion): string {
+  const kind = q.expectedKind ?? 'number';
+  if (kind === 'label') return q.expectedLabel ?? String(q.answer);
+  if (kind === 'fraction' && q.expectedFraction) {
+    return `${q.expectedFraction.num}/${q.expectedFraction.den}`;
+  }
+  return String(q.answer);
+}
+
 function drawAnswerKeyPage(
   doc: jsPDF,
   pages: ChartQuestion[][],
@@ -261,7 +388,7 @@ function drawAnswerKeyPage(
     const row = Math.floor(i / cols);
     const x = left + col * colW + 2;
     const y = gridTop + row * rowH + rowH / 2 + (fs * 0.352778) * 0.35;
-    doc.text(`${i + 1}) ${q.answer}`, x, y);
+    doc.text(`${i + 1}) ${answerKeyText(q)}`, x, y);
   }
 }
 

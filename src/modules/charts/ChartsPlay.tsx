@@ -5,8 +5,9 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { ChartQuestion, ChartSettings } from './logic';
-import { generateChartQuestions, isAnswerCorrect } from './logic';
+import { generateChartQuestions, isAnswerCorrect, isPieSkill } from './logic';
 import { BarChart } from './BarChart';
+import { PieChart } from './PieChart';
 
 export interface ChartsGameResult {
   score: number;
@@ -15,7 +16,7 @@ export interface ChartsGameResult {
   incorrectQuestions: Array<{
     prompt: string;
     userAnswer: string | null;
-    correctAnswer: number;
+    correctAnswer: string;
   }>;
   settings: ChartSettings;
 }
@@ -26,6 +27,15 @@ interface Props {
   onQuit: () => void;
 }
 
+function formatCorrectAnswer(q: ChartQuestion): string {
+  const kind = q.expectedKind ?? 'number';
+  if (kind === 'label') return q.expectedLabel ?? String(q.answer);
+  if (kind === 'fraction' && q.expectedFraction) {
+    return `${q.expectedFraction.num}/${q.expectedFraction.den}`;
+  }
+  return String(q.answer);
+}
+
 export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
   const [questions, setQuestions] = useState<ChartQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -34,11 +44,14 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
   const [incorrect, setIncorrect] = useState<ChartsGameResult['incorrectQuestions']>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [typed, setTyped] = useState('');
+  const [fracNum, setFracNum] = useState('');
+  const [fracDen, setFracDen] = useState('');
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const numRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const count = settings.gameMode === 'questions' ? settings.questionCount : 200;
@@ -47,8 +60,15 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
 
   useEffect(() => {
     setTyped('');
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, [currentIndex, questions.length]);
+    setFracNum('');
+    setFracDen('');
+    const q = questions[currentIndex];
+    const kind = q?.expectedKind ?? 'number';
+    setTimeout(() => {
+      if (kind === 'fraction') numRef.current?.focus();
+      else inputRef.current?.focus();
+    }, 50);
+  }, [currentIndex, questions]);
 
   useEffect(() => {
     if (settings.gameMode !== 'time' || isComplete) return;
@@ -78,7 +98,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
   }, [isComplete, score, questionsAnswered, bestStreak, incorrect, settings, onComplete]);
 
   const submit = useCallback(
-    (value: string) => {
+    (value: string, displayValue?: string) => {
       if (questions.length === 0) return;
       const q = questions[currentIndex];
       const correct = isAnswerCorrect(q, value);
@@ -96,12 +116,13 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
       } else {
         setStreak(0);
         setFeedback('incorrect');
+        const shown = displayValue ?? value;
         setIncorrect(prev => [
           ...prev,
           {
             prompt: q.prompt,
-            userAnswer: value || null,
-            correctAnswer: q.answer,
+            userAnswer: shown || null,
+            correctAnswer: formatCorrectAnswer(q),
           },
         ]);
       }
@@ -127,6 +148,20 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
     submit(typed.trim());
   };
 
+  const handleFractionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const num = fracNum.trim();
+    const den = fracDen.trim();
+    if (!num || !den) return;
+    const combined = `${num}/${den}`;
+    submit(combined, combined);
+  };
+
+  const handleLabelChoice = (label: string) => {
+    if (feedback !== 'none') return;
+    submit(label, label);
+  };
+
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -136,6 +171,8 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
   }
 
   const q = questions[currentIndex];
+  const kind = q.expectedKind ?? 'number';
+  const isPie = isPieSkill(q.skill);
   const progress =
     settings.gameMode === 'questions'
       ? (currentIndex / settings.questionCount) * 100
@@ -203,18 +240,27 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
           )}
         >
           <div className="flex justify-center text-foreground">
-            <BarChart
-              categories={q.categories}
-              highlightIndices={q.targets}
-              width={360}
-              height={260}
-              unit={q.unit}
-            />
+            {isPie ? (
+              <PieChart
+                categories={q.categories}
+                highlightIndices={q.skill === 'pie-fraction' ? q.targets : []}
+                width={320}
+                height={260}
+              />
+            ) : (
+              <BarChart
+                categories={q.categories}
+                highlightIndices={q.targets}
+                width={360}
+                height={260}
+                unit={q.unit}
+              />
+            )}
           </div>
           <p className="mt-3 text-base md:text-lg font-medium text-foreground">{q.prompt}</p>
           {feedback === 'incorrect' && (
             <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">
-              {q.answer}
+              {formatCorrectAnswer(q)}
             </div>
           )}
           {feedback === 'correct' && (
@@ -222,7 +268,57 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
           )}
         </Card>
 
-        {feedback === 'none' && (
+        {feedback === 'none' && kind === 'label' && (
+          <div className="grid grid-cols-2 gap-2 md:gap-3">
+            {q.categories.map((c, i) => (
+              <Button
+                key={`mc-${i}-${c.label}`}
+                type="button"
+                onClick={() => handleLabelChoice(c.label)}
+                className="py-4 md:py-5 text-lg md:text-xl font-bold shadow-button bg-gradient-to-b from-primary via-primary/85 to-primary/65"
+              >
+                {c.label}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        {feedback === 'none' && kind === 'fraction' && (
+          <form onSubmit={handleFractionSubmit} className="space-y-2 md:space-y-[13px]">
+            <div className="flex items-center justify-center gap-2 md:gap-3">
+              <Input
+                ref={numRef}
+                type="text"
+                inputMode="numeric"
+                value={fracNum}
+                onChange={e => setFracNum(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="n"
+                className="h-12 md:h-[64px] w-20 md:w-24 text-center text-2xl md:text-4xl font-bold"
+                aria-label="numerator"
+                autoFocus
+              />
+              <div className="text-3xl md:text-5xl font-bold text-muted-foreground">/</div>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={fracDen}
+                onChange={e => setFracDen(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="d"
+                className="h-12 md:h-[64px] w-20 md:w-24 text-center text-2xl md:text-4xl font-bold"
+                aria-label="denominator"
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+              disabled={!fracNum.trim() || !fracDen.trim()}
+            >
+              Check
+            </Button>
+          </form>
+        )}
+
+        {feedback === 'none' && kind === 'number' && (
           <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
             <Input
               ref={inputRef}

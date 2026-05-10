@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   axisMax,
+  buildPieSlices,
   generateChartQuestions,
   isAnswerCorrect,
   parseChartAnswer,
+  parseFractionAnswer,
+  reduceFraction,
 } from './logic';
 import type { ChartSettings, ChartSkill } from './logic';
 
@@ -211,6 +214,184 @@ describe('isAnswerCorrect', () => {
     expect(isAnswerCorrect(q, ' 7 ')).toBe(true);
     expect(isAnswerCorrect(q, '8')).toBe(false);
     expect(isAnswerCorrect(q, 'seven')).toBe(false);
+  });
+});
+
+describe('generateChartQuestions — read-pie skill', () => {
+  it('always returns exactly 4 categories', () => {
+    const qs = generateChartQuestions(baseSettings({ skills: ['read-pie'] }), 30);
+    qs.forEach(q => {
+      expect(q.skill).toBe('read-pie');
+      expect(q.categories).toHaveLength(4);
+    });
+  });
+
+  it('targets is exactly one index pointing to the unique extremum', () => {
+    const qs = generateChartQuestions(baseSettings({ skills: ['read-pie'] }), 50);
+    qs.forEach(q => {
+      expect(q.targets).toHaveLength(1);
+      const values = q.categories.map(c => c.value);
+      const target = q.categories[q.targets[0]].value;
+      // The picked target is either the strict max OR the strict min.
+      const isMax = values.every(v => v <= target);
+      const isMin = values.every(v => v >= target);
+      expect(isMax || isMin).toBe(true);
+    });
+  });
+
+  it('expectedLabel matches the targeted category label', () => {
+    const qs = generateChartQuestions(baseSettings({ skills: ['read-pie'] }), 30);
+    qs.forEach(q => {
+      expect(q.expectedKind).toBe('label');
+      expect(q.expectedLabel).toBe(q.categories[q.targets[0]].label);
+    });
+  });
+
+  it('slice values are positive integers summing to a denominator in {8,10,12}', () => {
+    const qs = generateChartQuestions(baseSettings({ skills: ['read-pie'] }), 40);
+    qs.forEach(q => {
+      q.categories.forEach(c => {
+        expect(Number.isInteger(c.value)).toBe(true);
+        expect(c.value).toBeGreaterThanOrEqual(1);
+      });
+      const sum = q.categories.reduce((a, c) => a + c.value, 0);
+      expect([8, 10, 12]).toContain(sum);
+    });
+  });
+});
+
+describe('generateChartQuestions — pie-fraction skill', () => {
+  it('always returns exactly 4 categories', () => {
+    const qs = generateChartQuestions(baseSettings({ skills: ['pie-fraction'] }), 30);
+    qs.forEach(q => {
+      expect(q.skill).toBe('pie-fraction');
+      expect(q.categories).toHaveLength(4);
+    });
+  });
+
+  it('expectedFraction is reduced and matches target slice / total', () => {
+    const qs = generateChartQuestions(baseSettings({ skills: ['pie-fraction'] }), 40);
+    qs.forEach(q => {
+      expect(q.expectedKind).toBe('fraction');
+      expect(q.expectedFraction).toBeDefined();
+      const idx = q.targets[0];
+      const total = q.categories.reduce((a, c) => a + c.value, 0);
+      const expected = reduceFraction(q.categories[idx].value, total);
+      expect(q.expectedFraction).toEqual(expected);
+    });
+  });
+
+  it('one and only one target', () => {
+    const qs = generateChartQuestions(baseSettings({ skills: ['pie-fraction'] }), 30);
+    qs.forEach(q => expect(q.targets).toHaveLength(1));
+  });
+});
+
+describe('isAnswerCorrect — pie skills', () => {
+  it('read-pie: string label matches expectedLabel', () => {
+    const q = {
+      skill: 'read-pie' as const,
+      categories: [
+        { label: 'Apple', value: 6 },
+        { label: 'Banana', value: 3 },
+        { label: 'Cherry', value: 2 },
+        { label: 'Date', value: 1 },
+      ],
+      targets: [0],
+      prompt: 'Which slice is the biggest?',
+      answer: 6,
+      expectedKind: 'label' as const,
+      expectedLabel: 'Apple',
+      unit: 'fruit',
+    };
+    expect(isAnswerCorrect(q, 'Apple')).toBe(true);
+    expect(isAnswerCorrect(q, 'Banana')).toBe(false);
+    expect(isAnswerCorrect(q, '  Apple  ')).toBe(true);
+  });
+
+  it('pie-fraction: "n/d" matches reduced expected fraction', () => {
+    const q = {
+      skill: 'pie-fraction' as const,
+      categories: [
+        { label: 'Red', value: 3 },
+        { label: 'Blue', value: 3 },
+        { label: 'Green', value: 4 },
+        { label: 'Yellow', value: 2 },
+      ],
+      targets: [0],
+      prompt: 'What fraction?',
+      answer: 3,
+      expectedKind: 'fraction' as const,
+      expectedFraction: { num: 1, den: 4 }, // 3/12 reduced
+      unit: 'votes',
+    };
+    expect(isAnswerCorrect(q, '1/4')).toBe(true);
+    expect(isAnswerCorrect(q, '3/12')).toBe(true); // accepts unreduced
+    expect(isAnswerCorrect(q, '2/8')).toBe(true); // also reduces to 1/4
+    expect(isAnswerCorrect(q, '1/3')).toBe(false);
+    expect(isAnswerCorrect(q, 'foo')).toBe(false);
+    expect(isAnswerCorrect(q, '')).toBe(false);
+  });
+});
+
+describe('parseFractionAnswer', () => {
+  it('parses simple fractions and reduces them', () => {
+    expect(parseFractionAnswer('1/4')).toEqual({ num: 1, den: 4 });
+    expect(parseFractionAnswer('3/12')).toEqual({ num: 1, den: 4 });
+    expect(parseFractionAnswer(' 2 / 8 ')).toEqual({ num: 1, den: 4 });
+  });
+
+  it('rejects garbage and zero-denominator', () => {
+    expect(parseFractionAnswer('')).toBeNull();
+    expect(parseFractionAnswer('foo')).toBeNull();
+    expect(parseFractionAnswer('1/0')).toBeNull();
+    expect(parseFractionAnswer('1.5/4')).toBeNull();
+    expect(parseFractionAnswer('-1/4')).toBeNull(); // we only accept non-negative
+  });
+});
+
+describe('reduceFraction', () => {
+  it('reduces common fractions', () => {
+    expect(reduceFraction(2, 4)).toEqual({ num: 1, den: 2 });
+    expect(reduceFraction(6, 8)).toEqual({ num: 3, den: 4 });
+    expect(reduceFraction(5, 10)).toEqual({ num: 1, den: 2 });
+  });
+
+  it('zero denominator returns zero fraction safely', () => {
+    expect(reduceFraction(0, 0)).toEqual({ num: 0, den: 1 });
+  });
+});
+
+describe('buildPieSlices', () => {
+  it('emits as many slices as values', () => {
+    const slices = buildPieSlices([1, 2, 3, 4]);
+    expect(slices).toHaveLength(4);
+  });
+
+  it('slice spans sum to 2*PI', () => {
+    const slices = buildPieSlices([3, 3, 2, 4]);
+    const sumSpan = slices.reduce((acc, s) => acc + (s.endAngle - s.startAngle), 0);
+    expect(sumSpan).toBeCloseTo(Math.PI * 2);
+  });
+
+  it('first slice starts at -PI/2 (top of the circle)', () => {
+    const slices = buildPieSlices([1, 1, 1, 1]);
+    expect(slices[0].startAngle).toBeCloseTo(-Math.PI / 2);
+  });
+
+  it('slices are contiguous (end of i == start of i+1)', () => {
+    const slices = buildPieSlices([2, 5, 1, 4]);
+    for (let i = 1; i < slices.length; i++) {
+      expect(slices[i].startAngle).toBeCloseTo(slices[i - 1].endAngle);
+    }
+  });
+
+  it('mid-angle is between start and end', () => {
+    const slices = buildPieSlices([3, 3, 3, 3]);
+    slices.forEach(s => {
+      expect(s.midAngle).toBeGreaterThan(s.startAngle - 1e-9);
+      expect(s.midAngle).toBeLessThan(s.endAngle + 1e-9);
+    });
   });
 });
 
