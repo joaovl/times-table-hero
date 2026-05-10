@@ -13,6 +13,13 @@ import {
 } from './storage';
 import { generateQuestions } from './logic';
 import { generateWorksheetPdf } from './pdf';
+import {
+  PRINT_PAGE_OPTIONS,
+  PRINT_PER_PAGE_OPTIONS,
+  formatTablesRange,
+  formatPdfOpsLabel,
+  buildPrintSummary,
+} from './printConfig';
 import type { UserProfile } from '@/lib/userStorage';
 import { UserSelector } from '@/components/UserSelector';
 import { PrintWorksheetModal } from '@/components/PrintWorksheetModal';
@@ -26,9 +33,6 @@ interface TimesTablesSetupProps {
   onNavigateToHub?: () => void;
   autoOpenPrint?: boolean;
 }
-
-const PRINT_PAGE_OPTIONS = [1, 3, 5, 10, 20];
-const PRINT_PER_PAGE_OPTIONS = [20, 40, 60, 80, 100];
 
 const TABLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
@@ -519,44 +523,3 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
   );
 }
 
-function buildPrintSummary(operation: Operation, tables: number[]): string {
-  const opLabel: Record<Operation, string> = {
-    multiply: '×',
-    divide: '÷',
-    square: 'x²',
-    sqrt: '√',
-    all: 'All (× ÷ x² √)',
-  };
-  const sorted = [...tables].sort((a, b) => a - b);
-  const isFull = sorted.length >= 12 && sorted[0] >= 1 && sorted[sorted.length - 1] <= 12;
-  const tablesLabel = sorted.length === 0
-    ? 'no tables'
-    : isFull
-      ? '1–12'
-      : sorted.join(', ');
-  return `${opLabel[operation]} • Tables ${tablesLabel}`;
-}
-
-// Compact "Tables 1–12" / "Tables 1, 3, 5" / "Table 7" for the PDF header.
-function formatTablesRange(sorted: number[]): string {
-  if (sorted.length === 0) return 'no tables';
-  if (sorted.length === 1) return `Table ${sorted[0]}`;
-  const min = sorted[0];
-  const max = sorted[sorted.length - 1];
-  // Contiguous? sorted has every integer from min..max
-  if (sorted.length === max - min + 1) return `Tables ${min}–${max}`;
-  return `Tables ${sorted.join(', ')}`;
-}
-
-// Helvetica's WinAnsi encoding has no glyph for U+221A (√), so spell it out
-// when the operation includes square roots. Other glyphs (×, ÷, ²) are in
-// WinAnsi and render correctly.
-function formatPdfOpsLabel(operation: Operation): string {
-  switch (operation) {
-    case 'multiply': return '×';
-    case 'divide':   return '÷';
-    case 'square':   return 'x²';
-    case 'sqrt':     return 'square roots';
-    case 'all':      return '× ÷ x² square roots';
-  }
-}

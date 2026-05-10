@@ -96,15 +96,37 @@ describe('generateArithQuestions — subtract', () => {
   });
 });
 
-describe('generateArithQuestions — multiply digit cap', () => {
-  it('5-digit setting still caps multiplication operands at 3 digits max', () => {
+describe('generateArithQuestions — multiply respects digit setting', () => {
+  it('5-digit hard multiply produces a 5-digit operand', () => {
     const qs = generateArithQuestions(
       baseSettings({ operation: 'multiply', difficulty: 'hard', digitMode: { kind: 'exact', digits: 5 } }),
-      40
+      20
     );
     qs.forEach(q => {
-      expect(digitsOf(q.operand1)).toBeLessThanOrEqual(3);
-      expect(digitsOf(q.operand2)).toBeLessThanOrEqual(3);
+      const max = Math.max(digitsOf(q.operand1), digitsOf(q.operand2));
+      expect(max).toBe(5);
+    });
+  });
+
+  it('4-digit hard multiply produces a 4-digit operand', () => {
+    const qs = generateArithQuestions(
+      baseSettings({ operation: 'multiply', difficulty: 'hard', digitMode: { kind: 'exact', digits: 4 } }),
+      20
+    );
+    qs.forEach(q => {
+      const max = Math.max(digitsOf(q.operand1), digitsOf(q.operand2));
+      expect(max).toBe(4);
+    });
+  });
+
+  it('3-digit hard multiply produces a 3-digit operand (with 2-digit other)', () => {
+    const qs = generateArithQuestions(
+      baseSettings({ operation: 'multiply', difficulty: 'hard', digitMode: { kind: 'exact', digits: 3 } }),
+      20
+    );
+    qs.forEach(q => {
+      const max = Math.max(digitsOf(q.operand1), digitsOf(q.operand2));
+      expect(max).toBe(3);
     });
   });
 });

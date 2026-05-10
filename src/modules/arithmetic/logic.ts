@@ -65,10 +65,26 @@ function pickDigitCount(mode: DigitMode, cap: number): number {
   return randInt(1, target);
 }
 
+// Multiplication scales with the user's digit setting. For very wide operands
+// the second factor stays small (1-digit) so the working stays kid-friendly:
+// 5-digit × 1 is a standard school "long multiplication" exercise; 5-digit ×
+// 5-digit is not.
 function multiplyDigitPair(diff: Difficulty, cap: number): [number, number] {
-  if (diff === 'easy') return [Math.min(1, cap), Math.min(1, cap)];
-  if (diff === 'medium') return [Math.min(1, cap), Math.min(2, cap)];
-  if (cap >= 2) return [2, Math.min(2, cap)];
+  if (diff === 'easy') {
+    if (cap >= 2) return [Math.min(2, cap), 1];
+    return [1, 1];
+  }
+  if (diff === 'medium') {
+    if (cap >= 4) return [cap, 1];
+    if (cap >= 3) return [3, 1];
+    if (cap >= 2) return [2, 2];
+    return [1, 1];
+  }
+  // hard
+  if (cap >= 5) return [5, 1];
+  if (cap >= 4) return [4, 2];
+  if (cap >= 3) return [3, 2];
+  if (cap >= 2) return [2, 2];
   return [1, 1];
 }
 
@@ -76,7 +92,7 @@ function trySample(settings: ArithSettings, op: 'add' | 'subtract' | 'multiply')
   const { difficulty, digitMode } = settings;
 
   if (op === 'multiply') {
-    const cap = Math.min(digitMode.digits, 3);
+    const cap = digitMode.digits;
     const [d1, d2] = multiplyDigitPair(difficulty, cap);
     const r1 = digitsToRange(d1);
     const r2 = digitsToRange(d2);

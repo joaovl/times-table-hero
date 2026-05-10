@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,11 @@ import {
   getSavedArithPrintConfig,
   saveArithPrintConfig,
 } from './storage';
+import {
+  PRINT_PAGE_OPTIONS,
+  perPageOptionsForOp,
+  buildArithSummary,
+} from './printConfig';
 
 interface Props {
   onStart: (s: ArithSettings) => void;
@@ -49,12 +54,6 @@ const buttonClass = (active: boolean) =>
       : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
   );
 
-const PRINT_PAGE_OPTIONS = [1, 3, 5, 10, 20];
-
-// 40 max keeps each row at ≥26mm so kids have room to write their answer
-// below the rule (column form) or after the equals sign (horizontal).
-const PRINT_PER_PAGE_OPTIONS = [10, 20, 30, 40];
-
 const opLabel = (op: ArithOp): string =>
   op === 'add' ? '+' : op === 'subtract' ? '−' : op === 'multiply' ? '×' : '+−×';
 
@@ -75,6 +74,8 @@ export function ArithmeticSetup({
   const [isLoaded, setIsLoaded] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [printConfig, setPrintConfig] = useState({ pageCount: 1, questionsPerPage: 30 });
+
+  const perPageOptions = useMemo(() => perPageOptionsForOp(operation), [operation]);
 
 
   useEffect(() => {
@@ -260,7 +261,7 @@ export function ArithmeticSetup({
         initialPageCount={printConfig.pageCount}
         initialQuestionsPerPage={printConfig.questionsPerPage}
         pageCountOptions={PRINT_PAGE_OPTIONS}
-        questionsPerPageOptions={PRINT_PER_PAGE_OPTIONS}
+        questionsPerPageOptions={perPageOptions}
         summary={buildArithSummary(operation, digitMode, difficulty)}
         onDownload={handlePrintDownload}
       />
@@ -268,15 +269,3 @@ export function ArithmeticSetup({
   );
 }
 
-function buildArithSummary(operation: ArithOp, digitMode: DigitMode, difficulty: Difficulty): string {
-  const opPart: Record<ArithOp, string> = {
-    add: '+',
-    subtract: '−',
-    multiply: '×',
-    all: 'All (+ − ×)',
-  };
-  const digitsPart = digitMode.kind === 'exact'
-    ? `exactly ${digitMode.digits}-digit`
-    : `up to ${digitMode.digits}-digit`;
-  return `${opPart[operation]} • ${digitsPart} • ${difficulty}`;
-}

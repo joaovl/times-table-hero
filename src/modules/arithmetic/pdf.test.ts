@@ -31,7 +31,8 @@ vi.mock('jspdf', () => {
 
 import { generateArithPdf } from './pdf';
 import { generateArithQuestions } from './logic';
-import type { ArithQuestion, ArithSettings } from './logic';
+import type { ArithOp, ArithQuestion, ArithSettings } from './logic';
+import { perPageOptionsForOp } from './printConfig';
 
 beforeEach(() => {
   capturedTextCalls.length = 0;
@@ -244,6 +245,88 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
       expect(capturedTextCalls).toContain(`${q.operand1}`);
       expect(capturedTextCalls).toContain(`${q.operand2}`);
     });
+  });
+
+  // The single most powerful regression test: walks every (op × difficulty
+  // × digit-mode × per-page count) combination the modal can produce, runs
+  // it through the generator and the PDF renderer, and asserts that:
+  //   1. Every generated question's operands appear in the PDF text stream.
+  //   2. No character outside Helvetica's WinAnsi encoding is written.
+  //   3. The answer value is never leaked into the PDF.
+  // If any future change breaks the path from a modal selection to a
+  // correctly-rendered PDF, this test catches it.
+  it('end-to-end: every modal selection produces a correct PDF', () => {
+    const ops: ArithOp[] = ['add', 'subtract', 'multiply', 'all'];
+    const diffs: ArithSettings['difficulty'][] = ['easy', 'medium', 'hard'];
+    const digitModes: ArithSettings['digitMode'][] = [
+      { kind: 'exact', digits: 1 },
+      { kind: 'exact', digits: 2 },
+      { kind: 'exact', digits: 3 },
+      { kind: 'exact', digits: 4 },
+      { kind: 'exact', digits: 5 },
+      { kind: 'upTo', digits: 3 },
+      { kind: 'upTo', digits: 5 },
+    ];
+
+    let combos = 0;
+    for (const operation of ops) {
+      const perPageOpts = perPageOptionsForOp(operation);
+      for (const difficulty of diffs) {
+        for (const digitMode of digitModes) {
+          for (const perPage of perPageOpts) {
+            combos++;
+            capturedTextCalls.length = 0;
+            const settings: ArithSettings = {
+              operation,
+              difficulty,
+              digitMode,
+              gameMode: 'questions',
+              questionCount: perPage,
+              timeLimit: 0,
+            };
+            const qs = generateArithQuestions(settings, perPage);
+            expect(qs).toHaveLength(perPage);
+            render(qs);
+
+            // 1. Every question's operands appear (no silent drops).
+            //    Layout is page-wide: if any question on the page has ≥4
+            //    digits then ALL questions render in column form (separate
+            //    text() calls per operand). Otherwise horizontal (the full
+            //    equation written as a single text() call).
+            const pageMaxDigits = qs.reduce(
+              (m, q) => Math.max(m, String(q.operand1).length, String(q.operand2).length),
+              0
+            );
+            const useColumn = pageMaxDigits >= 4;
+
+            qs.forEach(q => {
+              const ctx = `op=${operation} diff=${difficulty} digits=${digitMode.kind} ${digitMode.digits} count=${perPage} q=${JSON.stringify(q)}`;
+              if (useColumn) {
+                expect(capturedTextCalls, ctx).toContain(`${q.operand1}`);
+                expect(capturedTextCalls, ctx).toContain(`${q.operand2}`);
+              } else {
+                expect(
+                  capturedTextCalls,
+                  ctx
+                ).toContain(`${q.operand1} ${symbolFor(q.op)} ${q.operand2} =`);
+              }
+            });
+
+            // 2. No Math Operators block chars (would mis-render in Helvetica).
+            capturedTextCalls.forEach(t => {
+              expect(MATH_OPERATORS_BLOCK.test(t), `unsafe char in "${t}"`).toBe(false);
+            });
+
+            // 3. No answer leak.
+            qs.forEach(q => {
+              expect(capturedTextCalls).not.toContain(`= ${q.answer}`);
+            });
+          }
+        }
+      }
+    }
+    // Sanity: we actually iterated through a meaningful matrix size.
+    expect(combos).toBeGreaterThan(200);
   });
 
   it('exhaustive: no op/difficulty/digit combo writes a Mathematical Operators block char', () => {
