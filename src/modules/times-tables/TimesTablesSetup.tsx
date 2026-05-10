@@ -519,8 +519,27 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
         initialQuestionsPerPage={printConfig.questionsPerPage}
         pageCountOptions={PRINT_PAGE_OPTIONS}
         questionsPerPageOptions={PRINT_PER_PAGE_OPTIONS}
+        summary={buildPrintSummary(operation, selectedTables)}
         onDownload={handlePrintDownload}
       />
     </div>
   );
+}
+
+function buildPrintSummary(operation: Operation, tables: number[]): string {
+  const opLabel: Record<Operation, string> = {
+    multiply: '×',
+    divide: '÷',
+    square: 'x²',
+    sqrt: '√',
+    all: 'All (× ÷ x² √)',
+  };
+  const sorted = [...tables].sort((a, b) => a - b);
+  const isFull = sorted.length >= 12 && sorted[0] >= 1 && sorted[sorted.length - 1] <= 12;
+  const tablesLabel = sorted.length === 0
+    ? 'no tables'
+    : isFull
+      ? '1–12'
+      : sorted.join(', ');
+  return `${opLabel[operation]} • Tables ${tablesLabel}`;
 }

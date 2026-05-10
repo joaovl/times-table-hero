@@ -10,6 +10,8 @@ interface Props {
   initialQuestionsPerPage: number;
   pageCountOptions: number[];
   questionsPerPageOptions: number[];
+  /** One-line summary of the math options that will be printed (op, tables/digits, difficulty). */
+  summary?: string;
   onDownload: (pageCount: number, questionsPerPage: number, name: string) => void;
 }
 
@@ -30,6 +32,7 @@ export function PrintWorksheetModal({
   initialQuestionsPerPage,
   pageCountOptions,
   questionsPerPageOptions,
+  summary,
   onDownload,
 }: Props) {
   const [pageCount, setPageCount] = useState(initialPageCount);
@@ -77,9 +80,22 @@ export function PrintWorksheetModal({
         className="bg-card rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-md p-5 md:p-6"
         onClick={e => e.stopPropagation()}
       >
-        <h2 id="print-modal-title" className="text-lg md:text-xl font-bold text-foreground mb-4">
+        <h2 id="print-modal-title" className="text-lg md:text-xl font-bold text-foreground mb-1">
           Print Worksheet
         </h2>
+        {summary && (
+          <div className="mb-4 rounded-lg bg-muted px-3 py-2 text-xs md:text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium text-foreground truncate">{summary}</span>
+              <button
+                onClick={onClose}
+                className="text-muted-foreground hover:text-foreground underline whitespace-nowrap text-[11px] md:text-xs"
+              >
+                Edit
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="mb-3">
           <p className="text-xs md:text-sm text-muted-foreground mb-2">Pages</p>

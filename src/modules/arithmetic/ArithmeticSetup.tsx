@@ -257,8 +257,22 @@ export function ArithmeticSetup({
         initialQuestionsPerPage={printConfig.questionsPerPage}
         pageCountOptions={PRINT_PAGE_OPTIONS}
         questionsPerPageOptions={PRINT_PER_PAGE_OPTIONS}
+        summary={buildArithSummary(operation, digitMode, difficulty)}
         onDownload={handlePrintDownload}
       />
     </div>
   );
+}
+
+function buildArithSummary(operation: ArithOp, digitMode: DigitMode, difficulty: Difficulty): string {
+  const opPart: Record<ArithOp, string> = {
+    add: '+',
+    subtract: '−',
+    multiply: '×',
+    all: 'All (+ − ×)',
+  };
+  const digitsPart = digitMode.kind === 'exact'
+    ? `exactly ${digitMode.digits}-digit`
+    : `up to ${digitMode.digits}-digit`;
+  return `${opPart[operation]} • ${digitsPart} • ${difficulty}`;
 }
