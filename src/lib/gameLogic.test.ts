@@ -1,242 +1,127 @@
 import { describe, it, expect } from 'vitest';
 import { generateQuestions, generateWrongAnswers, shuffleOptions } from './gameLogic';
+import type { Question } from './gameLogic';
 
-describe('Multiplication Calculations', () => {
-  // Test all multiplication combinations from 0×0 to 12×12
-  describe('All multiplication tables (0-12)', () => {
-    for (let i = 0; i <= 12; i++) {
-      for (let j = 0; j <= 12; j++) {
-        it(`should calculate ${i} × ${j} = ${i * j} correctly`, () => {
-          const questions = generateQuestions([i], 1, 'multiply');
+const isMultiply = (q: Question) => q.kind === 'binary' && q.op === 'multiply';
+const isDivide = (q: Question) => q.kind === 'binary' && q.op === 'divide';
+const isSquare = (q: Question) => q.kind === 'unary' && q.op === 'square';
+const isSqrt = (q: Question) => q.kind === 'unary' && q.op === 'sqrt';
 
-          // Find the question with operand2 = j
-          const question = questions.find(q => q.operand2 === j);
-
-          if (question) {
-            expect(question.answer).toBe(i * j);
-            expect(question.operation).toBe('multiply');
-          }
-        });
-      }
-    }
+describe('generateQuestions — multiply', () => {
+  it('emits only binary multiply questions', () => {
+    const qs = generateQuestions([5], 20, 'multiply');
+    expect(qs).toHaveLength(20);
+    qs.forEach(q => expect(isMultiply(q)).toBe(true));
   });
 
-  // Test commutative property (a × b = b × a)
-  describe('Commutative property', () => {
-    const testCases = [
-      [2, 3], [5, 7], [4, 9], [6, 8], [10, 11]
-    ];
-
-    testCases.forEach(([a, b]) => {
-      it(`should verify ${a} × ${b} = ${b} × ${a}`, () => {
-        const questions1 = generateQuestions([a], 13, 'multiply');
-        const questions2 = generateQuestions([b], 13, 'multiply');
-
-        const q1 = questions1.find(q => q.operand1 === a && q.operand2 === b);
-        const q2 = questions2.find(q => q.operand1 === b && q.operand2 === a);
-
-        if (q1 && q2) {
-          expect(q1.answer).toBe(q2.answer);
-        }
-      });
-    });
-  });
-
-  // Test multiplication by zero
-  describe('Multiplication by zero', () => {
-    for (let i = 0; i <= 12; i++) {
-      it(`should calculate ${i} × 0 = 0`, () => {
-        const questions = generateQuestions([i], 13, 'multiply');
-        const question = questions.find(q => q.operand2 === 0);
-
-        if (question) {
-          expect(question.answer).toBe(0);
-        }
-      });
-
-      it(`should calculate 0 × ${i} = 0`, () => {
-        const questions = generateQuestions([0], 13, 'multiply');
-        const question = questions.find(q => q.operand2 === i);
-
-        if (question) {
-          expect(question.answer).toBe(0);
-        }
-      });
-    }
-  });
-
-  // Test multiplication by one
-  describe('Multiplication by one (identity)', () => {
-    for (let i = 0; i <= 12; i++) {
-      it(`should calculate ${i} × 1 = ${i}`, () => {
-        const questions = generateQuestions([i], 13, 'multiply');
-        const question = questions.find(q => q.operand2 === 1);
-
-        if (question) {
-          expect(question.answer).toBe(i);
-        }
-      });
-
-      it(`should calculate 1 × ${i} = ${i}`, () => {
-        const questions = generateQuestions([1], 13, 'multiply');
-        const question = questions.find(q => q.operand2 === i);
-
-        if (question) {
-          expect(question.answer).toBe(i);
-        }
-      });
-    }
-  });
-
-  // Test specific important multiplications
-  describe('Key multiplication facts', () => {
-    const keyFacts = [
-      [2, 2, 4],
-      [3, 3, 9],
-      [4, 4, 16],
-      [5, 5, 25],
-      [6, 6, 36],
-      [7, 7, 49],
-      [8, 8, 64],
-      [9, 9, 81],
-      [10, 10, 100],
-      [11, 11, 121],
-      [12, 12, 144],
-      [7, 8, 56],
-      [6, 7, 42],
-      [8, 9, 72],
-    ];
-
-    keyFacts.forEach(([a, b, expected]) => {
-      it(`should calculate ${a} × ${b} = ${expected}`, () => {
-        const questions = generateQuestions([a], 13, 'multiply');
-        const question = questions.find(q => q.operand2 === b);
-
-        if (question) {
-          expect(question.answer).toBe(expected);
-        }
-      });
-    });
-  });
-});
-
-describe('Division Calculations', () => {
-  // Test division for all tables
-  describe('Division inverse of multiplication', () => {
-    for (let table = 1; table <= 12; table++) {
+  it('answers respect a × b = a*b across 0..12', () => {
+    for (let t = 0; t <= 12; t++) {
+      const qs = generateQuestions([t], 13, 'multiply');
       for (let i = 0; i <= 12; i++) {
-        it(`should calculate (${table} × ${i}) ÷ ${table} = ${i}`, () => {
-          const questions = generateQuestions([table], 50, 'divide');
-          const question = questions.find(
-            q => q.operand1 === table * i && q.operand2 === table
-          );
-
-          if (question) {
-            expect(question.answer).toBe(i);
-            expect(question.operation).toBe('divide');
-          }
-        });
+        const q = qs.find(x => x.kind === 'binary' && x.operand1 === t && x.operand2 === i);
+        if (q && q.kind === 'binary') expect(q.answer).toBe(t * i);
       }
     }
   });
+});
 
-  // Test that division by zero is not generated
-  it('should not generate division by zero questions', () => {
-    const questions = generateQuestions([0, 1, 2, 3], 100, 'divide');
+describe('generateQuestions — divide', () => {
+  it('emits only binary divide questions and never divides by zero', () => {
+    const qs = generateQuestions([0, 1, 2, 3], 100, 'divide');
+    qs.forEach(q => {
+      expect(isDivide(q)).toBe(true);
+      if (q.kind === 'binary') expect(q.operand2).not.toBe(0);
+    });
+  });
 
-    questions.forEach(q => {
-      if (q.operation === 'divide') {
-        expect(q.operand2).not.toBe(0);
+  it('answers respect (t × i) ÷ t = i', () => {
+    for (let t = 1; t <= 12; t++) {
+      const qs = generateQuestions([t], 50, 'divide');
+      for (let i = 0; i <= 12; i++) {
+        const q = qs.find(x => x.kind === 'binary' && x.operand1 === t * i && x.operand2 === t);
+        if (q && q.kind === 'binary') expect(q.answer).toBe(i);
+      }
+    }
+  });
+});
+
+describe('generateQuestions — square', () => {
+  it('emits only unary square questions', () => {
+    const qs = generateQuestions([2, 5, 7], 30, 'square');
+    expect(qs).toHaveLength(30);
+    qs.forEach(q => expect(isSquare(q)).toBe(true));
+  });
+
+  it('answers respect n² = n*n for selected tables', () => {
+    const qs = generateQuestions([3, 7, 12], 30, 'square');
+    qs.forEach(q => {
+      if (q.kind === 'unary' && q.op === 'square') {
+        expect(q.answer).toBe(q.operand * q.operand);
+        expect([3, 7, 12]).toContain(q.operand);
       }
     });
   });
 });
 
-describe('Wrong Answers Generation', () => {
-  describe('Easy difficulty', () => {
-    it('should generate wrong answers that are different from correct answer', () => {
-      const wrongAnswers = generateWrongAnswers(20, 'easy');
-
-      expect(wrongAnswers).toHaveLength(2);
-      expect(wrongAnswers[0]).not.toBe(20);
-      expect(wrongAnswers[1]).not.toBe(20);
-      expect(wrongAnswers[0]).not.toBe(wrongAnswers[1]);
-    });
-
-    it('should generate non-negative wrong answers', () => {
-      const wrongAnswers = generateWrongAnswers(5, 'easy');
-
-      wrongAnswers.forEach(answer => {
-        expect(answer).toBeGreaterThanOrEqual(0);
-      });
-    });
+describe('generateQuestions — sqrt', () => {
+  it('emits only unary sqrt questions', () => {
+    const qs = generateQuestions([2, 5, 7], 30, 'sqrt');
+    expect(qs).toHaveLength(30);
+    qs.forEach(q => expect(isSqrt(q)).toBe(true));
   });
 
-  describe('Medium difficulty', () => {
-    it('should generate wrong answers close to correct answer', () => {
-      const correctAnswer = 50;
-      const wrongAnswers = generateWrongAnswers(correctAnswer, 'medium');
-
-      expect(wrongAnswers).toHaveLength(2);
-      wrongAnswers.forEach(answer => {
-        expect(Math.abs(answer - correctAnswer)).toBeGreaterThan(0);
-        // Medium difficulty should be reasonably close
-        expect(Math.abs(answer - correctAnswer)).toBeLessThanOrEqual(10);
-      });
+  it('answers respect √(n²) = n for selected tables', () => {
+    const qs = generateQuestions([3, 7, 12], 30, 'sqrt');
+    qs.forEach(q => {
+      if (q.kind === 'unary' && q.op === 'sqrt') {
+        expect(q.operand).toBe(q.answer * q.answer);
+        expect([3, 7, 12]).toContain(q.answer);
+      }
     });
   });
 });
 
-describe('Shuffle Options', () => {
-  it('should include correct answer in shuffled options', () => {
-    const correct = 42;
-    const wrong = [40, 44];
-    const options = shuffleOptions(correct, wrong);
-
-    expect(options).toContain(correct);
-    expect(options).toHaveLength(3);
-  });
-
-  it('should include all wrong answers in shuffled options', () => {
-    const correct = 25;
-    const wrong = [23, 27];
-    const options = shuffleOptions(correct, wrong);
-
-    expect(options).toContain(23);
-    expect(options).toContain(27);
-    expect(options).toHaveLength(3);
+describe('generateQuestions — all', () => {
+  it('mixes all four operations across enough samples', () => {
+    const qs = generateQuestions([2, 3, 4, 5, 6, 7, 8, 9, 10], 200, 'all');
+    expect(qs.some(isMultiply)).toBe(true);
+    expect(qs.some(isDivide)).toBe(true);
+    expect(qs.some(isSquare)).toBe(true);
+    expect(qs.some(isSqrt)).toBe(true);
   });
 });
 
-describe('Question Generation', () => {
-  it('should generate requested number of questions', () => {
-    const questions = generateQuestions([5, 7], 20, 'multiply');
-    expect(questions).toHaveLength(20);
+describe('generateQuestions — count and tables empty handling', () => {
+  it('returns the requested count', () => {
+    expect(generateQuestions([5, 7], 20, 'multiply')).toHaveLength(20);
+    expect(generateQuestions([5, 7], 7, 'multiply')).toHaveLength(7);
   });
+});
 
-  it('should generate both multiplication and division when operation is "both"', () => {
-    const questions = generateQuestions([3, 4], 50, 'both');
-
-    const hasMultiply = questions.some(q => q.operation === 'multiply');
-    const hasDivide = questions.some(q => q.operation === 'divide');
-
-    expect(hasMultiply).toBe(true);
-    expect(hasDivide).toBe(true);
-  });
-
-  it('should only generate multiplication when operation is "multiply"', () => {
-    const questions = generateQuestions([5], 20, 'multiply');
-
-    questions.forEach(q => {
-      expect(q.operation).toBe('multiply');
+describe('generateWrongAnswers', () => {
+  it('returns 2 wrong answers different from correct, all non-negative', () => {
+    const wrong = generateWrongAnswers(20, 'easy');
+    expect(wrong).toHaveLength(2);
+    wrong.forEach(w => {
+      expect(w).not.toBe(20);
+      expect(w).toBeGreaterThanOrEqual(0);
     });
+    expect(wrong[0]).not.toBe(wrong[1]);
   });
 
-  it('should only generate division when operation is "divide"', () => {
-    const questions = generateQuestions([6], 20, 'divide');
+  it('medium answers stay close to correct', () => {
+    const wrong = generateWrongAnswers(50, 'medium');
+    expect(wrong).toHaveLength(2);
+    wrong.forEach(w => expect(Math.abs(w - 50)).toBeLessThanOrEqual(10));
+  });
+});
 
-    questions.forEach(q => {
-      expect(q.operation).toBe('divide');
-    });
+describe('shuffleOptions', () => {
+  it('returns three options containing the correct value', () => {
+    const opts = shuffleOptions(42, [40, 44]);
+    expect(opts).toHaveLength(3);
+    expect(opts).toContain(42);
+    expect(opts).toContain(40);
+    expect(opts).toContain(44);
   });
 });

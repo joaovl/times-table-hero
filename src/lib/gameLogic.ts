@@ -2,14 +2,27 @@
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type GameMode = 'questions' | 'time';
-export type Operation = 'multiply' | 'divide' | 'both';
+export type Operation = 'multiply' | 'divide' | 'square' | 'sqrt' | 'all';
 
-export interface Question {
+export type BinaryOp = 'multiply' | 'divide';
+export type UnaryOp = 'square' | 'sqrt';
+
+export type BinaryQuestion = {
+  kind: 'binary';
+  op: BinaryOp;
   operand1: number;
   operand2: number;
   answer: number;
-  operation: 'multiply' | 'divide';
-}
+};
+
+export type UnaryQuestion = {
+  kind: 'unary';
+  op: UnaryOp;
+  operand: number;
+  answer: number;
+};
+
+export type Question = BinaryQuestion | UnaryQuestion;
 
 export interface GameSettings {
   tables: number[];
@@ -20,51 +33,60 @@ export interface GameSettings {
   timeLimit: number; // in seconds
 }
 
+function buildPool(tables: number[], operation: Exclude<Operation, 'all'>): Question[] {
+  const pool: Question[] = [];
+  if (operation === 'multiply') {
+    for (const t of tables) {
+      for (let i = 0; i <= 12; i++) {
+        pool.push({ kind: 'binary', op: 'multiply', operand1: t, operand2: i, answer: t * i });
+      }
+    }
+  } else if (operation === 'divide') {
+    for (const t of tables) {
+      if (t === 0) continue;
+      for (let i = 0; i <= 12; i++) {
+        pool.push({ kind: 'binary', op: 'divide', operand1: t * i, operand2: t, answer: i });
+      }
+    }
+  } else if (operation === 'square') {
+    for (const t of tables) {
+      pool.push({ kind: 'unary', op: 'square', operand: t, answer: t * t });
+    }
+  } else if (operation === 'sqrt') {
+    for (const t of tables) {
+      pool.push({ kind: 'unary', op: 'sqrt', operand: t * t, answer: t });
+    }
+  }
+  return pool;
+}
+
 export function generateQuestions(
   tables: number[],
   count: number,
   operation: Operation
 ): Question[] {
-  const allQuestions: Question[] = [];
+  const concreteOps: Exclude<Operation, 'all'>[] =
+    operation === 'all' ? ['multiply', 'divide', 'square', 'sqrt'] : [operation];
 
-  // Generate all possible questions for selected tables
-  for (const table of tables) {
-    for (let i = 0; i <= 12; i++) {
-      // Multiplication: table × i = answer
-      if (operation === 'multiply' || operation === 'both') {
-        allQuestions.push({
-          operand1: table,
-          operand2: i,
-          answer: table * i,
-          operation: 'multiply',
-        });
-      }
-
-      // Division: (table × i) ÷ table = i
-      // Skip division by zero
-      if ((operation === 'divide' || operation === 'both') && table !== 0) {
-        allQuestions.push({
-          operand1: table * i,
-          operand2: table,
-          answer: i,
-          operation: 'divide',
-        });
-      }
-    }
+  let allQuestions: Question[] = [];
+  for (const op of concreteOps) {
+    allQuestions = allQuestions.concat(buildPool(tables, op));
   }
 
-  // Shuffle and take required count
-  const shuffled = allQuestions.sort(() => Math.random() - 0.5);
+  allQuestions.sort(() => Math.random() - 0.5);
 
-  // If we need more questions than available, cycle through
+  if (allQuestions.length === 0) return [];
+
   const result: Question[] = [];
   while (result.length < count) {
     const remaining = count - result.length;
-    result.push(...shuffled.slice(0, Math.min(remaining, shuffled.length)));
-    shuffled.sort(() => Math.random() - 0.5); // Re-shuffle for variety
+    result.push(...allQuestions.slice(0, Math.min(remaining, allQuestions.length)));
+    if (result.length < count) {
+      allQuestions.sort(() => Math.random() - 0.5);
+    }
   }
 
-  return result;
+  return result.slice(0, count);
 }
 
 export function generateWrongAnswers(
