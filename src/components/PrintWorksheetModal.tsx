@@ -42,12 +42,27 @@ export function PrintWorksheetModal({
 
   useEffect(() => {
     if (isOpen) {
-      setPageCount(initialPageCount);
-      setQuestionsPerPage(initialQuestionsPerPage);
+      setPageCount(
+        pageCountOptions.includes(initialPageCount)
+          ? initialPageCount
+          : pageCountOptions[0] ?? initialPageCount
+      );
+      setQuestionsPerPage(
+        questionsPerPageOptions.includes(initialQuestionsPerPage)
+          ? initialQuestionsPerPage
+          : (questionsPerPageOptions[questionsPerPageOptions.length - 1] ?? initialQuestionsPerPage)
+      );
       setName(defaultName);
       setJustDownloaded(false);
     }
-  }, [isOpen, initialPageCount, initialQuestionsPerPage, defaultName]);
+  }, [
+    isOpen,
+    initialPageCount,
+    initialQuestionsPerPage,
+    defaultName,
+    pageCountOptions,
+    questionsPerPageOptions,
+  ]);
 
   useEffect(() => {
     if (!isOpen) return;

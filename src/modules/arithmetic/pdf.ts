@@ -32,10 +32,23 @@ function maxOperandDigits(qs: ArithQuestion[]): number {
   return max;
 }
 
-function gridSpec(maxDigits: number): { cols: number; rows: number; fs: number } {
-  if (maxDigits <= 2) return { cols: 4, rows: 10, fs: 14 };
-  if (maxDigits === 3) return { cols: 3, rows: 10, fs: 14 };
-  return { cols: 2, rows: 10, fs: 13 };
+// cols depends on operand digit count (column-form needs more horizontal space).
+// rows is derived from count so every question gets a cell — never silently drop.
+function gridSpec(maxDigits: number, count: number): { cols: number; rows: number; fs: number } {
+  let cols: number;
+  let fs: number;
+  if (maxDigits <= 2) {
+    cols = 4;
+    fs = 14;
+  } else if (maxDigits === 3) {
+    cols = 3;
+    fs = 14;
+  } else {
+    cols = 2;
+    fs = 13;
+  }
+  const rows = Math.max(1, Math.ceil(count / cols));
+  return { cols, rows, fs };
 }
 
 function drawHorizontal(doc: jsPDF, q: ArithQuestion, x: number, y: number) {
@@ -105,7 +118,7 @@ function drawPage(
 
   const md = maxOperandDigits(questions);
   const useColumn = md >= 4;
-  const { cols, rows, fs } = gridSpec(md);
+  const { cols, rows, fs } = gridSpec(md, questions.length);
   const cellW = PRINT_W / cols;
   const gridTop = top + HEADER_H;
   const gridH = PRINT_H - HEADER_H - FOOTER_H;

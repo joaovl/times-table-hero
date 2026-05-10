@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -50,7 +50,14 @@ const buttonClass = (active: boolean) =>
   );
 
 const PRINT_PAGE_OPTIONS = [1, 3, 5, 10, 20];
-const PRINT_PER_PAGE_OPTIONS = [20, 30, 40, 60, 80];
+
+// Per-page capacity depends on operand digit size. Horizontal layout (≤3 digits)
+// fits more per page; column form (4-5 digits) needs three lines per question.
+function perPageOptionsForDigits(digits: number): number[] {
+  if (digits <= 2) return [20, 30, 40, 60, 80];
+  if (digits === 3) return [20, 30, 40, 60];
+  return [10, 15, 20];
+}
 
 const opLabel = (op: ArithOp): string =>
   op === 'add' ? '+' : op === 'subtract' ? '−' : op === 'multiply' ? '×' : '+−×';
@@ -72,6 +79,11 @@ export function ArithmeticSetup({
   const [isLoaded, setIsLoaded] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [printConfig, setPrintConfig] = useState({ pageCount: 1, questionsPerPage: 30 });
+
+  const perPageOptions = useMemo(
+    () => perPageOptionsForDigits(digitMode.digits),
+    [digitMode.digits]
+  );
 
   useEffect(() => {
     setIsLoaded(false);
@@ -256,7 +268,7 @@ export function ArithmeticSetup({
         initialPageCount={printConfig.pageCount}
         initialQuestionsPerPage={printConfig.questionsPerPage}
         pageCountOptions={PRINT_PAGE_OPTIONS}
-        questionsPerPageOptions={PRINT_PER_PAGE_OPTIONS}
+        questionsPerPageOptions={perPageOptions}
         summary={buildArithSummary(operation, digitMode, difficulty)}
         onDownload={handlePrintDownload}
       />

@@ -155,6 +155,66 @@ describe('generateArithPdf — round-trip with generateArithQuestions', () => {
   });
 });
 
+describe('generateArithPdf — page capacity (no silent question dropping)', () => {
+  // Build N synthetic questions of a given digit-count band so we can
+  // verify exact rendered count without relying on the random generator.
+  const buildAddQs = (count: number, digits: number): ArithQuestion[] => {
+    const min = digits <= 1 ? 0 : 10 ** (digits - 1);
+    return Array.from({ length: count }, (_, i) => ({
+      op: 'add' as const,
+      operand1: min + i,
+      operand2: min + i + 1,
+      answer: 2 * (min + i) + 1,
+    }));
+  };
+
+  it('renders all 80 horizontal questions on a single page (2-digit add)', () => {
+    const qs = buildAddQs(80, 2);
+    render(qs);
+    qs.forEach(q => {
+      expect(capturedTextCalls).toContain(`${q.operand1} + ${q.operand2} =`);
+    });
+  });
+
+  it('renders all 60 horizontal questions on a single page (3-digit add)', () => {
+    const qs = buildAddQs(60, 3);
+    render(qs);
+    qs.forEach(q => {
+      expect(capturedTextCalls).toContain(`${q.operand1} + ${q.operand2} =`);
+    });
+  });
+
+  it('renders all 20 column-form questions on a single page (5-digit subtract)', () => {
+    const qs: ArithQuestion[] = Array.from({ length: 20 }, (_, i) => ({
+      op: 'subtract' as const,
+      operand1: 90000 + i,
+      operand2: 10000 + i,
+      answer: 80000,
+    }));
+    render(qs);
+    qs.forEach(q => {
+      expect(capturedTextCalls).toContain(`${q.operand1}`);
+      expect(capturedTextCalls).toContain(`${q.operand2}`);
+    });
+  });
+
+  // The exact reproducer of the user-reported bug: subtract / 5-digit / hard /
+  // 80 questions used to silently render only the first ~20.
+  it('80 column-form questions: every operand pair appears (no silent dropping)', () => {
+    const qs: ArithQuestion[] = Array.from({ length: 80 }, (_, i) => ({
+      op: 'subtract' as const,
+      operand1: 90000 + i,
+      operand2: 10000 + i,
+      answer: 80000,
+    }));
+    render(qs);
+    qs.forEach(q => {
+      expect(capturedTextCalls).toContain(`${q.operand1}`);
+      expect(capturedTextCalls).toContain(`${q.operand2}`);
+    });
+  });
+});
+
 describe('generateArithPdf — encoding safety (no Math Operators block chars)', () => {
   const baseSettings: ArithSettings = {
     operation: 'add',
