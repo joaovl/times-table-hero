@@ -60,6 +60,18 @@ function buildPool(tables: number[], operation: Exclude<Operation, 'all'>): Ques
   return pool;
 }
 
+function sampleFromPool(pool: Question[], n: number): Question[] {
+  if (pool.length === 0 || n <= 0) return [];
+  const out: Question[] = [];
+  let shuffled = [...pool].sort(() => Math.random() - 0.5);
+  while (out.length < n) {
+    const need = n - out.length;
+    out.push(...shuffled.slice(0, Math.min(need, shuffled.length)));
+    if (out.length < n) shuffled = [...pool].sort(() => Math.random() - 0.5);
+  }
+  return out.slice(0, n);
+}
+
 export function generateQuestions(
   tables: number[],
   count: number,
@@ -68,25 +80,24 @@ export function generateQuestions(
   const concreteOps: Exclude<Operation, 'all'>[] =
     operation === 'all' ? ['multiply', 'divide', 'square', 'sqrt'] : [operation];
 
-  let allQuestions: Question[] = [];
-  for (const op of concreteOps) {
-    allQuestions = allQuestions.concat(buildPool(tables, op));
-  }
+  const opsWithPools = concreteOps
+    .map(op => ({ op, pool: buildPool(tables, op) }))
+    .filter(x => x.pool.length > 0);
 
-  allQuestions.sort(() => Math.random() - 0.5);
+  if (opsWithPools.length === 0) return [];
 
-  if (allQuestions.length === 0) return [];
+  const k = opsWithPools.length;
+  const perOp = Math.floor(count / k);
+  const remainder = count - perOp * k;
 
   const result: Question[] = [];
-  while (result.length < count) {
-    const remaining = count - result.length;
-    result.push(...allQuestions.slice(0, Math.min(remaining, allQuestions.length)));
-    if (result.length < count) {
-      allQuestions.sort(() => Math.random() - 0.5);
-    }
-  }
+  opsWithPools.forEach(({ pool }, idx) => {
+    const target = perOp + (idx < remainder ? 1 : 0);
+    result.push(...sampleFromPool(pool, target));
+  });
 
-  return result.slice(0, count);
+  result.sort(() => Math.random() - 0.5);
+  return result;
 }
 
 export function generateWrongAnswers(

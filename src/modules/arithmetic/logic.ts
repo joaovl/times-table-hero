@@ -108,35 +108,47 @@ function trySample(settings: ArithSettings, op: 'add' | 'subtract' | 'multiply')
     : { op: 'subtract', operand1: a, operand2: b, answer: a - b };
 }
 
+function sampleOne(
+  settings: ArithSettings,
+  op: 'add' | 'subtract' | 'multiply'
+): ArithQuestion {
+  let q: ArithQuestion | null = null;
+  for (let i = 0; i < 200 && q === null; i++) {
+    q = trySample(settings, op);
+  }
+  if (q) return q;
+
+  // Fallback: sample for the same op without difficulty filter.
+  const dm = settings.digitMode;
+  const d = pickDigitCount(dm, dm.digits);
+  const r = digitsToRange(d);
+  const a = randInt(r.min, r.max);
+  const b = randInt(r.min, r.max);
+  if (op === 'add') return { op, operand1: a, operand2: b, answer: a + b };
+  if (op === 'subtract') {
+    const [hi, lo] = a >= b ? [a, b] : [b, a];
+    return { op: 'subtract', operand1: hi, operand2: lo, answer: hi - lo };
+  }
+  return { op: 'multiply', operand1: a, operand2: b, answer: a * b };
+}
+
 export function generateArithQuestions(settings: ArithSettings, count: number): ArithQuestion[] {
-  const result: ArithQuestion[] = [];
   const concreteOps: Array<'add' | 'subtract' | 'multiply'> =
     settings.operation === 'all' ? ['add', 'subtract', 'multiply'] : [settings.operation];
 
-  while (result.length < count) {
-    const op = concreteOps[randInt(0, concreteOps.length - 1)];
+  const k = concreteOps.length;
+  const perOp = Math.floor(count / k);
+  const remainder = count - perOp * k;
 
-    let q: ArithQuestion | null = null;
-    for (let i = 0; i < 200 && q === null; i++) {
-      q = trySample(settings, op);
+  const result: ArithQuestion[] = [];
+  concreteOps.forEach((op, idx) => {
+    const target = perOp + (idx < remainder ? 1 : 0);
+    for (let n = 0; n < target; n++) {
+      result.push(sampleOne(settings, op));
     }
+  });
 
-    if (!q) {
-      const dm = settings.digitMode;
-      const d = pickDigitCount(dm, dm.digits);
-      const r = digitsToRange(d);
-      const a = randInt(r.min, r.max);
-      const b = randInt(r.min, r.max);
-      if (op === 'add') q = { op, operand1: a, operand2: b, answer: a + b };
-      else if (op === 'subtract') {
-        const [hi, lo] = a >= b ? [a, b] : [b, a];
-        q = { op: 'subtract', operand1: hi, operand2: lo, answer: hi - lo };
-      } else {
-        q = { op: 'multiply', operand1: a, operand2: b, answer: a * b };
-      }
-    }
-    result.push(q);
-  }
-
+  // Final shuffle so ops are interleaved, not grouped by op.
+  result.sort(() => Math.random() - 0.5);
   return result;
 }

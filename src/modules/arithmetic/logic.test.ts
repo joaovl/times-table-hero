@@ -120,6 +120,29 @@ describe('generateArithQuestions — all', () => {
     expect(ops.has('subtract')).toBe(true);
     expect(ops.has('multiply')).toBe(true);
   });
+
+  it('balances ops evenly when count is divisible by 3', () => {
+    const qs = generateArithQuestions(
+      baseSettings({ operation: 'all', digitMode: { kind: 'exact', digits: 2 }, difficulty: 'easy' }),
+      30
+    );
+    expect(qs).toHaveLength(30);
+    expect(qs.filter(q => q.op === 'add')).toHaveLength(10);
+    expect(qs.filter(q => q.op === 'subtract')).toHaveLength(10);
+    expect(qs.filter(q => q.op === 'multiply')).toHaveLength(10);
+  });
+
+  it('distributes remainder to first ops when count is not divisible', () => {
+    const qs = generateArithQuestions(
+      baseSettings({ operation: 'all', digitMode: { kind: 'exact', digits: 2 }, difficulty: 'easy' }),
+      10
+    );
+    expect(qs).toHaveLength(10);
+    // 10 / 3 = 3 each, remainder 1 → 4, 3, 3
+    expect(qs.filter(q => q.op === 'add')).toHaveLength(4);
+    expect(qs.filter(q => q.op === 'subtract')).toHaveLength(3);
+    expect(qs.filter(q => q.op === 'multiply')).toHaveLength(3);
+  });
 });
 
 describe('generateArithQuestions — digit mode', () => {

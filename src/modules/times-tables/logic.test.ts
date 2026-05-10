@@ -89,6 +89,25 @@ describe('generateQuestions — all', () => {
     expect(qs.some(isSquare)).toBe(true);
     expect(qs.some(isSqrt)).toBe(true);
   });
+
+  it('balances operations evenly when count is divisible by 4', () => {
+    const qs = generateQuestions([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 100, 'all');
+    expect(qs).toHaveLength(100);
+    expect(qs.filter(isMultiply)).toHaveLength(25);
+    expect(qs.filter(isDivide)).toHaveLength(25);
+    expect(qs.filter(isSquare)).toHaveLength(25);
+    expect(qs.filter(isSqrt)).toHaveLength(25);
+  });
+
+  it('distributes remainder to first ops when count is not divisible', () => {
+    const qs = generateQuestions([1, 2, 3, 4], 10, 'all');
+    expect(qs).toHaveLength(10);
+    // 10 / 4 = 2 each, remainder 2 → 3, 3, 2, 2
+    expect(qs.filter(isMultiply)).toHaveLength(3);
+    expect(qs.filter(isDivide)).toHaveLength(3);
+    expect(qs.filter(isSquare)).toHaveLength(2);
+    expect(qs.filter(isSqrt)).toHaveLength(2);
+  });
 });
 
 describe('generateQuestions — count and tables empty handling', () => {
