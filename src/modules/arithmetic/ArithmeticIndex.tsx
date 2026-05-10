@@ -11,7 +11,11 @@ import type { ArithSettings } from './logic';
 
 type State = 'setup' | 'playing' | 'results';
 
-const ArithmeticIndex = () => {
+interface ArithmeticIndexProps {
+  printOpen?: boolean;
+}
+
+const ArithmeticIndex = ({ printOpen = false }: ArithmeticIndexProps) => {
   const navigate = useNavigate();
   const [state, setState] = useState<State>('setup');
   const [settings, setSettings] = useState<ArithSettings | null>(null);
@@ -43,7 +47,7 @@ const ArithmeticIndex = () => {
           onUserChange={setCurrentUser}
           onNewUser={() => setShowNewUserModal(true)}
           onNavigateToHub={() => navigate('/')}
-          onNavigateToPrint={() => navigate('/arithmetic/print')}
+          autoOpenPrint={printOpen}
         />
       )}
       {state === 'playing' && settings && (

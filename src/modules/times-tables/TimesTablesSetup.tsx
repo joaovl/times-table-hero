@@ -1,12 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Printer, Palette } from 'lucide-react';
+import { Menu, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Difficulty, GameMode, GameSettings, Operation } from './logic';
-import { getTotalStats, getSavedSettings, saveSettings } from './storage';
+import {
+  getTotalStats,
+  getSavedSettings,
+  saveSettings,
+  getSavedPrintConfig,
+  savePrintConfig,
+} from './storage';
+import { generateQuestions } from './logic';
+import { generateWorksheetPdf } from './pdf';
 import type { UserProfile } from '@/lib/userStorage';
 import { UserSelector } from '@/components/UserSelector';
+import { PrintWorksheetModal } from '@/components/PrintWorksheetModal';
 import { PRESET_THEMES, DEFAULT_THEME, getTheme, saveTheme, resetTheme } from '@/lib/themeStorage';
 
 interface TimesTablesSetupProps {
@@ -14,9 +23,12 @@ interface TimesTablesSetupProps {
   currentUser: UserProfile | null;
   onUserChange: (user: UserProfile | null) => void;
   onNewUser: () => void;
-  onNavigateToPrint?: () => void;
   onNavigateToHub?: () => void;
+  autoOpenPrint?: boolean;
 }
+
+const PRINT_PAGE_OPTIONS = [1, 3, 5, 10, 20];
+const PRINT_PER_PAGE_OPTIONS = [20, 40, 60, 80, 100];
 
 const TABLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
@@ -31,8 +43,10 @@ const TIME_LIMITS = [
   { label: '15 min', value: 900 },
 ];
 
-export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser, onNavigateToPrint, onNavigateToHub }: TimesTablesSetupProps) {
+export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser, onNavigateToHub, autoOpenPrint = false }: TimesTablesSetupProps) {
   const [selectedTables, setSelectedTables] = useState<number[]>(TABLES);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [printConfig, setPrintConfig] = useState({ pageCount: 1, questionsPerPage: 40 });
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [gameMode, setGameMode] = useState<GameMode>('time');
   const [operation, setOperation] = useState<Operation>('multiply');
@@ -80,8 +94,39 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
     setOperation((saved.operation as Operation) || 'multiply');
     setQuestionCount(saved.questionCount);
     setTimeLimit(saved.timeLimit);
+    setPrintConfig(getSavedPrintConfig(currentUser?.id));
     setIsLoaded(true);
   }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (autoOpenPrint && isLoaded) setPrintOpen(true);
+  }, [autoOpenPrint, isLoaded]);
+
+  const handlePrintDownload = (pages: number, perPage: number, name: string) => {
+    if (selectedTables.length === 0) return;
+    const sortedTables = [...selectedTables].sort((a, b) => a - b);
+    const opLabelSuffix: Record<Operation, string> = {
+      multiply: '×',
+      divide: '÷',
+      square: '²',
+      sqrt: '√',
+      all: '×÷²√',
+    };
+    const tablesLabel = sortedTables.map(t => `${t}${opLabelSuffix[operation]}`).join(', ');
+    const pagesArr = Array.from({ length: pages }, () =>
+      generateQuestions(sortedTables, perPage, operation)
+    );
+    const doc = generateWorksheetPdf({
+      pages: pagesArr,
+      tablesLabel,
+      questionCount: perPage,
+      studentName: name || undefined,
+    });
+    doc.save('maths-challenge.pdf');
+    const next = { pageCount: pages, questionsPerPage: perPage };
+    setPrintConfig(next);
+    savePrintConfig(next, currentUser?.id);
+  };
 
   // Auto-save any change so choices persist without needing to start a game
   useEffect(() => {
@@ -239,20 +284,6 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
                     </div>
                   )}
                 </div>
-
-                {/* Print Worksheets Option */}
-                {onNavigateToPrint && (
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      onNavigateToPrint();
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 min-h-[44px]"
-                  >
-                    <Printer className="w-4 h-4" aria-hidden="true" />
-                    Print Worksheets
-                  </button>
-                )}
 
                 {/* Version */}
                 <div className="border-t mt-1 pt-1.5 px-4 pb-1 text-[10px] text-muted-foreground/60">
@@ -458,17 +489,38 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
           )}
         </Card>
 
-        {/* Start Button */}
-        <Button
-          onClick={handleStart}
-          disabled={selectedTables.length === 0}
-          className="w-full py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px] hover:shadow-xl active:translate-y-0 active:shadow-md disabled:opacity-50 disabled:from-muted disabled:to-muted"
-          size="lg"
-        >
-          {selectedTables.length === 0 ? 'Select at least one table' : "Let's Go!"}
-        </Button>
+        {/* Action Buttons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setPrintOpen(true)}
+            disabled={selectedTables.length === 0}
+            className="py-3 font-bold disabled:opacity-50"
+          >
+            Print Worksheet
+          </Button>
+          <Button
+            onClick={handleStart}
+            disabled={selectedTables.length === 0}
+            className="py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px] hover:shadow-xl active:translate-y-0 active:shadow-md disabled:opacity-50 disabled:from-muted disabled:to-muted"
+            size="lg"
+          >
+            {selectedTables.length === 0 ? 'Select at least one table' : "Let's Go!"}
+          </Button>
+        </div>
 
       </div>
+
+      <PrintWorksheetModal
+        isOpen={printOpen}
+        onClose={() => setPrintOpen(false)}
+        defaultName={currentUser?.name ?? ''}
+        initialPageCount={printConfig.pageCount}
+        initialQuestionsPerPage={printConfig.questionsPerPage}
+        pageCountOptions={PRINT_PAGE_OPTIONS}
+        questionsPerPageOptions={PRINT_PER_PAGE_OPTIONS}
+        onDownload={handlePrintDownload}
+      />
     </div>
   );
 }

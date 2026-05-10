@@ -9,7 +9,11 @@ import type { GameSettings } from './logic';
 
 type GameState = 'setup' | 'playing' | 'results';
 
-const TimesTablesIndex = () => {
+interface TimesTablesIndexProps {
+  printOpen?: boolean;
+}
+
+const TimesTablesIndex = ({ printOpen = false }: TimesTablesIndexProps) => {
   const navigate = useNavigate();
   const [gameState, setGameState] = useState<GameState>('setup');
   const [settings, setSettings] = useState<GameSettings | null>(null);
@@ -62,10 +66,6 @@ const TimesTablesIndex = () => {
     setShowNewUserModal(false);
   };
 
-  const handleNavigateToPrint = () => {
-    navigate('/times-tables/print');
-  };
-
   return (
     <>
       {gameState === 'setup' && (
@@ -74,8 +74,8 @@ const TimesTablesIndex = () => {
           currentUser={currentUser}
           onUserChange={handleUserChange}
           onNewUser={handleNewUser}
-          onNavigateToPrint={handleNavigateToPrint}
           onNavigateToHub={() => navigate('/')}
+          autoOpenPrint={printOpen}
         />
       )}
       {gameState === 'playing' && settings && (

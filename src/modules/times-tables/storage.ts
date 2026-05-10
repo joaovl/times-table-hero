@@ -188,39 +188,41 @@ export function saveSettings(settings: SavedSettings, userId?: string): void {
   }
 }
 
-export interface PrintSavedSettings {
-  tables: number[];
-  operation: string;
-  questionCount: number;
+export interface PrintConfig {
   pageCount: number;
+  questionsPerPage: number;
 }
 
-const DEFAULT_PRINT_SETTINGS: PrintSavedSettings = {
-  tables: [2, 3, 4, 5],
-  operation: 'multiply',
-  questionCount: 40,
+const DEFAULT_PRINT_CONFIG: PrintConfig = {
   pageCount: 1,
+  questionsPerPage: 40,
 };
 
-export function getSavedPrintSettings(userId?: string): PrintSavedSettings {
+export function getSavedPrintConfig(userId?: string): PrintConfig {
   try {
     const key = getStorageKey('printSettings', userId);
     const data = localStorage.getItem(key);
     if (data) {
-      const parsed = { ...DEFAULT_PRINT_SETTINGS, ...JSON.parse(data) };
-      if (parsed.operation === 'both') parsed.operation = 'all';
-      return parsed;
+      const parsed = JSON.parse(data);
+      return {
+        pageCount: typeof parsed.pageCount === 'number' ? parsed.pageCount : DEFAULT_PRINT_CONFIG.pageCount,
+        questionsPerPage: typeof parsed.questionsPerPage === 'number'
+          ? parsed.questionsPerPage
+          : typeof parsed.questionCount === 'number'
+            ? parsed.questionCount
+            : DEFAULT_PRINT_CONFIG.questionsPerPage,
+      };
     }
-    return DEFAULT_PRINT_SETTINGS;
+    return DEFAULT_PRINT_CONFIG;
   } catch {
-    return DEFAULT_PRINT_SETTINGS;
+    return DEFAULT_PRINT_CONFIG;
   }
 }
 
-export function savePrintSettings(settings: PrintSavedSettings, userId?: string): void {
+export function savePrintConfig(config: PrintConfig, userId?: string): void {
   try {
     const key = getStorageKey('printSettings', userId);
-    localStorage.setItem(key, JSON.stringify(settings));
+    localStorage.setItem(key, JSON.stringify(config));
   } catch {
     // Ignore storage errors
   }

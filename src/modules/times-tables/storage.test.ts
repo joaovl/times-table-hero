@@ -14,7 +14,7 @@ class MemoryStorage {
 
 import {
   getSavedSettings,
-  getSavedPrintSettings,
+  getSavedPrintConfig,
   getQuestionKey,
   recordAnswer,
   getProgress,
@@ -58,13 +58,29 @@ describe('getSavedSettings migration', () => {
   });
 });
 
-describe('getSavedPrintSettings migration', () => {
-  it("rewrites legacy 'both' to 'all'", () => {
+describe('getSavedPrintConfig', () => {
+  it('reads pageCount and questionsPerPage', () => {
     localStorage.setItem(
       'maths-challenge-printSettings',
-      JSON.stringify({ tables: [1], operation: 'both', questionCount: 40, pageCount: 1 })
+      JSON.stringify({ pageCount: 5, questionsPerPage: 60 })
     );
-    expect(getSavedPrintSettings().operation).toBe('all');
+    const c = getSavedPrintConfig();
+    expect(c.pageCount).toBe(5);
+    expect(c.questionsPerPage).toBe(60);
+  });
+
+  it('falls back to legacy questionCount field if questionsPerPage missing', () => {
+    localStorage.setItem(
+      'maths-challenge-printSettings',
+      JSON.stringify({ pageCount: 3, questionCount: 40 })
+    );
+    expect(getSavedPrintConfig().questionsPerPage).toBe(40);
+  });
+
+  it('returns defaults when nothing saved', () => {
+    const c = getSavedPrintConfig();
+    expect(c.pageCount).toBeGreaterThan(0);
+    expect(c.questionsPerPage).toBeGreaterThan(0);
   });
 });
 

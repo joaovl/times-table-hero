@@ -3,9 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
+import { PrintWorksheetModal } from '@/components/PrintWorksheetModal';
 import type { UserProfile } from '@/lib/userStorage';
 import type { ArithOp, ArithSettings, Difficulty, DigitMode } from './logic';
-import { getSavedArithSettings, saveArithSettings } from './storage';
+import { generateArithQuestions } from './logic';
+import { generateArithPdf } from './pdf';
+import {
+  getSavedArithSettings,
+  saveArithSettings,
+  getSavedArithPrintConfig,
+  saveArithPrintConfig,
+} from './storage';
 
 interface Props {
   onStart: (s: ArithSettings) => void;
@@ -13,7 +21,7 @@ interface Props {
   onUserChange: (u: UserProfile | null) => void;
   onNewUser: () => void;
   onNavigateToHub: () => void;
-  onNavigateToPrint: () => void;
+  autoOpenPrint?: boolean;
 }
 
 const QUESTION_COUNTS = [5, 10, 25, 50, 75, 100];
@@ -41,13 +49,19 @@ const buttonClass = (active: boolean) =>
       : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
   );
 
+const PRINT_PAGE_OPTIONS = [1, 3, 5, 10, 20];
+const PRINT_PER_PAGE_OPTIONS = [20, 30, 40, 60, 80];
+
+const opLabel = (op: ArithOp): string =>
+  op === 'add' ? '+' : op === 'subtract' ? '−' : op === 'multiply' ? '×' : '+−×';
+
 export function ArithmeticSetup({
   onStart,
   currentUser,
   onUserChange,
   onNewUser,
   onNavigateToHub,
-  onNavigateToPrint,
+  autoOpenPrint = false,
 }: Props) {
   const [operation, setOperation] = useState<ArithOp>('add');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
@@ -56,6 +70,8 @@ export function ArithmeticSetup({
   const [questionCount, setQuestionCount] = useState(10);
   const [timeLimit, setTimeLimit] = useState(180);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [printConfig, setPrintConfig] = useState({ pageCount: 1, questionsPerPage: 30 });
 
   useEffect(() => {
     setIsLoaded(false);
@@ -66,6 +82,7 @@ export function ArithmeticSetup({
     setGameMode(s.gameMode);
     setQuestionCount(s.questionCount);
     setTimeLimit(s.timeLimit);
+    setPrintConfig(getSavedArithPrintConfig(currentUser?.id));
     setIsLoaded(true);
   }, [currentUser?.id]);
 
@@ -77,7 +94,36 @@ export function ArithmeticSetup({
     );
   }, [isLoaded, operation, difficulty, digitMode, gameMode, questionCount, timeLimit, currentUser?.id]);
 
+  useEffect(() => {
+    if (autoOpenPrint && isLoaded) setPrintOpen(true);
+  }, [autoOpenPrint, isLoaded]);
+
   const start = () => onStart({ operation, difficulty, digitMode, gameMode, questionCount, timeLimit });
+
+  const handlePrintDownload = (pages: number, perPage: number, name: string) => {
+    const settings: ArithSettings = {
+      operation,
+      difficulty,
+      digitMode,
+      gameMode: 'questions',
+      questionCount: perPage,
+      timeLimit: 0,
+    };
+    const pagesArr = Array.from({ length: pages }, () => generateArithQuestions(settings, perPage));
+    const subtitle = `${opLabel(operation)} • ${difficulty} • ${
+      digitMode.kind === 'exact' ? `exactly ${digitMode.digits}` : `up to ${digitMode.digits}`
+    } digits`;
+    const doc = generateArithPdf({
+      pages: pagesArr,
+      title: 'Maths Challenge — Arithmetic',
+      subtitle: `${perPage} Questions per page — ${subtitle}`,
+      studentName: name || undefined,
+    });
+    doc.save('maths-arithmetic.pdf');
+    const next = { pageCount: pages, questionsPerPage: perPage };
+    setPrintConfig(next);
+    saveArithPrintConfig(next, currentUser?.id);
+  };
 
   const hints = DIFFICULTY_HINTS[operation];
 
@@ -190,7 +236,7 @@ export function ArithmeticSetup({
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
-          <Button variant="outline" onClick={onNavigateToPrint} className="py-3 font-bold">
+          <Button variant="outline" onClick={() => setPrintOpen(true)} className="py-3 font-bold">
             Print Worksheet
           </Button>
           <Button
@@ -202,6 +248,17 @@ export function ArithmeticSetup({
           </Button>
         </div>
       </div>
+
+      <PrintWorksheetModal
+        isOpen={printOpen}
+        onClose={() => setPrintOpen(false)}
+        defaultName={currentUser?.name ?? ''}
+        initialPageCount={printConfig.pageCount}
+        initialQuestionsPerPage={printConfig.questionsPerPage}
+        pageCountOptions={PRINT_PAGE_OPTIONS}
+        questionsPerPageOptions={PRINT_PER_PAGE_OPTIONS}
+        onDownload={handlePrintDownload}
+      />
     </div>
   );
 }
