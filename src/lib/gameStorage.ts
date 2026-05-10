@@ -1,8 +1,11 @@
 // Progress tracking with localStorage, namespaced by userId
 
+import type { Question, BinaryOp, UnaryOp } from './gameLogic';
+
 export interface QuestionRecord {
   multiplier: number;
   multiplicand: number;
+  op?: BinaryOp | UnaryOp;
   timesWrong: number;
   timesCorrect: number;
   lastAttempt: string;
@@ -44,27 +47,44 @@ export function saveProgress(progress: Record<string, QuestionRecord>, userId?: 
   localStorage.setItem(key, JSON.stringify(progress));
 }
 
-export function getQuestionKey(multiplier: number, multiplicand: number): string {
-  return `${multiplier}x${multiplicand}`;
+export function getQuestionKey(q: Question): string {
+  if (q.kind === 'binary') {
+    const sep = q.op === 'multiply' ? 'x' : 'd';
+    return `${q.operand1}${sep}${q.operand2}`;
+  }
+  const suffix = q.op === 'square' ? 'sq' : 'rt';
+  return `${q.operand}${suffix}`;
 }
 
 export function recordAnswer(
-  multiplier: number,
-  multiplicand: number,
+  question: Question,
   correct: boolean,
   userId?: string
 ): void {
   const progress = getProgress(userId);
-  const key = getQuestionKey(multiplier, multiplicand);
+  const key = getQuestionKey(question);
 
   if (!progress[key]) {
-    progress[key] = {
-      multiplier,
-      multiplicand,
+    const base = {
       timesWrong: 0,
       timesCorrect: 0,
       lastAttempt: new Date().toISOString(),
     };
+    if (question.kind === 'binary') {
+      progress[key] = {
+        ...base,
+        op: question.op,
+        multiplier: question.operand1,
+        multiplicand: question.operand2,
+      };
+    } else {
+      progress[key] = {
+        ...base,
+        op: question.op,
+        multiplier: question.operand,
+        multiplicand: question.answer,
+      };
+    }
   }
 
   if (correct) {
@@ -90,7 +110,7 @@ export function getImprovedQuestions(
 ): QuestionRecord[] {
   const progress = getProgress(userId);
   return incorrectThisSession
-    .map(q => progress[getQuestionKey(q.multiplier, q.multiplicand)])
+    .map(q => progress[`${q.multiplier}x${q.multiplicand}`])
     .filter(q => q && q.timesWrong > 0 && q.timesCorrect > 0);
 }
 
@@ -149,7 +169,9 @@ export function getSavedSettings(userId?: string): SavedSettings {
     const key = getStorageKey('settings', userId);
     const data = localStorage.getItem(key);
     if (data) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+      const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+      if (parsed.operation === 'both') parsed.operation = 'all';
+      return parsed;
     }
     return DEFAULT_SETTINGS;
   } catch {
@@ -185,7 +207,9 @@ export function getSavedPrintSettings(userId?: string): PrintSavedSettings {
     const key = getStorageKey('printSettings', userId);
     const data = localStorage.getItem(key);
     if (data) {
-      return { ...DEFAULT_PRINT_SETTINGS, ...JSON.parse(data) };
+      const parsed = { ...DEFAULT_PRINT_SETTINGS, ...JSON.parse(data) };
+      if (parsed.operation === 'both') parsed.operation = 'all';
+      return parsed;
     }
     return DEFAULT_PRINT_SETTINGS;
   } catch {
