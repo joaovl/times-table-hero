@@ -35,7 +35,8 @@ export function ArithmeticResults({ result, onPlayAgain, onNewGame, userId }: Pr
         total: result.total,
         operation: result.settings.operation,
         difficulty: result.settings.difficulty,
-        digitMode: result.settings.digitMode,
+        addSubFirstDigits: result.settings.addSubFirstDigits,
+        addSubSecondDigits: result.settings.addSubSecondDigits,
       },
       userId
     );

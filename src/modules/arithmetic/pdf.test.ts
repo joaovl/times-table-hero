@@ -184,9 +184,10 @@ describe('generateArithPdf — round-trip with generateArithQuestions', () => {
   const baseSettings: ArithSettings = {
     operation: 'add',
     difficulty: 'medium',
-    digitMode: { kind: 'exact', digits: 2 },
-    multiplyFirstDigits: 2,
-    multiplySecondDigits: 1,
+    addSubFirstDigits: [2],
+    addSubSecondDigits: [2],
+    multiplyFirstDigits: [2],
+    multiplySecondDigits: [1],
     gameMode: 'questions',
     questionCount: 20,
     timeLimit: 0,
@@ -208,7 +209,12 @@ describe('generateArithPdf — round-trip with generateArithQuestions', () => {
 
   it('every subtract question (3-digit horizontal) appears in PDF', () => {
     const qs = generateArithQuestions(
-      { ...baseSettings, operation: 'subtract', digitMode: { kind: 'exact', digits: 3 } },
+      {
+        ...baseSettings,
+        operation: 'subtract',
+        addSubFirstDigits: [3],
+        addSubSecondDigits: [3],
+      },
       20
     );
     render(qs);
@@ -217,7 +223,12 @@ describe('generateArithPdf — round-trip with generateArithQuestions', () => {
 
   it('every 4-digit add question appears in column form (operands + symbol)', () => {
     const qs = generateArithQuestions(
-      { ...baseSettings, operation: 'add', digitMode: { kind: 'exact', digits: 4 } },
+      {
+        ...baseSettings,
+        operation: 'add',
+        addSubFirstDigits: [4],
+        addSubSecondDigits: [4],
+      },
       10
     );
     render(qs);
@@ -226,7 +237,12 @@ describe('generateArithPdf — round-trip with generateArithQuestions', () => {
 
   it("'all' mode: every 2-digit question matches its rendered horizontal form", () => {
     const qs = generateArithQuestions(
-      { ...baseSettings, operation: 'all', digitMode: { kind: 'exact', digits: 2 } },
+      {
+        ...baseSettings,
+        operation: 'all',
+        addSubFirstDigits: [2],
+        addSubSecondDigits: [2],
+      },
       30
     );
     render(qs);
@@ -298,9 +314,10 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
   const baseSettings: ArithSettings = {
     operation: 'add',
     difficulty: 'medium',
-    digitMode: { kind: 'exact', digits: 2 },
-    multiplyFirstDigits: 2,
-    multiplySecondDigits: 1,
+    addSubFirstDigits: [2],
+    addSubSecondDigits: [2],
+    multiplyFirstDigits: [2],
+    multiplySecondDigits: [1],
     gameMode: 'questions',
     questionCount: 20,
     timeLimit: 0,
@@ -310,7 +327,13 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
   // exactly 5-digit • 20 questions printed the math-minus as a stray quote.
   it('subtract / exactly 5-digit / hard / 20 questions: no U+2212 in PDF', () => {
     const qs = generateArithQuestions(
-      { ...baseSettings, operation: 'subtract', difficulty: 'hard', digitMode: { kind: 'exact', digits: 5 } },
+      {
+        ...baseSettings,
+        operation: 'subtract',
+        difficulty: 'hard',
+        addSubFirstDigits: [5],
+        addSubSecondDigits: [5],
+      },
       20
     );
     render(qs);
@@ -338,30 +361,34 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
   it('end-to-end: every modal selection produces a correct PDF', () => {
     const ops: ArithOp[] = ['add', 'subtract', 'multiply', 'all'];
     const diffs: ArithSettings['difficulty'][] = ['easy', 'medium', 'hard'];
-    const digitModes: ArithSettings['digitMode'][] = [
-      { kind: 'exact', digits: 1 },
-      { kind: 'exact', digits: 2 },
-      { kind: 'exact', digits: 3 },
-      { kind: 'exact', digits: 4 },
-      { kind: 'exact', digits: 5 },
-      { kind: 'upTo', digits: 3 },
-      { kind: 'upTo', digits: 5 },
+    // Matrix of digit-set fixtures mirroring the chip-picker UI: single
+    // chips, contiguous "up to N" ranges, and a sparse pick.
+    const digitSets: number[][] = [
+      [1],
+      [2],
+      [3],
+      [4],
+      [5],
+      [1, 2, 3],
+      [1, 2, 3, 4, 5],
+      [1, 3, 5],
     ];
 
     let combos = 0;
     for (const operation of ops) {
       const perPageOpts = perPageOptionsForOp(operation);
       for (const difficulty of diffs) {
-        for (const digitMode of digitModes) {
+        for (const digitSet of digitSets) {
           for (const perPage of perPageOpts) {
             combos++;
             capturedTextCalls.length = 0;
             const settings: ArithSettings = {
               operation,
               difficulty,
-              digitMode,
-              multiplyFirstDigits: 2,
-              multiplySecondDigits: 1,
+              addSubFirstDigits: digitSet,
+              addSubSecondDigits: digitSet,
+              multiplyFirstDigits: [2],
+              multiplySecondDigits: [1],
               gameMode: 'questions',
               questionCount: perPage,
               timeLimit: 0,
@@ -382,7 +409,7 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
             const useColumn = pageMaxDigits >= 4;
 
             qs.forEach(q => {
-              const ctx = `op=${operation} diff=${difficulty} digits=${digitMode.kind} ${digitMode.digits} count=${perPage} q=${JSON.stringify(q)}`;
+              const ctx = `op=${operation} diff=${difficulty} digits=[${digitSet.join(',')}] count=${perPage} q=${JSON.stringify(q)}`;
               if (useColumn) {
                 expect(capturedTextCalls, ctx).toContain(`${q.operand1}`);
                 expect(capturedTextCalls, ctx).toContain(`${q.operand2}`);
@@ -415,29 +442,36 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
   it('exhaustive: no op/difficulty/digit combo writes a Mathematical Operators block char', () => {
     const ops: ArithSettings['operation'][] = ['add', 'subtract', 'multiply', 'all'];
     const diffs: ArithSettings['difficulty'][] = ['easy', 'medium', 'hard'];
-    const digitModes = [
-      { kind: 'exact' as const, digits: 1 },
-      { kind: 'exact' as const, digits: 2 },
-      { kind: 'exact' as const, digits: 3 },
-      { kind: 'exact' as const, digits: 4 },
-      { kind: 'exact' as const, digits: 5 },
-      { kind: 'upTo' as const, digits: 3 },
-      { kind: 'upTo' as const, digits: 5 },
+    const digitSets: number[][] = [
+      [1],
+      [2],
+      [3],
+      [4],
+      [5],
+      [1, 2, 3],
+      [1, 2, 3, 4, 5],
+      [1, 3, 5],
     ];
 
     for (const operation of ops) {
       for (const difficulty of diffs) {
-        for (const digitMode of digitModes) {
+        for (const digitSet of digitSets) {
           capturedTextCalls.length = 0;
           const qs = generateArithQuestions(
-            { ...baseSettings, operation, difficulty, digitMode },
+            {
+              ...baseSettings,
+              operation,
+              difficulty,
+              addSubFirstDigits: digitSet,
+              addSubSecondDigits: digitSet,
+            },
             20
           );
           render(qs);
           capturedTextCalls.forEach(t => {
             expect(
               MATH_OPERATORS_BLOCK.test(t),
-              `unrenderable char in "${t}" (op=${operation} diff=${difficulty} digits=${digitMode.kind} ${digitMode.digits})`
+              `unrenderable char in "${t}" (op=${operation} diff=${difficulty} digits=[${digitSet.join(',')}])`
             ).toBe(false);
           });
         }

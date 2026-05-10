@@ -5,8 +5,13 @@ import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
 import { PrintWorksheetModal } from '@/components/PrintWorksheetModal';
 import type { UserProfile } from '@/lib/userStorage';
-import type { ArithOp, ArithSettings, Difficulty, DigitMode } from './logic';
-import { generateArithQuestions, MULTIPLY_DIGIT_OPTIONS, multiplyExample } from './logic';
+import type { ArithOp, ArithSettings, Difficulty } from './logic';
+import {
+  generateArithQuestions,
+  MULTIPLY_DIGIT_OPTIONS,
+  multiplyExample,
+  addSubExample,
+} from './logic';
 import { generateArithPdf } from './pdf';
 import {
   getSavedArithSettings,
@@ -18,6 +23,7 @@ import {
   PRINT_PAGE_OPTIONS,
   perPageOptionsForOp,
   buildArithSummary,
+  formatDigitSet,
 } from './printConfig';
 
 interface Props {
@@ -36,7 +42,6 @@ const TIME_LIMITS = [
   { label: '5 min', value: 300 },
   { label: '10 min', value: 600 },
 ];
-const DIGIT_BUTTONS = [1, 2, 3, 4, 5];
 
 const DIFFICULTY_HINTS: Record<ArithOp, [string, string, string]> = {
   add: ['No carry', '1 carry', 'Multiple carries'],
@@ -57,6 +62,49 @@ const buttonClass = (active: boolean) =>
 const opLabel = (op: ArithOp): string =>
   op === 'add' ? '+' : op === 'subtract' ? '−' : op === 'multiply' ? '×' : '+−×';
 
+// Multi-select chip picker over a digit set. Always non-empty: the last
+// selected chip refuses to deselect, so generation always has something to
+// pick from. Sorted ascending on every change.
+interface DigitChipPickerProps {
+  label: string;
+  options: ReadonlyArray<number>;
+  selected: number[];
+  onChange: (next: number[]) => void;
+}
+
+function DigitChipPicker({ label, options, selected, onChange }: DigitChipPickerProps) {
+  const isSelected = (d: number) => selected.includes(d);
+  const toggle = (d: number) => {
+    if (isSelected(d)) {
+      // Refuse to deselect if it's the last remaining chip.
+      if (selected.length === 1) return;
+      onChange(selected.filter(x => x !== d).sort((a, b) => a - b));
+    } else {
+      onChange([...selected, d].sort((a, b) => a - b));
+    }
+  };
+  return (
+    <>
+      <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">{label}</p>
+      <div className="grid grid-cols-5 gap-1 md:gap-2 mb-2">
+        {options.map(d => (
+          <button
+            key={`${label}-${d}`}
+            type="button"
+            onClick={() => toggle(d)}
+            aria-pressed={isSelected(d)}
+            className={buttonClass(isSelected(d))}
+          >
+            <span className="text-[15px] md:text-[18px]">{d}</span>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+const DIGIT_CHIP_OPTIONS = MULTIPLY_DIGIT_OPTIONS;
+
 export function ArithmeticSetup({
   onStart,
   currentUser,
@@ -67,9 +115,10 @@ export function ArithmeticSetup({
 }: Props) {
   const [operation, setOperation] = useState<ArithOp>('add');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
-  const [digitMode, setDigitMode] = useState<DigitMode>({ kind: 'exact', digits: 2 });
-  const [multiplyFirstDigits, setMultiplyFirstDigits] = useState<number>(2);
-  const [multiplySecondDigits, setMultiplySecondDigits] = useState<number>(1);
+  const [addSubFirstDigits, setAddSubFirstDigits] = useState<number[]>([2]);
+  const [addSubSecondDigits, setAddSubSecondDigits] = useState<number[]>([2]);
+  const [multiplyFirstDigits, setMultiplyFirstDigits] = useState<number[]>([2]);
+  const [multiplySecondDigits, setMultiplySecondDigits] = useState<number[]>([1]);
   const [gameMode, setGameMode] = useState<'questions' | 'time'>('questions');
   const [questionCount, setQuestionCount] = useState(10);
   const [timeLimit, setTimeLimit] = useState(180);
@@ -85,7 +134,8 @@ export function ArithmeticSetup({
     const s = getSavedArithSettings(currentUser?.id);
     setOperation(s.operation);
     setDifficulty(s.difficulty);
-    setDigitMode(s.digitMode);
+    setAddSubFirstDigits(s.addSubFirstDigits);
+    setAddSubSecondDigits(s.addSubSecondDigits);
     setMultiplyFirstDigits(s.multiplyFirstDigits);
     setMultiplySecondDigits(s.multiplySecondDigits);
     setGameMode(s.gameMode);
@@ -101,7 +151,8 @@ export function ArithmeticSetup({
       {
         operation,
         difficulty,
-        digitMode,
+        addSubFirstDigits,
+        addSubSecondDigits,
         multiplyFirstDigits,
         multiplySecondDigits,
         gameMode,
@@ -114,7 +165,8 @@ export function ArithmeticSetup({
     isLoaded,
     operation,
     difficulty,
-    digitMode,
+    addSubFirstDigits,
+    addSubSecondDigits,
     multiplyFirstDigits,
     multiplySecondDigits,
     gameMode,
@@ -131,7 +183,8 @@ export function ArithmeticSetup({
     onStart({
       operation,
       difficulty,
-      digitMode,
+      addSubFirstDigits,
+      addSubSecondDigits,
       multiplyFirstDigits,
       multiplySecondDigits,
       gameMode,
@@ -143,7 +196,8 @@ export function ArithmeticSetup({
     const settings: ArithSettings = {
       operation,
       difficulty,
-      digitMode,
+      addSubFirstDigits,
+      addSubSecondDigits,
       multiplyFirstDigits,
       multiplySecondDigits,
       gameMode: 'questions',
@@ -155,11 +209,13 @@ export function ArithmeticSetup({
     if (operation !== 'multiply') {
       subtitleParts.push(difficulty);
       subtitleParts.push(
-        digitMode.kind === 'exact' ? `exactly ${digitMode.digits} digits` : `up to ${digitMode.digits} digits`
+        `${formatDigitSet(addSubFirstDigits)} + ${formatDigitSet(addSubSecondDigits)}`
       );
     }
     if (operation === 'multiply' || operation === 'all') {
-      subtitleParts.push(`${multiplyFirstDigits}-digit × ${multiplySecondDigits}-digit`);
+      subtitleParts.push(
+        `${formatDigitSet(multiplyFirstDigits)} × ${formatDigitSet(multiplySecondDigits)}`
+      );
     }
     const subtitle = subtitleParts.join(' • ');
     const doc = generateArithPdf({
@@ -185,6 +241,10 @@ export function ArithmeticSetup({
       : operation === 'subtract'
         ? 'Subtract'
         : 'Add & subtract';
+
+  // For the live add/subtract example, pick the first concrete op so the
+  // user sees "23 + 7" or "23 − 7" depending on the picker.
+  const exampleOp: 'add' | 'subtract' = operation === 'subtract' ? 'subtract' : 'add';
 
   return (
     <div className="min-h-screen bg-background p-7">
@@ -234,30 +294,21 @@ export function ArithmeticSetup({
               <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
                 {addSubLabel} digits
               </h2>
-              <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">Exactly</p>
-              <div className="grid grid-cols-5 gap-1 md:gap-2 mb-2">
-                {DIGIT_BUTTONS.map(d => (
-                  <button
-                    key={`exact-${d}`}
-                    onClick={() => setDigitMode({ kind: 'exact', digits: d })}
-                    className={buttonClass(digitMode.kind === 'exact' && digitMode.digits === d)}
-                  >
-                    <span className="text-[15px] md:text-[18px]">{d}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">Up to</p>
-              <div className="grid grid-cols-5 gap-1 md:gap-2">
-                {DIGIT_BUTTONS.map(d => (
-                  <button
-                    key={`upto-${d}`}
-                    onClick={() => setDigitMode({ kind: 'upTo', digits: d })}
-                    className={buttonClass(digitMode.kind === 'upTo' && digitMode.digits === d)}
-                  >
-                    <span className="text-[15px] md:text-[18px]">{d}</span>
-                  </button>
-                ))}
-              </div>
+              <DigitChipPicker
+                label="First number"
+                options={DIGIT_CHIP_OPTIONS}
+                selected={addSubFirstDigits}
+                onChange={setAddSubFirstDigits}
+              />
+              <DigitChipPicker
+                label="Second number"
+                options={DIGIT_CHIP_OPTIONS}
+                selected={addSubSecondDigits}
+                onChange={setAddSubSecondDigits}
+              />
+              <p className="text-[12px] md:text-[14px] text-foreground/70 text-center mt-3">
+                Example: {addSubExample(addSubFirstDigits, addSubSecondDigits, exampleOp)}
+              </p>
             </Card>
 
             <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
@@ -278,39 +329,27 @@ export function ArithmeticSetup({
           </>
         )}
 
-        {/* Multiply digits — two independent pickers (left × right operand
-            digit-counts) so any combination from 1×1 up to 5×5 is allowed.
-            The example below the pickers updates live so the parent sees
-            exactly what kind of problem will be generated. */}
+        {/* Multiply digits — multi-select chip pickers (one per operand) so
+            any mix from 1×1 up to 5×5 is allowed. The example below the
+            pickers updates live so the parent sees exactly what kind of
+            problem will be generated. */}
         {(operation === 'multiply' || operation === 'all') && (
           <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
             <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
               Multiply digits
             </h2>
-            <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">First number</p>
-            <div className="grid grid-cols-5 gap-1 md:gap-2 mb-2">
-              {MULTIPLY_DIGIT_OPTIONS.map(d => (
-                <button
-                  key={`first-${d}`}
-                  onClick={() => setMultiplyFirstDigits(d)}
-                  className={buttonClass(multiplyFirstDigits === d)}
-                >
-                  <span className="text-[15px] md:text-[18px]">{d}</span>
-                </button>
-              ))}
-            </div>
-            <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">Second number</p>
-            <div className="grid grid-cols-5 gap-1 md:gap-2">
-              {MULTIPLY_DIGIT_OPTIONS.map(d => (
-                <button
-                  key={`second-${d}`}
-                  onClick={() => setMultiplySecondDigits(d)}
-                  className={buttonClass(multiplySecondDigits === d)}
-                >
-                  <span className="text-[15px] md:text-[18px]">{d}</span>
-                </button>
-              ))}
-            </div>
+            <DigitChipPicker
+              label="First number"
+              options={DIGIT_CHIP_OPTIONS}
+              selected={multiplyFirstDigits}
+              onChange={setMultiplyFirstDigits}
+            />
+            <DigitChipPicker
+              label="Second number"
+              options={DIGIT_CHIP_OPTIONS}
+              selected={multiplySecondDigits}
+              onChange={setMultiplySecondDigits}
+            />
             <p className="text-[12px] md:text-[14px] text-foreground/70 text-center mt-3">
               Example: {multiplyExample(multiplyFirstDigits, multiplySecondDigits)}
             </p>
@@ -368,10 +407,16 @@ export function ArithmeticSetup({
         initialQuestionsPerPage={printConfig.questionsPerPage}
         pageCountOptions={PRINT_PAGE_OPTIONS}
         questionsPerPageOptions={perPageOptions}
-        summary={buildArithSummary(operation, digitMode, difficulty, multiplyFirstDigits, multiplySecondDigits)}
+        summary={buildArithSummary(
+          operation,
+          difficulty,
+          addSubFirstDigits,
+          addSubSecondDigits,
+          multiplyFirstDigits,
+          multiplySecondDigits
+        )}
         onDownload={handlePrintDownload}
       />
     </div>
   );
 }
-

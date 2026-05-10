@@ -3,6 +3,7 @@ import {
   PRINT_PAGE_OPTIONS,
   perPageOptionsForOp,
   buildArithSummary,
+  formatDigitSet,
 } from './printConfig';
 
 describe('PRINT_PAGE_OPTIONS', () => {
@@ -46,44 +47,70 @@ describe('perPageOptionsForOp', () => {
   });
 });
 
-describe('buildArithSummary', () => {
-  it('shows operation, exact-digit count, and difficulty for add', () => {
-    expect(
-      buildArithSummary('add', { kind: 'exact', digits: 3 }, 'medium', 2, 1)
-    ).toBe('+ • exactly 3-digit • medium');
+describe('formatDigitSet', () => {
+  it('single element renders as "N-digit"', () => {
+    expect(formatDigitSet([3])).toBe('3-digit');
   });
 
-  it("uses 'up to N-digit' phrasing for subtract", () => {
+  it('contiguous range renders with a hyphen', () => {
+    expect(formatDigitSet([1, 2, 3])).toBe('1-3 digit');
+    expect(formatDigitSet([2, 3, 4, 5])).toBe('2-5 digit');
+  });
+
+  it('full range [1..5] renders as "1-5 digit"', () => {
+    expect(formatDigitSet([1, 2, 3, 4, 5])).toBe('1-5 digit');
+  });
+
+  it('sparse set lists each digit with a comma', () => {
+    expect(formatDigitSet([1, 3, 5])).toBe('1, 3, 5 digit');
+    expect(formatDigitSet([2, 4])).toBe('2, 4 digit');
+  });
+
+  it('sorts unsorted input before formatting', () => {
+    expect(formatDigitSet([3, 1, 2])).toBe('1-3 digit');
+    expect(formatDigitSet([5, 1, 3])).toBe('1, 3, 5 digit');
+  });
+});
+
+describe('buildArithSummary', () => {
+  it('shows operation, digit-set summary, and difficulty for add', () => {
     expect(
-      buildArithSummary('subtract', { kind: 'upTo', digits: 5 }, 'easy', 2, 1)
-    ).toBe('− • up to 5-digit • easy');
+      buildArithSummary('add', 'medium', [3], [1], [2], [1])
+    ).toBe('+ • 3-digit + 1-digit • medium');
+  });
+
+  it('uses range phrasing when add/subtract digit set is contiguous', () => {
+    expect(
+      buildArithSummary('subtract', 'easy', [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [2], [1])
+    ).toBe('− • 1-5 digit + 1-5 digit • easy');
   });
 
   it('multiply summary shows only operation + digit pair', () => {
     expect(
-      buildArithSummary('multiply', { kind: 'exact', digits: 5 }, 'easy', 5, 1)
+      buildArithSummary('multiply', 'easy', [2], [2], [5], [1])
     ).toBe('× • multiply 5-digit × 1-digit');
   });
 
   it('multiply with 5x5 reflects the parent\'s exact pick', () => {
     expect(
-      buildArithSummary('multiply', { kind: 'exact', digits: 2 }, 'easy', 5, 5)
+      buildArithSummary('multiply', 'easy', [2], [2], [5], [5])
     ).toBe('× • multiply 5-digit × 5-digit');
   });
 
-  it("'all' summary shows op mix, digits, difficulty, and multiply pair", () => {
+  it("'all' summary shows op mix, add/sub digits, difficulty, and multiply pair", () => {
     expect(
-      buildArithSummary('all', { kind: 'exact', digits: 2 }, 'hard', 2, 2)
-    ).toBe('All (+ − ×) • exactly 2-digit • hard • multiply 2-digit × 2-digit');
+      buildArithSummary('all', 'hard', [2], [2], [2], [2])
+    ).toBe('All (+ − ×) • 2-digit + 2-digit • hard • multiply 2-digit × 2-digit');
   });
 
   it('summary stays compact (≤ 80 chars even for the longest case)', () => {
     const longest = buildArithSummary(
       'all',
-      { kind: 'upTo', digits: 5 },
       'medium',
-      5,
-      5
+      [1, 2, 3, 4, 5],
+      [1, 2, 3, 4, 5],
+      [1, 2, 3, 4, 5],
+      [1, 2, 3, 4, 5]
     );
     expect(longest.length).toBeLessThanOrEqual(80);
   });

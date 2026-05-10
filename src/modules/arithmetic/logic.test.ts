@@ -1,13 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { countCarries, countBorrows, generateArithQuestions } from './logic';
-import type { ArithSettings, DigitMode } from './logic';
+import type { ArithSettings } from './logic';
 
 const baseSettings = (over: Partial<ArithSettings>): ArithSettings => ({
   operation: 'add',
   difficulty: 'easy',
-  digitMode: { kind: 'exact', digits: 2 },
-  multiplyFirstDigits: 2,
-  multiplySecondDigits: 1,
+  addSubFirstDigits: [2],
+  addSubSecondDigits: [2],
+  multiplyFirstDigits: [2],
+  multiplySecondDigits: [1],
   gameMode: 'questions',
   questionCount: 10,
   timeLimit: 60,
@@ -51,7 +52,12 @@ describe('generateArithQuestions — add difficulty scales with digit count', ()
   it('easy add: always 0 carries (every digit setting)', () => {
     for (const digits of [2, 3, 4, 5]) {
       const qs = generateArithQuestions(
-        baseSettings({ operation: 'add', difficulty: 'easy', digitMode: { kind: 'exact', digits } }),
+        baseSettings({
+          operation: 'add',
+          difficulty: 'easy',
+          addSubFirstDigits: [digits],
+          addSubSecondDigits: [digits],
+        }),
         40
       );
       qs.forEach(q => {
@@ -62,7 +68,12 @@ describe('generateArithQuestions — add difficulty scales with digit count', ()
 
   it('medium 3-digit add: 1 carry (max-1 ceil(3/3))', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'add', difficulty: 'medium', digitMode: { kind: 'exact', digits: 3 } }),
+      baseSettings({
+        operation: 'add',
+        difficulty: 'medium',
+        addSubFirstDigits: [3],
+        addSubSecondDigits: [3],
+      }),
       40
     );
     qs.forEach(q => expect(countCarries(q.operand1, q.operand2)).toBe(1));
@@ -70,7 +81,12 @@ describe('generateArithQuestions — add difficulty scales with digit count', ()
 
   it('medium 5-digit add: 1..2 carries (ceil(5/3) = 2)', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'add', difficulty: 'medium', digitMode: { kind: 'exact', digits: 5 } }),
+      baseSettings({
+        operation: 'add',
+        difficulty: 'medium',
+        addSubFirstDigits: [5],
+        addSubSecondDigits: [5],
+      }),
       40
     );
     qs.forEach(q => {
@@ -82,7 +98,12 @@ describe('generateArithQuestions — add difficulty scales with digit count', ()
 
   it('hard 3-digit add: ≥2 carries', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'add', difficulty: 'hard', digitMode: { kind: 'exact', digits: 3 } }),
+      baseSettings({
+        operation: 'add',
+        difficulty: 'hard',
+        addSubFirstDigits: [3],
+        addSubSecondDigits: [3],
+      }),
       40
     );
     qs.forEach(q => expect(countCarries(q.operand1, q.operand2)).toBeGreaterThanOrEqual(2));
@@ -90,7 +111,12 @@ describe('generateArithQuestions — add difficulty scales with digit count', ()
 
   it('hard 5-digit add: ≥3 carries (more than ceil(5/3) = 2)', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'add', difficulty: 'hard', digitMode: { kind: 'exact', digits: 5 } }),
+      baseSettings({
+        operation: 'add',
+        difficulty: 'hard',
+        addSubFirstDigits: [5],
+        addSubSecondDigits: [5],
+      }),
       40
     );
     qs.forEach(q => expect(countCarries(q.operand1, q.operand2)).toBeGreaterThanOrEqual(3));
@@ -100,7 +126,12 @@ describe('generateArithQuestions — add difficulty scales with digit count', ()
 describe('generateArithQuestions — subtract', () => {
   it('never produces negative answers', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'subtract', difficulty: 'hard', digitMode: { kind: 'exact', digits: 4 } }),
+      baseSettings({
+        operation: 'subtract',
+        difficulty: 'hard',
+        addSubFirstDigits: [4],
+        addSubSecondDigits: [4],
+      }),
       80
     );
     qs.forEach(q => {
@@ -112,7 +143,12 @@ describe('generateArithQuestions — subtract', () => {
 
   it('easy subtract: 0 borrows', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'subtract', difficulty: 'easy', digitMode: { kind: 'exact', digits: 3 } }),
+      baseSettings({
+        operation: 'subtract',
+        difficulty: 'easy',
+        addSubFirstDigits: [3],
+        addSubSecondDigits: [3],
+      }),
       40
     );
     qs.forEach(q => expect(countBorrows(q.operand1, q.operand2)).toBe(0));
@@ -124,12 +160,12 @@ describe('generateArithQuestions — multiply uses two independent digit pickers
   const combos: Array<[number, number]> = [];
   for (let f = 1; f <= 5; f++) for (let s = 1; s <= 5; s++) combos.push([f, s]);
 
-  it.each(combos)('first=%i, second=%i: operand1 has F digits, operand2 has S digits', (f, s) => {
+  it.each(combos)('first=[%i], second=[%i]: operand1 has F digits, operand2 has S digits', (f, s) => {
     const qs = generateArithQuestions(
       baseSettings({
         operation: 'multiply',
-        multiplyFirstDigits: f,
-        multiplySecondDigits: s,
+        multiplyFirstDigits: [f],
+        multiplySecondDigits: [s],
       }),
       20
     );
@@ -139,14 +175,15 @@ describe('generateArithQuestions — multiply uses two independent digit pickers
     });
   });
 
-  it('multiply ignores difficulty and digitMode (those drive add/subtract only)', () => {
+  it('multiply ignores difficulty and add/subtract digit sets', () => {
     const qs = generateArithQuestions(
       baseSettings({
         operation: 'multiply',
-        multiplyFirstDigits: 5,
-        multiplySecondDigits: 1,
+        multiplyFirstDigits: [5],
+        multiplySecondDigits: [1],
         difficulty: 'easy',
-        digitMode: { kind: 'exact', digits: 1 },
+        addSubFirstDigits: [1],
+        addSubSecondDigits: [1],
       }),
       20
     );
@@ -155,12 +192,49 @@ describe('generateArithQuestions — multiply uses two independent digit pickers
       expect(digitsOf(q.operand2)).toBe(1);
     });
   });
+
+  it('multi-select multiply: every operand digit count is in the selected set', () => {
+    const firstSet = [2, 3];
+    const secondSet = [1, 4];
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'multiply',
+        multiplyFirstDigits: firstSet,
+        multiplySecondDigits: secondSet,
+      }),
+      80
+    );
+    qs.forEach(q => {
+      expect(firstSet).toContain(digitsOf(q.operand1));
+      expect(secondSet).toContain(digitsOf(q.operand2));
+    });
+  });
+
+  it('multi-select multiply: a wide set ([1..5]) actually emits multiple distinct digit counts', () => {
+    const firstSet = [1, 2, 3, 4, 5];
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'multiply',
+        multiplyFirstDigits: firstSet,
+        multiplySecondDigits: [1],
+      }),
+      300
+    );
+    const observed = new Set(qs.map(q => digitsOf(q.operand1)));
+    expect(observed.size).toBeGreaterThan(1);
+    observed.forEach(d => expect(firstSet).toContain(d));
+  });
 });
 
 describe('generateArithQuestions — all', () => {
   it('mixes add, subtract, and multiply', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'all', digitMode: { kind: 'exact', digits: 2 }, difficulty: 'medium' }),
+      baseSettings({
+        operation: 'all',
+        addSubFirstDigits: [2],
+        addSubSecondDigits: [2],
+        difficulty: 'medium',
+      }),
       120
     );
     const ops = new Set(qs.map(q => q.op));
@@ -171,7 +245,12 @@ describe('generateArithQuestions — all', () => {
 
   it('balances ops evenly when count is divisible by 3', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'all', digitMode: { kind: 'exact', digits: 2 }, difficulty: 'easy' }),
+      baseSettings({
+        operation: 'all',
+        addSubFirstDigits: [2],
+        addSubSecondDigits: [2],
+        difficulty: 'easy',
+      }),
       30
     );
     expect(qs).toHaveLength(30);
@@ -182,7 +261,12 @@ describe('generateArithQuestions — all', () => {
 
   it('distributes remainder to first ops when count is not divisible', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'all', digitMode: { kind: 'exact', digits: 2 }, difficulty: 'easy' }),
+      baseSettings({
+        operation: 'all',
+        addSubFirstDigits: [2],
+        addSubSecondDigits: [2],
+        difficulty: 'easy',
+      }),
       10
     );
     expect(qs).toHaveLength(10);
@@ -193,11 +277,15 @@ describe('generateArithQuestions — all', () => {
   });
 });
 
-describe('generateArithQuestions — digit mode', () => {
-  it('exact: both operands have the requested digit count', () => {
-    const dm: DigitMode = { kind: 'exact', digits: 3 };
+describe('generateArithQuestions — add/subtract digit sets', () => {
+  it('single-element set: both operands have the requested digit count', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'add', difficulty: 'medium', digitMode: dm }),
+      baseSettings({
+        operation: 'add',
+        difficulty: 'medium',
+        addSubFirstDigits: [3],
+        addSubSecondDigits: [3],
+      }),
       40
     );
     qs.forEach(q => {
@@ -206,17 +294,59 @@ describe('generateArithQuestions — digit mode', () => {
     });
   });
 
-  it('upTo: each operand has 1..N digits', () => {
-    const dm: DigitMode = { kind: 'upTo', digits: 3 };
+  it('contiguous range [1,2,3]: every operand has 1, 2, or 3 digits', () => {
+    const set = [1, 2, 3];
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'add', difficulty: 'easy', digitMode: dm }),
-      80
+      baseSettings({
+        operation: 'add',
+        difficulty: 'easy',
+        addSubFirstDigits: set,
+        addSubSecondDigits: set,
+      }),
+      120
     );
     qs.forEach(q => {
-      expect(digitsOf(q.operand1)).toBeGreaterThanOrEqual(1);
-      expect(digitsOf(q.operand1)).toBeLessThanOrEqual(3);
-      expect(digitsOf(q.operand2)).toBeGreaterThanOrEqual(1);
-      expect(digitsOf(q.operand2)).toBeLessThanOrEqual(3);
+      expect(set).toContain(digitsOf(q.operand1));
+      expect(set).toContain(digitsOf(q.operand2));
+    });
+  });
+
+  it('sparse set [1,3,5]: every operand has exactly 1, 3, or 5 digits — never 2 or 4', () => {
+    const set = [1, 3, 5];
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'add',
+        difficulty: 'easy',
+        addSubFirstDigits: set,
+        addSubSecondDigits: set,
+      }),
+      200
+    );
+    qs.forEach(q => {
+      expect(set).toContain(digitsOf(q.operand1));
+      expect(set).toContain(digitsOf(q.operand2));
+    });
+  });
+
+  it('independent picks: operand1 in firstSet, operand2 in secondSet (subtract may swap)', () => {
+    const firstSet = [4, 5];
+    const secondSet = [1, 2];
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'subtract',
+        difficulty: 'easy',
+        addSubFirstDigits: firstSet,
+        addSubSecondDigits: secondSet,
+      }),
+      40
+    );
+    // For subtract with first ≫ second the swap is rare; but in any case the
+    // observed digit-count for each operand must come from the union of both
+    // sets, and never from outside it.
+    const allowed = [...firstSet, ...secondSet];
+    qs.forEach(q => {
+      expect(allowed).toContain(digitsOf(q.operand1));
+      expect(allowed).toContain(digitsOf(q.operand2));
     });
   });
 });

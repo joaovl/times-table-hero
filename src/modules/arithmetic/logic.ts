@@ -1,16 +1,13 @@
 export type ArithOp = 'add' | 'subtract' | 'multiply' | 'all';
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
-export type DigitMode =
-  | { kind: 'exact'; digits: number }
-  | { kind: 'upTo'; digits: number };
-
-// Multiplication is configured by two independent digit-count pickers:
-// the parent picks the size of each operand. e.g. first=2, second=1 gives
-// "2-digit × 1-digit" problems like 23 × 7.
+// Operands are configured by independent multi-select chip pickers (one per
+// operand). Each picker holds a non-empty subset of [1..5] meaning "the
+// allowed digit-counts for this operand". e.g. addSubFirstDigits=[1,2,3]
+// means "operand1 may be 1, 2, or 3 digits, picked uniformly at random".
 export const MULTIPLY_DIGIT_OPTIONS = [1, 2, 3, 4, 5] as const;
 
-const MULTIPLY_SAMPLE: Record<number, string> = {
+const DIGIT_SAMPLE: Record<number, string> = {
   1: '7',
   2: '23',
   3: '234',
@@ -18,8 +15,18 @@ const MULTIPLY_SAMPLE: Record<number, string> = {
   5: '12345',
 };
 
-export function multiplyExample(firstDigits: number, secondDigits: number): string {
-  return `${MULTIPLY_SAMPLE[firstDigits] ?? '?'} × ${MULTIPLY_SAMPLE[secondDigits] ?? '?'}`;
+function sampleFor(set: number[]): string {
+  const d = set[0];
+  return DIGIT_SAMPLE[d] ?? '?';
+}
+
+export function multiplyExample(firstDigits: number[], secondDigits: number[]): string {
+  return `${sampleFor(firstDigits)} × ${sampleFor(secondDigits)}`;
+}
+
+export function addSubExample(firstDigits: number[], secondDigits: number[], op: 'add' | 'subtract'): string {
+  const sym = op === 'add' ? '+' : '−';
+  return `${sampleFor(firstDigits)} ${sym} ${sampleFor(secondDigits)}`;
 }
 
 export interface ArithQuestion {
@@ -32,9 +39,10 @@ export interface ArithQuestion {
 export interface ArithSettings {
   operation: ArithOp;
   difficulty: Difficulty;
-  digitMode: DigitMode;
-  multiplyFirstDigits: number;   // 1..5 — size of the left operand
-  multiplySecondDigits: number;  // 1..5 — size of the right operand
+  addSubFirstDigits: number[];   // non-empty subset of [1..5]
+  addSubSecondDigits: number[];  // non-empty subset of [1..5]
+  multiplyFirstDigits: number[]; // non-empty subset of [1..5]
+  multiplySecondDigits: number[];// non-empty subset of [1..5]
   gameMode: 'questions' | 'time';
   questionCount: number;
   timeLimit: number;
@@ -88,26 +96,34 @@ function randInt(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
-function pickDigitCount(mode: DigitMode, cap: number): number {
-  const target = Math.min(mode.digits, cap);
-  if (mode.kind === 'exact') return target;
-  return randInt(1, target);
+function pickFromSet(set: number[]): number {
+  // Caller guarantees non-empty; fall back defensively.
+  if (!set || set.length === 0) return 1;
+  return set[Math.floor(Math.random() * set.length)];
 }
 
 
 function trySample(settings: ArithSettings, op: 'add' | 'subtract' | 'multiply'): ArithQuestion | null {
-  const { difficulty, digitMode, multiplyFirstDigits, multiplySecondDigits } = settings;
+  const {
+    difficulty,
+    addSubFirstDigits,
+    addSubSecondDigits,
+    multiplyFirstDigits,
+    multiplySecondDigits,
+  } = settings;
 
   if (op === 'multiply') {
-    const r1 = digitsToRange(multiplyFirstDigits);
-    const r2 = digitsToRange(multiplySecondDigits);
+    const d1 = pickFromSet(multiplyFirstDigits);
+    const d2 = pickFromSet(multiplySecondDigits);
+    const r1 = digitsToRange(d1);
+    const r2 = digitsToRange(d2);
     const a = randInt(r1.min, r1.max);
     const b = randInt(r2.min, r2.max);
     return { op: 'multiply', operand1: a, operand2: b, answer: a * b };
   }
 
-  const d1 = pickDigitCount(digitMode, digitMode.digits);
-  const d2 = pickDigitCount(digitMode, digitMode.digits);
+  const d1 = pickFromSet(addSubFirstDigits);
+  const d2 = pickFromSet(addSubSecondDigits);
   const r1 = digitsToRange(d1);
   const r2 = digitsToRange(d2);
   let a = randInt(r1.min, r1.max);
@@ -150,18 +166,27 @@ function sampleOne(
   }
   if (q) return q;
 
-  // Fallback: sample for the same op without difficulty filter.
-  const dm = settings.digitMode;
-  const d = pickDigitCount(dm, dm.digits);
-  const r = digitsToRange(d);
-  const a = randInt(r.min, r.max);
-  const b = randInt(r.min, r.max);
-  if (op === 'add') return { op, operand1: a, operand2: b, answer: a + b };
-  if (op === 'subtract') {
-    const [hi, lo] = a >= b ? [a, b] : [b, a];
-    return { op: 'subtract', operand1: hi, operand2: lo, answer: hi - lo };
+  // Fallback: sample for the same op without difficulty filter, using the
+  // same digit-set semantics.
+  if (op === 'multiply') {
+    const d1 = pickFromSet(settings.multiplyFirstDigits);
+    const d2 = pickFromSet(settings.multiplySecondDigits);
+    const r1 = digitsToRange(d1);
+    const r2 = digitsToRange(d2);
+    const a = randInt(r1.min, r1.max);
+    const b = randInt(r2.min, r2.max);
+    return { op: 'multiply', operand1: a, operand2: b, answer: a * b };
   }
-  return { op: 'multiply', operand1: a, operand2: b, answer: a * b };
+
+  const d1 = pickFromSet(settings.addSubFirstDigits);
+  const d2 = pickFromSet(settings.addSubSecondDigits);
+  const r1 = digitsToRange(d1);
+  const r2 = digitsToRange(d2);
+  const a = randInt(r1.min, r1.max);
+  const b = randInt(r2.min, r2.max);
+  if (op === 'add') return { op, operand1: a, operand2: b, answer: a + b };
+  const [hi, lo] = a >= b ? [a, b] : [b, a];
+  return { op: 'subtract', operand1: hi, operand2: lo, answer: hi - lo };
 }
 
 export function generateArithQuestions(settings: ArithSettings, count: number): ArithQuestion[] {
