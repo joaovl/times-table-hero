@@ -6,7 +6,8 @@ const baseSettings = (over: Partial<ArithSettings>): ArithSettings => ({
   operation: 'add',
   difficulty: 'easy',
   digitMode: { kind: 'exact', digits: 2 },
-  multiplyLevel: 'd2x1',
+  multiplyFirstDigits: 2,
+  multiplySecondDigits: 1,
   gameMode: 'questions',
   questionCount: 10,
   timeLimit: 60,
@@ -118,35 +119,32 @@ describe('generateArithQuestions — subtract', () => {
   });
 });
 
-describe('generateArithQuestions — multiply uses level not difficulty/digits', () => {
-  const levels: Array<[ArithSettings['multiplyLevel'], number, number]> = [
-    ['facts', 1, 1],
-    ['d2x1', 2, 1],
-    ['d2x2', 2, 2],
-    ['d3x1', 3, 1],
-    ['d3x2', 3, 2],
-    ['d4x1', 4, 1],
-    ['d5x1', 5, 1],
-  ];
+describe('generateArithQuestions — multiply uses two independent digit pickers', () => {
+  // Cover every (firstDigits, secondDigits) combination from 1..5 × 1..5.
+  const combos: Array<[number, number]> = [];
+  for (let f = 1; f <= 5; f++) for (let s = 1; s <= 5; s++) combos.push([f, s]);
 
-  it.each(levels)("multiplyLevel '%s' produces operand digits [%i, %i]", (level, expectedD1, expectedD2) => {
-    const qs = generateArithQuestions(
-      baseSettings({ operation: 'multiply', multiplyLevel: level }),
-      20
-    );
-    qs.forEach(q => {
-      // operand1 has expectedD1 digits, operand2 has expectedD2 digits.
-      // (Generator emits in the order [larger, smaller] when level dictates.)
-      expect(digitsOf(q.operand1)).toBe(expectedD1);
-      expect(digitsOf(q.operand2)).toBe(expectedD2);
-    });
-  });
-
-  it('multiplyLevel ignores the digitMode and difficulty settings', () => {
+  it.each(combos)('first=%i, second=%i: operand1 has F digits, operand2 has S digits', (f, s) => {
     const qs = generateArithQuestions(
       baseSettings({
         operation: 'multiply',
-        multiplyLevel: 'd5x1',
+        multiplyFirstDigits: f,
+        multiplySecondDigits: s,
+      }),
+      20
+    );
+    qs.forEach(q => {
+      expect(digitsOf(q.operand1)).toBe(f);
+      expect(digitsOf(q.operand2)).toBe(s);
+    });
+  });
+
+  it('multiply ignores difficulty and digitMode (those drive add/subtract only)', () => {
+    const qs = generateArithQuestions(
+      baseSettings({
+        operation: 'multiply',
+        multiplyFirstDigits: 5,
+        multiplySecondDigits: 1,
         difficulty: 'easy',
         digitMode: { kind: 'exact', digits: 1 },
       }),

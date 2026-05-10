@@ -8,17 +8,37 @@ const DEFAULT_SETTINGS: ArithSettings = {
   operation: 'add',
   difficulty: 'easy',
   digitMode: { kind: 'exact', digits: 2 },
-  multiplyLevel: 'd2x1',
+  multiplyFirstDigits: 2,
+  multiplySecondDigits: 1,
   gameMode: 'questions',
   questionCount: 10,
   timeLimit: 180,
 };
 
+// Legacy persisted shape used MultiplyLevel ('facts' | 'd2x1' | ...).
+// Migrate transparently when loading.
+const LEGACY_LEVEL_TO_DIGITS: Record<string, [number, number]> = {
+  facts: [1, 1],
+  d2x1: [2, 1],
+  d2x2: [2, 2],
+  d3x1: [3, 1],
+  d3x2: [3, 2],
+  d4x1: [4, 1],
+  d5x1: [5, 1],
+};
+
 export function getSavedArithSettings(userId?: string): ArithSettings {
   try {
     const data = localStorage.getItem(key('settings', userId));
-    if (data) return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
-    return DEFAULT_SETTINGS;
+    if (!data) return DEFAULT_SETTINGS;
+    const parsed = JSON.parse(data) as Partial<ArithSettings> & { multiplyLevel?: string };
+    const merged = { ...DEFAULT_SETTINGS, ...parsed };
+    if (parsed.multiplyLevel && LEGACY_LEVEL_TO_DIGITS[parsed.multiplyLevel]) {
+      const [d1, d2] = LEGACY_LEVEL_TO_DIGITS[parsed.multiplyLevel];
+      merged.multiplyFirstDigits = d1;
+      merged.multiplySecondDigits = d2;
+    }
+    return merged;
   } catch {
     return DEFAULT_SETTINGS;
   }

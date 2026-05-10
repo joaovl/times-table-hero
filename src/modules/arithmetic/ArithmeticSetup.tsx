@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
 import { PrintWorksheetModal } from '@/components/PrintWorksheetModal';
 import type { UserProfile } from '@/lib/userStorage';
-import type { ArithOp, ArithSettings, Difficulty, DigitMode, MultiplyLevel } from './logic';
-import { generateArithQuestions, MULTIPLY_LEVELS, MULTIPLY_LEVEL_LABEL, MULTIPLY_LEVEL_EXAMPLE } from './logic';
+import type { ArithOp, ArithSettings, Difficulty, DigitMode } from './logic';
+import { generateArithQuestions, MULTIPLY_DIGIT_OPTIONS, multiplyExample } from './logic';
 import { generateArithPdf } from './pdf';
 import {
   getSavedArithSettings,
@@ -68,7 +68,8 @@ export function ArithmeticSetup({
   const [operation, setOperation] = useState<ArithOp>('add');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [digitMode, setDigitMode] = useState<DigitMode>({ kind: 'exact', digits: 2 });
-  const [multiplyLevel, setMultiplyLevel] = useState<MultiplyLevel>('d2x1');
+  const [multiplyFirstDigits, setMultiplyFirstDigits] = useState<number>(2);
+  const [multiplySecondDigits, setMultiplySecondDigits] = useState<number>(1);
   const [gameMode, setGameMode] = useState<'questions' | 'time'>('questions');
   const [questionCount, setQuestionCount] = useState(10);
   const [timeLimit, setTimeLimit] = useState(180);
@@ -85,7 +86,8 @@ export function ArithmeticSetup({
     setOperation(s.operation);
     setDifficulty(s.difficulty);
     setDigitMode(s.digitMode);
-    setMultiplyLevel(s.multiplyLevel);
+    setMultiplyFirstDigits(s.multiplyFirstDigits);
+    setMultiplySecondDigits(s.multiplySecondDigits);
     setGameMode(s.gameMode);
     setQuestionCount(s.questionCount);
     setTimeLimit(s.timeLimit);
@@ -96,23 +98,54 @@ export function ArithmeticSetup({
   useEffect(() => {
     if (!isLoaded) return;
     saveArithSettings(
-      { operation, difficulty, digitMode, multiplyLevel, gameMode, questionCount, timeLimit },
+      {
+        operation,
+        difficulty,
+        digitMode,
+        multiplyFirstDigits,
+        multiplySecondDigits,
+        gameMode,
+        questionCount,
+        timeLimit,
+      },
       currentUser?.id
     );
-  }, [isLoaded, operation, difficulty, digitMode, multiplyLevel, gameMode, questionCount, timeLimit, currentUser?.id]);
+  }, [
+    isLoaded,
+    operation,
+    difficulty,
+    digitMode,
+    multiplyFirstDigits,
+    multiplySecondDigits,
+    gameMode,
+    questionCount,
+    timeLimit,
+    currentUser?.id,
+  ]);
 
   useEffect(() => {
     if (autoOpenPrint && isLoaded) setPrintOpen(true);
   }, [autoOpenPrint, isLoaded]);
 
-  const start = () => onStart({ operation, difficulty, digitMode, multiplyLevel, gameMode, questionCount, timeLimit });
+  const start = () =>
+    onStart({
+      operation,
+      difficulty,
+      digitMode,
+      multiplyFirstDigits,
+      multiplySecondDigits,
+      gameMode,
+      questionCount,
+      timeLimit,
+    });
 
   const handlePrintDownload = (pages: number, perPage: number, name: string) => {
     const settings: ArithSettings = {
       operation,
       difficulty,
       digitMode,
-      multiplyLevel,
+      multiplyFirstDigits,
+      multiplySecondDigits,
       gameMode: 'questions',
       questionCount: perPage,
       timeLimit: 0,
@@ -126,7 +159,7 @@ export function ArithmeticSetup({
       );
     }
     if (operation === 'multiply' || operation === 'all') {
-      subtitleParts.push(MULTIPLY_LEVEL_LABEL[multiplyLevel]);
+      subtitleParts.push(`${multiplyFirstDigits}-digit × ${multiplySecondDigits}-digit`);
     }
     const subtitle = subtitleParts.join(' • ');
     const doc = generateArithPdf({
@@ -230,32 +263,42 @@ export function ArithmeticSetup({
           </>
         )}
 
-        {/* Multiply Level — shown when multiply or all is selected. Each
-            button shows the operand-size pattern; a small caption underneath
-            gives a concrete example so the parent immediately recognises
-            what kind of problems will be generated. */}
+        {/* Multiply digits — two independent pickers (left × right operand
+            digit-counts) so any combination from 1×1 up to 5×5 is allowed.
+            The example below the pickers updates live so the parent sees
+            exactly what kind of problem will be generated. */}
         {(operation === 'multiply' || operation === 'all') && (
           <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
             <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-              Multiply Level
+              Multiply digits
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 md:gap-2">
-              {MULTIPLY_LEVELS.map(lv => (
-                <div key={lv} className="flex flex-col gap-1 md:gap-1.5">
-                  <button
-                    onClick={() => setMultiplyLevel(lv)}
-                    className={buttonClass(multiplyLevel === lv)}
-                  >
-                    <span className="text-[12px] md:text-[14px] px-1 leading-tight">
-                      {MULTIPLY_LEVEL_LABEL[lv]}
-                    </span>
-                  </button>
-                  <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">
-                    {MULTIPLY_LEVEL_EXAMPLE[lv]}
-                  </p>
-                </div>
+            <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">First number</p>
+            <div className="grid grid-cols-5 gap-1 md:gap-2 mb-2">
+              {MULTIPLY_DIGIT_OPTIONS.map(d => (
+                <button
+                  key={`first-${d}`}
+                  onClick={() => setMultiplyFirstDigits(d)}
+                  className={buttonClass(multiplyFirstDigits === d)}
+                >
+                  <span className="text-[15px] md:text-[18px]">{d}</span>
+                </button>
               ))}
             </div>
+            <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">Second number</p>
+            <div className="grid grid-cols-5 gap-1 md:gap-2">
+              {MULTIPLY_DIGIT_OPTIONS.map(d => (
+                <button
+                  key={`second-${d}`}
+                  onClick={() => setMultiplySecondDigits(d)}
+                  className={buttonClass(multiplySecondDigits === d)}
+                >
+                  <span className="text-[15px] md:text-[18px]">{d}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[12px] md:text-[14px] text-foreground/70 text-center mt-3">
+              Example: {multiplyExample(multiplyFirstDigits, multiplySecondDigits)}
+            </p>
           </Card>
         )}
 
@@ -310,7 +353,7 @@ export function ArithmeticSetup({
         initialQuestionsPerPage={printConfig.questionsPerPage}
         pageCountOptions={PRINT_PAGE_OPTIONS}
         questionsPerPageOptions={perPageOptions}
-        summary={buildArithSummary(operation, digitMode, difficulty, multiplyLevel)}
+        summary={buildArithSummary(operation, digitMode, difficulty, multiplyFirstDigits, multiplySecondDigits)}
         onDownload={handlePrintDownload}
       />
     </div>

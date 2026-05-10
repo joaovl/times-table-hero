@@ -49,25 +49,31 @@ describe('perPageOptionsForOp', () => {
 describe('buildArithSummary', () => {
   it('shows operation, exact-digit count, and difficulty for add', () => {
     expect(
-      buildArithSummary('add', { kind: 'exact', digits: 3 }, 'medium', 'd2x1')
+      buildArithSummary('add', { kind: 'exact', digits: 3 }, 'medium', 2, 1)
     ).toBe('+ • exactly 3-digit • medium');
   });
 
   it("uses 'up to N-digit' phrasing for subtract", () => {
     expect(
-      buildArithSummary('subtract', { kind: 'upTo', digits: 5 }, 'easy', 'd2x1')
+      buildArithSummary('subtract', { kind: 'upTo', digits: 5 }, 'easy', 2, 1)
     ).toBe('− • up to 5-digit • easy');
   });
 
-  it('multiply summary shows only operation + level (digits/difficulty irrelevant)', () => {
+  it('multiply summary shows only operation + digit pair', () => {
     expect(
-      buildArithSummary('multiply', { kind: 'exact', digits: 5 }, 'easy', 'd5x1')
+      buildArithSummary('multiply', { kind: 'exact', digits: 5 }, 'easy', 5, 1)
     ).toBe('× • multiply 5-digit × 1-digit');
   });
 
-  it("'all' summary shows op mix, digits, difficulty, and multiply level", () => {
+  it('multiply with 5x5 reflects the parent\'s exact pick', () => {
     expect(
-      buildArithSummary('all', { kind: 'exact', digits: 2 }, 'hard', 'd2x2')
+      buildArithSummary('multiply', { kind: 'exact', digits: 2 }, 'easy', 5, 5)
+    ).toBe('× • multiply 5-digit × 5-digit');
+  });
+
+  it("'all' summary shows op mix, digits, difficulty, and multiply pair", () => {
+    expect(
+      buildArithSummary('all', { kind: 'exact', digits: 2 }, 'hard', 2, 2)
     ).toBe('All (+ − ×) • exactly 2-digit • hard • multiply 2-digit × 2-digit');
   });
 
@@ -76,7 +82,8 @@ describe('buildArithSummary', () => {
       'all',
       { kind: 'upTo', digits: 5 },
       'medium',
-      'd5x1'
+      5,
+      5
     );
     expect(longest.length).toBeLessThanOrEqual(80);
   });

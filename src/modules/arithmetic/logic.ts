@@ -5,29 +5,22 @@ export type DigitMode =
   | { kind: 'exact'; digits: number }
   | { kind: 'upTo'; digits: number };
 
-export type MultiplyLevel = 'facts' | 'd2x1' | 'd2x2' | 'd3x1' | 'd3x2' | 'd4x1' | 'd5x1';
+// Multiplication is configured by two independent digit-count pickers:
+// the parent picks the size of each operand. e.g. first=2, second=1 gives
+// "2-digit × 1-digit" problems like 23 × 7.
+export const MULTIPLY_DIGIT_OPTIONS = [1, 2, 3, 4, 5] as const;
 
-export const MULTIPLY_LEVELS: MultiplyLevel[] = ['facts', 'd2x1', 'd2x2', 'd3x1', 'd3x2', 'd4x1', 'd5x1'];
-
-export const MULTIPLY_LEVEL_LABEL: Record<MultiplyLevel, string> = {
-  facts: '1-digit × 1-digit',
-  d2x1: '2-digit × 1-digit',
-  d2x2: '2-digit × 2-digit',
-  d3x1: '3-digit × 1-digit',
-  d3x2: '3-digit × 2-digit',
-  d4x1: '4-digit × 1-digit',
-  d5x1: '5-digit × 1-digit',
+const MULTIPLY_SAMPLE: Record<number, string> = {
+  1: '7',
+  2: '23',
+  3: '234',
+  4: '1234',
+  5: '12345',
 };
 
-export const MULTIPLY_LEVEL_EXAMPLE: Record<MultiplyLevel, string> = {
-  facts: 'e.g. 5 × 7',
-  d2x1: 'e.g. 23 × 7',
-  d2x2: 'e.g. 23 × 45',
-  d3x1: 'e.g. 234 × 7',
-  d3x2: 'e.g. 234 × 56',
-  d4x1: 'e.g. 1234 × 7',
-  d5x1: 'e.g. 12345 × 7',
-};
+export function multiplyExample(firstDigits: number, secondDigits: number): string {
+  return `${MULTIPLY_SAMPLE[firstDigits] ?? '?'} × ${MULTIPLY_SAMPLE[secondDigits] ?? '?'}`;
+}
 
 export interface ArithQuestion {
   op: 'add' | 'subtract' | 'multiply';
@@ -40,7 +33,8 @@ export interface ArithSettings {
   operation: ArithOp;
   difficulty: Difficulty;
   digitMode: DigitMode;
-  multiplyLevel: MultiplyLevel;
+  multiplyFirstDigits: number;   // 1..5 — size of the left operand
+  multiplySecondDigits: number;  // 1..5 — size of the right operand
   gameMode: 'questions' | 'time';
   questionCount: number;
   timeLimit: number;
@@ -100,28 +94,13 @@ function pickDigitCount(mode: DigitMode, cap: number): number {
   return randInt(1, target);
 }
 
-// Multiplication uses an explicit level-based picker rather than the
-// digit/difficulty knobs that govern add/subtract. This decouples kid
-// progression (which is naturally a sequence) from the rest of the form.
-function multiplyLevelToDigitPair(level: MultiplyLevel): [number, number] {
-  switch (level) {
-    case 'facts': return [1, 1];
-    case 'd2x1':  return [2, 1];
-    case 'd2x2':  return [2, 2];
-    case 'd3x1':  return [3, 1];
-    case 'd3x2':  return [3, 2];
-    case 'd4x1':  return [4, 1];
-    case 'd5x1':  return [5, 1];
-  }
-}
 
 function trySample(settings: ArithSettings, op: 'add' | 'subtract' | 'multiply'): ArithQuestion | null {
-  const { difficulty, digitMode, multiplyLevel } = settings;
+  const { difficulty, digitMode, multiplyFirstDigits, multiplySecondDigits } = settings;
 
   if (op === 'multiply') {
-    const [d1, d2] = multiplyLevelToDigitPair(multiplyLevel);
-    const r1 = digitsToRange(d1);
-    const r2 = digitsToRange(d2);
+    const r1 = digitsToRange(multiplyFirstDigits);
+    const r2 = digitsToRange(multiplySecondDigits);
     const a = randInt(r1.min, r1.max);
     const b = randInt(r2.min, r2.max);
     return { op: 'multiply', operand1: a, operand2: b, answer: a * b };

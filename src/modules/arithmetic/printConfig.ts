@@ -1,5 +1,4 @@
-import type { ArithOp, DigitMode, Difficulty, MultiplyLevel } from './logic';
-import { MULTIPLY_LEVEL_LABEL } from './logic';
+import type { ArithOp, DigitMode, Difficulty } from './logic';
 
 // Page-count picker options (independent of operation).
 export const PRINT_PAGE_OPTIONS = [1, 3, 5, 10, 20];
@@ -14,12 +13,13 @@ export function perPageOptionsForOp(op: ArithOp): number[] {
 
 // One-line summary of the active print settings, shown at the top of the
 // modal so the parent can see what will be printed. Includes the multiply
-// level when relevant (multiply alone or 'all' mode).
+// digit pair when relevant (multiply alone or 'all' mode).
 export function buildArithSummary(
   operation: ArithOp,
   digitMode: DigitMode,
   difficulty: Difficulty,
-  multiplyLevel: MultiplyLevel
+  multiplyFirstDigits: number,
+  multiplySecondDigits: number
 ): string {
   const opPart: Record<ArithOp, string> = {
     add: '+',
@@ -37,7 +37,7 @@ export function buildArithSummary(
     parts.push(difficulty);
   }
   if (operation === 'multiply' || operation === 'all') {
-    parts.push(`multiply ${MULTIPLY_LEVEL_LABEL[multiplyLevel]}`);
+    parts.push(`multiply ${multiplyFirstDigits}-digit × ${multiplySecondDigits}-digit`);
   }
   return parts.join(' • ');
 }
