@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Palette } from 'lucide-react';
+import { Menu, Palette, Clock, BarChart3 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
@@ -161,7 +161,9 @@ const Hub = () => {
             onClick={() => navigate('/time')}
             className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
           >
-            <div className="text-5xl md:text-6xl font-extrabold text-primary text-center mb-2">⏰</div>
+            <div className="flex justify-center mb-2">
+              <Clock className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
+            </div>
             <div className="text-lg md:text-xl font-bold text-foreground text-center">Time</div>
             <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
               Read analog clocks &middot; hour, half, quarter, 5-min
@@ -194,7 +196,9 @@ const Hub = () => {
             onClick={() => navigate('/charts')}
             className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
           >
-            <div className="text-5xl md:text-6xl font-extrabold text-primary text-center mb-2">📊</div>
+            <div className="flex justify-center mb-2">
+              <BarChart3 className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
+            </div>
             <div className="text-lg md:text-xl font-bold text-foreground text-center">Charts</div>
             <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
               Read bar charts &middot; compare &middot; total
