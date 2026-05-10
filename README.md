@@ -1,126 +1,100 @@
-# Maths Challenge
+# Times Table Hero
 
-An interactive maths learning game designed for children to practice multiplication and division with times tables from 0 to 12.
+Free maths practice for kids — practice online or print worksheets.
 
-## Features
+Live site: https://times-table-hero.pages.dev/
 
-- **User Profiles**
-  - Simple avatar-based profiles (name, color, icon)
-  - Individual progress tracking per user
-  - No passwords - kid-friendly identification
+![Times Table Hero screenshot](public/screenshot.png)
 
-- **Three Difficulty Levels**
-  - Easy: Multiple choice with clearly different options
-  - Medium: Multiple choice with closer options
-  - Hard: Type the answer directly
+## What it does
 
-- **Two Game Modes**
-  - Practice Mode: Answer a set number of questions at your own pace
-  - Timed Mode: Race against the clock to answer as many as possible
+Times Table Hero is a kid-friendly maths practice app with six learning modules. Each module supports two ways to practice:
 
-- **Operations**
-  - Multiplication
-  - Division
-  - Both combined
+- **Online play** — pick a skill, difficulty, and game mode, then answer questions in the browser. Results are tracked per local user profile.
+- **Printable worksheets** — generate an A4-ready PDF (with optional answer key) for offline practice.
 
-- **Printable Worksheets**
-  - Generate practice sheets for offline use
-  - A4 optimized layout
-  - Configurable question count (20-100)
-  - Dynamic sizing based on content
+There are no accounts, no tracking, no ads. Profiles are simple kid-friendly avatars stored in the browser.
 
-- **Progress Tracking**
-  - Tracks scores per user locally
-  - Shows improvement between sessions
-  - Detailed results breakdown after each game
+## Modules
 
-- **Kid-Friendly Design**
-  - Colorful, engaging interface
-  - Encouraging feedback messages
-  - Responsive design for tablets and phones
+The Hub offers six modules, each fully self-contained:
 
-## Tech Stack
+- **Times Tables** — multiplication and division facts from 0 to 12.
+- **Arithmetic** — addition, subtraction, multiplication, and division with configurable digit counts.
+- **Time** — read analog clocks at varying precision and convert between 12-hour and 24-hour formats.
+- **Fractions** — recognise, simplify, compare, add, and subtract fractions.
+- **Shapes** — identify 2D and 3D shapes and count faces, edges, and vertices.
+- **Charts** — read and interpret bar, line, and pie charts.
 
-- [React](https://react.dev/) - UI framework
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
-- [Vite](https://vitejs.dev/) - Build tool
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
-- [shadcn/ui](https://ui.shadcn.com/) - UI components
-- [React Router](https://reactrouter.com/) - Navigation
+## Quickstart
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-
-### Installation
+Requires Node.js 18 or newer.
 
 ```bash
-# Clone the repository
-git clone https://github.com/joaovl/times-table-hero.git
-
-# Navigate to the project
-cd times-table-hero
-
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
 
-The app will be available at `http://localhost:8080`
+The dev server runs at http://localhost:8080.
 
-### Available Scripts
+To build the production bundle:
+
+```bash
+npm run build
+```
+
+Output lands in `dist/` as static files (HTML, CSS, JS, assets).
+
+## Available scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build |
-| `npm run lint` | Run ESLint |
+| `npm run dev` | Start the Vite dev server on port 8080 |
+| `npm run build` | Build the production bundle into `dist/` |
+| `npm run preview` | Serve the built bundle locally |
+| `npm run lint` | Run ESLint over the project |
+| `npm run typecheck` | Run the TypeScript project references with `tsc -b --noEmit` |
+| `npm test` | Run the Vitest test suite |
+| `npm run test:ui` | Run Vitest with the interactive UI |
 
-## Project Structure
+## Deploy
 
-```
-src/
-├── components/
-│   ├── game/           # Game-specific components
-│   │   ├── GamePlay.tsx
-│   │   ├── GameResults.tsx
-│   │   └── GameSetup.tsx
-│   ├── ui/             # Reusable UI components
-│   ├── NewUserModal.tsx
-│   ├── UserSelector.tsx
-│   └── Worksheet.tsx
-├── lib/
-│   ├── gameLogic.ts    # Game mechanics and question generation
-│   ├── gameStorage.ts  # Local storage for progress
-│   ├── userStorage.ts  # User profile management
-│   └── utils.ts        # Utility functions
-├── pages/
-│   ├── Index.tsx       # Main game page
-│   └── PrintResources.tsx # Worksheet generator
-└── App.tsx             # Main application
-```
+The project produces a plain static `dist/` directory, so any static host works.
 
-## Deployment
+### Cloudflare Pages (current host)
 
-### Cloudflare Pages
+The live site at `times-table-hero.pages.dev` is deployed via Cloudflare Pages connected directly to the GitHub repository. There is no `wrangler.toml` — Pages handles the build itself.
 
-1. Push your code to GitHub
-2. Connect your repository in Cloudflare Pages dashboard
-3. Configure build settings:
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-4. Deploy
+To set up your own deployment:
 
-### Other Platforms
+1. Push the repo to GitHub.
+2. In the Cloudflare dashboard, create a new Pages project and connect the repo.
+3. Set the build configuration:
+   - **Build command:** `npm run build`
+   - **Build output directory:** `dist`
+   - **Node version:** 18 or higher (set via the `NODE_VERSION` environment variable if needed).
+4. Deploy.
 
-The production build (`npm run build`) generates static files in the `dist/` folder that can be deployed to any static hosting service (Vercel, Netlify, GitHub Pages, etc.)
+### Other static hosts
+
+The same `dist/` output deploys cleanly to Vercel, Netlify, GitHub Pages, or any static file server.
+
+## Add a new module
+
+Each module under `src/modules/<name>/` follows the same shape: `<Name>Index.tsx`, `<Name>Setup.tsx`, `<Name>Play.tsx`, `<Name>Results.tsx`, plus `logic.ts`, `pdf.ts`, `printConfig.ts`, `storage.ts`, and tests.
+
+The roadmap document at [`docs/superpowers/specs/2026-05-10-future-modules-roadmap.md`](docs/superpowers/specs/2026-05-10-future-modules-roadmap.md) describes the shared module pattern and the planned modules in detail. Read that first, then mirror the folder shape of an existing module (`src/modules/arithmetic/` is a good reference).
+
+## Tech stack
+
+- [React 18](https://react.dev/) with TypeScript
+- [Vite 5](https://vitejs.dev/) build tooling
+- [Vitest](https://vitest.dev/) for unit and integration tests
+- [Tailwind CSS](https://tailwindcss.com/) for styling
+- [React Router](https://reactrouter.com/) for navigation
+- [jsPDF](https://github.com/parallax/jsPDF) for worksheet generation
+- [Lucide React](https://lucide.dev/) for icons
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).

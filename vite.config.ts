@@ -27,4 +27,18 @@ export default defineConfig({
   define: {
     __GIT_HASH__: JSON.stringify(getGitHash()),
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split heavy dependencies into their own chunks so the main app
+        // bundle stays under Vite's 500 kB warning threshold. jspdf only
+        // loads when a user actually generates a worksheet, and react /
+        // router are shared across every page.
+        manualChunks: {
+          jspdf: ["jspdf"],
+          react: ["react", "react-dom", "react-router-dom"],
+        },
+      },
+    },
+  },
 });
