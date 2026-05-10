@@ -6,6 +6,8 @@ export interface ArithPdfOptions {
   title: string;
   subtitle: string;
   studentName?: string;
+  /** Append a final page that lists every answer in number order. */
+  includeAnswerKey?: boolean;
 }
 
 const A4_W = 210;
@@ -45,8 +47,8 @@ function gridSpec(maxDigits: number, count: number): { cols: number; rows: numbe
   return { cols, rows, fs };
 }
 
-function drawHorizontal(doc: jsPDF, q: ArithQuestion, x: number, y: number) {
-  const eq = `${q.operand1} ${symbol(q.op)} ${q.operand2} =`;
+function drawHorizontal(doc: jsPDF, q: ArithQuestion, x: number, y: number, num: number) {
+  const eq = `${num}.  ${q.operand1} ${symbol(q.op)} ${q.operand2} =`;
   doc.text(eq, x, y);
   const eqW = doc.getTextWidth(eq);
   const blankStart = x + eqW + 1.5;
@@ -55,25 +57,32 @@ function drawHorizontal(doc: jsPDF, q: ArithQuestion, x: number, y: number) {
   doc.line(blankStart, y + 0.6, blankEnd, y + 0.6);
 }
 
-function drawColumn(doc: jsPDF, q: ArithQuestion, x: number, yTop: number, fs: number) {
+function drawColumn(doc: jsPDF, q: ArithQuestion, x: number, yTop: number, fs: number, num: number) {
+  // Question number sits on the line above the operand stack.
+  const numStr = `${num}.`;
+  doc.text(numStr, x, yTop);
+
   const a = String(q.operand1);
   const b = String(q.operand2);
   const width = Math.max(a.length, b.length);
   const charW = fs * 0.55;
   const colW = (width + 1) * charW;
+  // Push the column itself right by the width of the number prefix.
+  const colX = x + doc.getTextWidth(numStr) + 1.5;
 
   const lineH = fs * 0.5;
-  const aX = x + colW - a.length * charW;
-  doc.text(a, aX, yTop);
+  const aY = yTop + lineH;
+  const aX = colX + colW - a.length * charW;
+  doc.text(a, aX, aY);
 
-  const symY = yTop + lineH;
-  doc.text(symbol(q.op), x, symY);
-  const bX = x + colW - b.length * charW;
+  const symY = aY + lineH;
+  doc.text(symbol(q.op), colX, symY);
+  const bX = colX + colW - b.length * charW;
   doc.text(b, bX, symY);
 
   const ruleY = symY + 1.5;
   doc.setLineWidth(0.4);
-  doc.line(x, ruleY, x + colW, ruleY);
+  doc.line(colX, ruleY, colX + colW, ruleY);
 }
 
 function drawPage(
@@ -81,7 +90,8 @@ function drawPage(
   questions: ArithQuestion[],
   title: string,
   subtitle: string,
-  studentName?: string
+  studentName?: string,
+  numberOffset = 0
 ) {
   const left = MARGIN;
   const top = MARGIN;
@@ -127,11 +137,12 @@ function drawPage(
     const row = Math.floor(i / cols);
     const cellX = left + col * cellW + 2;
     const cellTop = gridTop + row * rowH;
+    const num = numberOffset + i + 1;
     if (useColumn) {
-      drawColumn(doc, q, cellX, cellTop + 4, fs);
+      drawColumn(doc, q, cellX, cellTop + 4, fs, num);
     } else {
       const baselineY = cellTop + rowH / 2 + (fs * 0.352778) * 0.35;
-      drawHorizontal(doc, q, cellX, baselineY);
+      drawHorizontal(doc, q, cellX, baselineY, num);
     }
   }
 
@@ -140,11 +151,71 @@ function drawPage(
   doc.text('Good luck!', A4_W / 2, top + PRINT_H - 3, { align: 'center' });
 }
 
+function drawAnswerKeyPage(
+  doc: jsPDF,
+  pages: ArithQuestion[][],
+  title: string,
+  studentName?: string
+) {
+  const left = MARGIN;
+  const top = MARGIN;
+  const right = MARGIN + PRINT_W;
+
+  // Header (same chrome as a question page)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text(`${title} — Answer Key`, left, top + 6);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  const nameLabel = 'Name:';
+  const nameLabelW = doc.getTextWidth(nameLabel);
+  const nameLineEnd = right;
+  const nameLineStart = nameLineEnd - 50;
+  doc.text(nameLabel, nameLineStart - nameLabelW - 2, top + 6);
+  if (studentName) doc.text(studentName, nameLineStart + 1, top + 5.5);
+  doc.setLineWidth(0.3);
+  doc.line(nameLineStart, top + 7, nameLineEnd, top + 7);
+  doc.setLineWidth(0.5);
+  doc.line(left, top + 10, right, top + 10);
+
+  // Flatten all questions, numbered 1..N continuously across pages.
+  const allQuestions: ArithQuestion[] = pages.flat();
+  const total = allQuestions.length;
+
+  const cols = 5;
+  const colW = PRINT_W / cols;
+  const gridTop = top + HEADER_H;
+  const gridH = PRINT_H - HEADER_H - FOOTER_H;
+  const rows = Math.max(1, Math.ceil(total / cols));
+  const rowH = gridH / rows;
+  // Cap row height for legibility; if too many rows, font shrinks
+  const fs = Math.min(12, Math.max(8, Math.floor(rowH * 0.45)));
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(fs);
+
+  for (let i = 0; i < total; i++) {
+    const q = allQuestions[i];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = left + col * colW + 2;
+    const y = gridTop + row * rowH + rowH / 2 + (fs * 0.352778) * 0.35;
+    doc.text(`${i + 1}) ${q.answer}`, x, y);
+  }
+}
+
 export function generateArithPdf(opts: ArithPdfOptions): jsPDF {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  let runningOffset = 0;
   opts.pages.forEach((qs, idx) => {
     if (idx > 0) doc.addPage('a4', 'portrait');
-    drawPage(doc, qs, opts.title, opts.subtitle, opts.studentName);
+    drawPage(doc, qs, opts.title, opts.subtitle, opts.studentName, runningOffset);
+    runningOffset += qs.length;
   });
+  if (opts.includeAnswerKey) {
+    doc.addPage('a4', 'portrait');
+    drawAnswerKeyPage(doc, opts.pages, opts.title, opts.studentName);
+  }
   return doc;
 }

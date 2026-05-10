@@ -47,26 +47,37 @@ describe('perPageOptionsForOp', () => {
 });
 
 describe('buildArithSummary', () => {
-  it('shows operation, exact-digit count, and difficulty', () => {
+  it('shows operation, exact-digit count, and difficulty for add', () => {
     expect(
-      buildArithSummary('add', { kind: 'exact', digits: 3 }, 'medium')
+      buildArithSummary('add', { kind: 'exact', digits: 3 }, 'medium', 'd2x1')
     ).toBe('+ • exactly 3-digit • medium');
   });
 
-  it("uses 'up to N-digit' phrasing when DigitMode.kind is 'upTo'", () => {
+  it("uses 'up to N-digit' phrasing for subtract", () => {
     expect(
-      buildArithSummary('subtract', { kind: 'upTo', digits: 5 }, 'easy')
+      buildArithSummary('subtract', { kind: 'upTo', digits: 5 }, 'easy', 'd2x1')
     ).toBe('− • up to 5-digit • easy');
   });
 
-  it("'all' op shows the operator mix in the summary", () => {
+  it('multiply summary shows only operation + level (digits/difficulty irrelevant)', () => {
     expect(
-      buildArithSummary('all', { kind: 'exact', digits: 2 }, 'hard')
-    ).toBe('All (+ − ×) • exactly 2-digit • hard');
+      buildArithSummary('multiply', { kind: 'exact', digits: 5 }, 'easy', 'd5x1')
+    ).toBe('× • multiply 5×1');
   });
 
-  it('summary string is short enough to fit a typical modal width (≤ 60 chars)', () => {
-    const longest = buildArithSummary('all', { kind: 'upTo', digits: 5 }, 'medium');
-    expect(longest.length).toBeLessThanOrEqual(60);
+  it("'all' summary shows op mix, digits, difficulty, and multiply level", () => {
+    expect(
+      buildArithSummary('all', { kind: 'exact', digits: 2 }, 'hard', 'd2x2')
+    ).toBe('All (+ − ×) • exactly 2-digit • hard • multiply 2×2');
+  });
+
+  it('summary stays compact (≤ 80 chars even for the longest case)', () => {
+    const longest = buildArithSummary(
+      'all',
+      { kind: 'upTo', digits: 5 },
+      'medium',
+      'd5x1'
+    );
+    expect(longest.length).toBeLessThanOrEqual(80);
   });
 });

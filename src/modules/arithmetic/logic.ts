@@ -5,6 +5,20 @@ export type DigitMode =
   | { kind: 'exact'; digits: number }
   | { kind: 'upTo'; digits: number };
 
+export type MultiplyLevel = 'facts' | 'd2x1' | 'd2x2' | 'd3x1' | 'd3x2' | 'd4x1' | 'd5x1';
+
+export const MULTIPLY_LEVELS: MultiplyLevel[] = ['facts', 'd2x1', 'd2x2', 'd3x1', 'd3x2', 'd4x1', 'd5x1'];
+
+export const MULTIPLY_LEVEL_LABEL: Record<MultiplyLevel, string> = {
+  facts: '×1d',
+  d2x1: '2×1',
+  d2x2: '2×2',
+  d3x1: '3×1',
+  d3x2: '3×2',
+  d4x1: '4×1',
+  d5x1: '5×1',
+};
+
 export interface ArithQuestion {
   op: 'add' | 'subtract' | 'multiply';
   operand1: number;
@@ -16,9 +30,20 @@ export interface ArithSettings {
   operation: ArithOp;
   difficulty: Difficulty;
   digitMode: DigitMode;
+  multiplyLevel: MultiplyLevel;
   gameMode: 'questions' | 'time';
   questionCount: number;
   timeLimit: number;
+}
+
+// Difficulty thresholds scale with operand digit count: a "hard" 5-digit add
+// requires more carries than a "hard" 2-digit add, otherwise hard at high
+// digit counts can still come out unchallenging.
+function carryThresholds(digits: number): { easyMax: number; mediumMax: number } {
+  // easy: 0 carries
+  // medium: 1..ceil(digits/3) carries
+  // hard: > ceil(digits/3) carries
+  return { easyMax: 0, mediumMax: Math.max(1, Math.ceil(digits / 3)) };
 }
 
 export function countCarries(a: number, b: number): number {
@@ -65,35 +90,26 @@ function pickDigitCount(mode: DigitMode, cap: number): number {
   return randInt(1, target);
 }
 
-// Multiplication scales with the user's digit setting. For very wide operands
-// the second factor stays small (1-digit) so the working stays kid-friendly:
-// 5-digit × 1 is a standard school "long multiplication" exercise; 5-digit ×
-// 5-digit is not.
-function multiplyDigitPair(diff: Difficulty, cap: number): [number, number] {
-  if (diff === 'easy') {
-    if (cap >= 2) return [Math.min(2, cap), 1];
-    return [1, 1];
+// Multiplication uses an explicit level-based picker rather than the
+// digit/difficulty knobs that govern add/subtract. This decouples kid
+// progression (which is naturally a sequence) from the rest of the form.
+function multiplyLevelToDigitPair(level: MultiplyLevel): [number, number] {
+  switch (level) {
+    case 'facts': return [1, 1];
+    case 'd2x1':  return [2, 1];
+    case 'd2x2':  return [2, 2];
+    case 'd3x1':  return [3, 1];
+    case 'd3x2':  return [3, 2];
+    case 'd4x1':  return [4, 1];
+    case 'd5x1':  return [5, 1];
   }
-  if (diff === 'medium') {
-    if (cap >= 4) return [cap, 1];
-    if (cap >= 3) return [3, 1];
-    if (cap >= 2) return [2, 2];
-    return [1, 1];
-  }
-  // hard
-  if (cap >= 5) return [5, 1];
-  if (cap >= 4) return [4, 2];
-  if (cap >= 3) return [3, 2];
-  if (cap >= 2) return [2, 2];
-  return [1, 1];
 }
 
 function trySample(settings: ArithSettings, op: 'add' | 'subtract' | 'multiply'): ArithQuestion | null {
-  const { difficulty, digitMode } = settings;
+  const { difficulty, digitMode, multiplyLevel } = settings;
 
   if (op === 'multiply') {
-    const cap = digitMode.digits;
-    const [d1, d2] = multiplyDigitPair(difficulty, cap);
+    const [d1, d2] = multiplyLevelToDigitPair(multiplyLevel);
     const r1 = digitsToRange(d1);
     const r2 = digitsToRange(d2);
     const a = randInt(r1.min, r1.max);
@@ -112,10 +128,21 @@ function trySample(settings: ArithSettings, op: 'add' | 'subtract' | 'multiply')
 
   const carries = countCarries(a, b);
   const borrows = countBorrows(a, b);
+  const widerDigits = Math.max(String(a).length, String(b).length);
+  const { easyMax, mediumMax } = carryThresholds(widerDigits);
+
   const matches =
     op === 'add'
-      ? (difficulty === 'easy' ? carries === 0 : difficulty === 'medium' ? carries === 1 : carries >= 2)
-      : (difficulty === 'easy' ? borrows === 0 : difficulty === 'medium' ? borrows === 1 : borrows >= 2);
+      ? (difficulty === 'easy'
+          ? carries <= easyMax
+          : difficulty === 'medium'
+            ? carries >= 1 && carries <= mediumMax
+            : carries > mediumMax)
+      : (difficulty === 'easy'
+          ? borrows <= easyMax
+          : difficulty === 'medium'
+            ? borrows >= 1 && borrows <= mediumMax
+            : borrows > mediumMax);
 
   if (!matches) return null;
 

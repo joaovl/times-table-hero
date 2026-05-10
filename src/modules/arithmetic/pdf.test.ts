@@ -45,27 +45,103 @@ const render = (qs: ArithQuestion[]) =>
 const symbolFor = (op: 'add' | 'subtract' | 'multiply') =>
   op === 'add' ? '+' : op === 'subtract' ? '-' : '×';
 
+// PDF prefixes equations with the question number ("1.  7 + 8 =") so we
+// match by suffix when we don't know what the running number is.
+const someTextEndsWith = (suffix: string): boolean =>
+  capturedTextCalls.some(t => t.endsWith(suffix));
+
 // Regex matching any character in the Unicode Mathematical Operators block
 // (U+2200..U+22FF). No char in this block is in Helvetica's WinAnsi
 // encoding, so any such char passed to doc.text() will mis-render.
 const MATH_OPERATORS_BLOCK = /[∀-⋿]/u;
 
+describe('generateArithPdf — question numbering', () => {
+  it('prefixes horizontal questions with their 1-based number', () => {
+    render([
+      { op: 'add', operand1: 1, operand2: 2, answer: 3 },
+      { op: 'add', operand1: 4, operand2: 5, answer: 9 },
+    ]);
+    expect(capturedTextCalls).toContain('1.  1 + 2 =');
+    expect(capturedTextCalls).toContain('2.  4 + 5 =');
+  });
+
+  it('numbers continue across multiple pages', () => {
+    capturedTextCalls.length = 0;
+    generateArithPdf({
+      pages: [
+        [{ op: 'add', operand1: 1, operand2: 1, answer: 2 }],
+        [{ op: 'add', operand1: 2, operand2: 2, answer: 4 }],
+      ],
+      title: 'T',
+      subtitle: '',
+    });
+    expect(capturedTextCalls).toContain('1.  1 + 1 =');
+    expect(capturedTextCalls).toContain('2.  2 + 2 =');
+  });
+
+  it('column-form questions render their number above the stack', () => {
+    capturedTextCalls.length = 0;
+    generateArithPdf({
+      pages: [[{ op: 'add', operand1: 12345, operand2: 67890, answer: 80235 }]],
+      title: 'T',
+      subtitle: '',
+    });
+    expect(capturedTextCalls).toContain('1.');
+    expect(capturedTextCalls).toContain('12345');
+    expect(capturedTextCalls).toContain('67890');
+  });
+});
+
+describe('generateArithPdf — answer key', () => {
+  it('does not include answers when includeAnswerKey is unset', () => {
+    capturedTextCalls.length = 0;
+    generateArithPdf({
+      pages: [[{ op: 'add', operand1: 7, operand2: 8, answer: 15 }]],
+      title: 'T',
+      subtitle: '',
+    });
+    expect(capturedTextCalls).not.toContain('1) 15');
+  });
+
+  it('appends a numbered answer page when includeAnswerKey is true', () => {
+    capturedTextCalls.length = 0;
+    generateArithPdf({
+      pages: [
+        [
+          { op: 'add', operand1: 7, operand2: 8, answer: 15 },
+          { op: 'subtract', operand1: 90, operand2: 45, answer: 45 },
+        ],
+        [{ op: 'multiply', operand1: 12, operand2: 9, answer: 108 }],
+      ],
+      title: 'Maths',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    // Continuous numbering across pages: 1) 15, 2) 45, 3) 108
+    expect(capturedTextCalls).toContain('1) 15');
+    expect(capturedTextCalls).toContain('2) 45');
+    expect(capturedTextCalls).toContain('3) 108');
+    // Answer key has its own header
+    expect(capturedTextCalls).toContain('Maths — Answer Key');
+  });
+});
+
 describe('generateArithPdf — horizontal layout (≤ 3 digits)', () => {
-  it('renders an add question as "a + b ="', () => {
+  it('renders an add question as "a + b =" (with number prefix)', () => {
     render([{ op: 'add', operand1: 234, operand2: 567, answer: 801 }]);
-    expect(capturedTextCalls).toContain('234 + 567 =');
+    expect(capturedTextCalls).toContain('1.  234 + 567 =');
   });
 
   it('renders a subtract question as "a - b =" (ASCII hyphen, not U+2212)', () => {
     render([{ op: 'subtract', operand1: 90, operand2: 45, answer: 45 }]);
-    expect(capturedTextCalls).toContain('90 - 45 =');
+    expect(someTextEndsWith('90 - 45 =')).toBe(true);
     // The Unicode math-minus would render as a stray quote in Helvetica.
-    expect(capturedTextCalls).not.toContain('90 − 45 =');
+    expect(capturedTextCalls.some(t => t.includes('−'))).toBe(false);
   });
 
   it('renders a multiply question as "a × b ="', () => {
     render([{ op: 'multiply', operand1: 12, operand2: 9, answer: 108 }]);
-    expect(capturedTextCalls).toContain('12 × 9 =');
+    expect(someTextEndsWith('12 × 9 =')).toBe(true);
   });
 
   it('does not leak the answer in the rendered text', () => {
@@ -109,13 +185,14 @@ describe('generateArithPdf — round-trip with generateArithQuestions', () => {
     operation: 'add',
     difficulty: 'medium',
     digitMode: { kind: 'exact', digits: 2 },
+    multiplyLevel: 'd2x1',
     gameMode: 'questions',
     questionCount: 20,
     timeLimit: 0,
   };
 
   const containsHorizontal = (q: ArithQuestion): boolean =>
-    capturedTextCalls.includes(`${q.operand1} ${symbolFor(q.op)} ${q.operand2} =`);
+    capturedTextCalls.some(t => t.endsWith(`${q.operand1} ${symbolFor(q.op)} ${q.operand2} =`));
 
   const containsColumn = (q: ArithQuestion): boolean =>
     capturedTextCalls.includes(`${q.operand1}`) &&
@@ -173,7 +250,7 @@ describe('generateArithPdf — page capacity (no silent question dropping)', () 
     const qs = buildAddQs(80, 2);
     render(qs);
     qs.forEach(q => {
-      expect(capturedTextCalls).toContain(`${q.operand1} + ${q.operand2} =`);
+      expect(someTextEndsWith(`${q.operand1} + ${q.operand2} =`)).toBe(true);
     });
   });
 
@@ -181,7 +258,7 @@ describe('generateArithPdf — page capacity (no silent question dropping)', () 
     const qs = buildAddQs(60, 3);
     render(qs);
     qs.forEach(q => {
-      expect(capturedTextCalls).toContain(`${q.operand1} + ${q.operand2} =`);
+      expect(someTextEndsWith(`${q.operand1} + ${q.operand2} =`)).toBe(true);
     });
   });
 
@@ -221,6 +298,7 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
     operation: 'add',
     difficulty: 'medium',
     digitMode: { kind: 'exact', digits: 2 },
+    multiplyLevel: 'd2x1',
     gameMode: 'questions',
     questionCount: 20,
     timeLimit: 0,
@@ -280,6 +358,7 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
               operation,
               difficulty,
               digitMode,
+              multiplyLevel: 'd2x1',
               gameMode: 'questions',
               questionCount: perPage,
               timeLimit: 0,
@@ -305,10 +384,11 @@ describe('generateArithPdf — encoding safety (no Math Operators block chars)',
                 expect(capturedTextCalls, ctx).toContain(`${q.operand1}`);
                 expect(capturedTextCalls, ctx).toContain(`${q.operand2}`);
               } else {
+                const eqSuffix = `${q.operand1} ${symbolFor(q.op)} ${q.operand2} =`;
                 expect(
-                  capturedTextCalls,
+                  capturedTextCalls.some(t => t.endsWith(eqSuffix)),
                   ctx
-                ).toContain(`${q.operand1} ${symbolFor(q.op)} ${q.operand2} =`);
+                ).toBe(true);
               }
             });
 

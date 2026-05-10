@@ -1,4 +1,5 @@
-import type { ArithOp, DigitMode, Difficulty } from './logic';
+import type { ArithOp, DigitMode, Difficulty, MultiplyLevel } from './logic';
+import { MULTIPLY_LEVEL_LABEL } from './logic';
 
 // Page-count picker options (independent of operation).
 export const PRINT_PAGE_OPTIONS = [1, 3, 5, 10, 20];
@@ -12,11 +13,13 @@ export function perPageOptionsForOp(op: ArithOp): number[] {
 }
 
 // One-line summary of the active print settings, shown at the top of the
-// modal so the parent can see what will be printed.
+// modal so the parent can see what will be printed. Includes the multiply
+// level when relevant (multiply alone or 'all' mode).
 export function buildArithSummary(
   operation: ArithOp,
   digitMode: DigitMode,
-  difficulty: Difficulty
+  difficulty: Difficulty,
+  multiplyLevel: MultiplyLevel
 ): string {
   const opPart: Record<ArithOp, string> = {
     add: '+',
@@ -24,9 +27,17 @@ export function buildArithSummary(
     multiply: '×',
     all: 'All (+ − ×)',
   };
-  const digitsPart =
-    digitMode.kind === 'exact'
-      ? `exactly ${digitMode.digits}-digit`
-      : `up to ${digitMode.digits}-digit`;
-  return `${opPart[operation]} • ${digitsPart} • ${difficulty}`;
+  const parts: string[] = [opPart[operation]];
+  if (operation !== 'multiply') {
+    const digitsPart =
+      digitMode.kind === 'exact'
+        ? `exactly ${digitMode.digits}-digit`
+        : `up to ${digitMode.digits}-digit`;
+    parts.push(digitsPart);
+    parts.push(difficulty);
+  }
+  if (operation === 'multiply' || operation === 'all') {
+    parts.push(`multiply ${MULTIPLY_LEVEL_LABEL[multiplyLevel]}`);
+  }
+  return parts.join(' • ');
 }

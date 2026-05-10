@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
 import { PrintWorksheetModal } from '@/components/PrintWorksheetModal';
 import type { UserProfile } from '@/lib/userStorage';
-import type { ArithOp, ArithSettings, Difficulty, DigitMode } from './logic';
-import { generateArithQuestions } from './logic';
+import type { ArithOp, ArithSettings, Difficulty, DigitMode, MultiplyLevel } from './logic';
+import { generateArithQuestions, MULTIPLY_LEVELS, MULTIPLY_LEVEL_LABEL } from './logic';
 import { generateArithPdf } from './pdf';
 import {
   getSavedArithSettings,
@@ -68,6 +68,7 @@ export function ArithmeticSetup({
   const [operation, setOperation] = useState<ArithOp>('add');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [digitMode, setDigitMode] = useState<DigitMode>({ kind: 'exact', digits: 2 });
+  const [multiplyLevel, setMultiplyLevel] = useState<MultiplyLevel>('d2x1');
   const [gameMode, setGameMode] = useState<'questions' | 'time'>('questions');
   const [questionCount, setQuestionCount] = useState(10);
   const [timeLimit, setTimeLimit] = useState(180);
@@ -84,6 +85,7 @@ export function ArithmeticSetup({
     setOperation(s.operation);
     setDifficulty(s.difficulty);
     setDigitMode(s.digitMode);
+    setMultiplyLevel(s.multiplyLevel);
     setGameMode(s.gameMode);
     setQuestionCount(s.questionCount);
     setTimeLimit(s.timeLimit);
@@ -94,35 +96,45 @@ export function ArithmeticSetup({
   useEffect(() => {
     if (!isLoaded) return;
     saveArithSettings(
-      { operation, difficulty, digitMode, gameMode, questionCount, timeLimit },
+      { operation, difficulty, digitMode, multiplyLevel, gameMode, questionCount, timeLimit },
       currentUser?.id
     );
-  }, [isLoaded, operation, difficulty, digitMode, gameMode, questionCount, timeLimit, currentUser?.id]);
+  }, [isLoaded, operation, difficulty, digitMode, multiplyLevel, gameMode, questionCount, timeLimit, currentUser?.id]);
 
   useEffect(() => {
     if (autoOpenPrint && isLoaded) setPrintOpen(true);
   }, [autoOpenPrint, isLoaded]);
 
-  const start = () => onStart({ operation, difficulty, digitMode, gameMode, questionCount, timeLimit });
+  const start = () => onStart({ operation, difficulty, digitMode, multiplyLevel, gameMode, questionCount, timeLimit });
 
   const handlePrintDownload = (pages: number, perPage: number, name: string) => {
     const settings: ArithSettings = {
       operation,
       difficulty,
       digitMode,
+      multiplyLevel,
       gameMode: 'questions',
       questionCount: perPage,
       timeLimit: 0,
     };
     const pagesArr = Array.from({ length: pages }, () => generateArithQuestions(settings, perPage));
-    const subtitle = `${opLabel(operation)} • ${difficulty} • ${
-      digitMode.kind === 'exact' ? `exactly ${digitMode.digits}` : `up to ${digitMode.digits}`
-    } digits`;
+    const subtitleParts: string[] = [opLabel(operation)];
+    if (operation !== 'multiply') {
+      subtitleParts.push(difficulty);
+      subtitleParts.push(
+        digitMode.kind === 'exact' ? `exactly ${digitMode.digits} digits` : `up to ${digitMode.digits} digits`
+      );
+    }
+    if (operation === 'multiply' || operation === 'all') {
+      subtitleParts.push(MULTIPLY_LEVEL_LABEL[multiplyLevel]);
+    }
+    const subtitle = subtitleParts.join(' • ');
     const doc = generateArithPdf({
       pages: pagesArr,
       title: 'Maths Challenge — Arithmetic',
       subtitle: `${perPage} Questions per page — ${subtitle}`,
       studentName: name || undefined,
+      includeAnswerKey: true,
     });
     doc.save('maths-arithmetic.pdf');
     const next = { pageCount: pages, questionsPerPage: perPage };
@@ -169,47 +181,74 @@ export function ArithmeticSetup({
           </div>
         </Card>
 
-        <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Digits</h2>
-          <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">Exactly</p>
-          <div className="grid grid-cols-5 gap-1 md:gap-2 mb-2">
-            {DIGIT_BUTTONS.map(d => (
-              <button
-                key={`exact-${d}`}
-                onClick={() => setDigitMode({ kind: 'exact', digits: d })}
-                className={buttonClass(digitMode.kind === 'exact' && digitMode.digits === d)}
-              >
-                <span className="text-[15px] md:text-[18px]">{d}</span>
-              </button>
-            ))}
-          </div>
-          <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">Up to</p>
-          <div className="grid grid-cols-5 gap-1 md:gap-2">
-            {DIGIT_BUTTONS.map(d => (
-              <button
-                key={`upto-${d}`}
-                onClick={() => setDigitMode({ kind: 'upTo', digits: d })}
-                className={buttonClass(digitMode.kind === 'upTo' && digitMode.digits === d)}
-              >
-                <span className="text-[15px] md:text-[18px]">{d}</span>
-              </button>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Difficulty</h2>
-          <div className="grid grid-cols-3 gap-2">
-            {(['easy', 'medium', 'hard'] as const).map((d, idx) => (
-              <div key={d} className="flex flex-col gap-1 md:gap-1.5">
-                <button onClick={() => setDifficulty(d)} className={buttonClass(difficulty === d)}>
-                  <span className="text-[13px] md:text-[16px]">{d.charAt(0).toUpperCase() + d.slice(1)}</span>
-                </button>
-                <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">{hints[idx]}</p>
+        {/* Digits + Difficulty drive add/subtract. Hidden when only multiply
+            is selected — multiply has its own level picker. Shown for 'all'
+            because 'all' includes add/subtract. */}
+        {operation !== 'multiply' && (
+          <>
+            <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+              <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Digits</h2>
+              <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">Exactly</p>
+              <div className="grid grid-cols-5 gap-1 md:gap-2 mb-2">
+                {DIGIT_BUTTONS.map(d => (
+                  <button
+                    key={`exact-${d}`}
+                    onClick={() => setDigitMode({ kind: 'exact', digits: d })}
+                    className={buttonClass(digitMode.kind === 'exact' && digitMode.digits === d)}
+                  >
+                    <span className="text-[15px] md:text-[18px]">{d}</span>
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
-        </Card>
+              <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">Up to</p>
+              <div className="grid grid-cols-5 gap-1 md:gap-2">
+                {DIGIT_BUTTONS.map(d => (
+                  <button
+                    key={`upto-${d}`}
+                    onClick={() => setDigitMode({ kind: 'upTo', digits: d })}
+                    className={buttonClass(digitMode.kind === 'upTo' && digitMode.digits === d)}
+                  >
+                    <span className="text-[15px] md:text-[18px]">{d}</span>
+                  </button>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+              <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Difficulty</h2>
+              <div className="grid grid-cols-3 gap-2">
+                {(['easy', 'medium', 'hard'] as const).map((d, idx) => (
+                  <div key={d} className="flex flex-col gap-1 md:gap-1.5">
+                    <button onClick={() => setDifficulty(d)} className={buttonClass(difficulty === d)}>
+                      <span className="text-[13px] md:text-[16px]">{d.charAt(0).toUpperCase() + d.slice(1)}</span>
+                    </button>
+                    <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">{hints[idx]}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </>
+        )}
+
+        {/* Multiply Level — shown when multiply or all is selected. */}
+        {(operation === 'multiply' || operation === 'all') && (
+          <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+            <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
+              Multiply Level
+            </h2>
+            <div className="grid grid-cols-4 gap-1 md:gap-2">
+              {MULTIPLY_LEVELS.map(lv => (
+                <button
+                  key={lv}
+                  onClick={() => setMultiplyLevel(lv)}
+                  className={buttonClass(multiplyLevel === lv)}
+                >
+                  <span className="text-[14px] md:text-[16px]">{MULTIPLY_LEVEL_LABEL[lv]}</span>
+                </button>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Game Mode</h2>
@@ -262,7 +301,7 @@ export function ArithmeticSetup({
         initialQuestionsPerPage={printConfig.questionsPerPage}
         pageCountOptions={PRINT_PAGE_OPTIONS}
         questionsPerPageOptions={perPageOptions}
-        summary={buildArithSummary(operation, digitMode, difficulty)}
+        summary={buildArithSummary(operation, digitMode, difficulty, multiplyLevel)}
         onDownload={handlePrintDownload}
       />
     </div>

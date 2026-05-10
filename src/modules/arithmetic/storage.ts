@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS: ArithSettings = {
   operation: 'add',
   difficulty: 'easy',
   digitMode: { kind: 'exact', digits: 2 },
+  multiplyLevel: 'd2x1',
   gameMode: 'questions',
   questionCount: 10,
   timeLimit: 180,

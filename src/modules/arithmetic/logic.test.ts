@@ -6,6 +6,7 @@ const baseSettings = (over: Partial<ArithSettings>): ArithSettings => ({
   operation: 'add',
   difficulty: 'easy',
   digitMode: { kind: 'exact', digits: 2 },
+  multiplyLevel: 'd2x1',
   gameMode: 'questions',
   questionCount: 10,
   timeLimit: 60,
@@ -45,19 +46,20 @@ describe('generateArithQuestions — count', () => {
   });
 });
 
-describe('generateArithQuestions — add difficulty buckets', () => {
-  it('easy add: 0 carries', () => {
-    const qs = generateArithQuestions(
-      baseSettings({ operation: 'add', difficulty: 'easy', digitMode: { kind: 'exact', digits: 3 } }),
-      40
-    );
-    qs.forEach(q => {
-      expect(q.op).toBe('add');
-      expect(countCarries(q.operand1, q.operand2)).toBe(0);
-    });
+describe('generateArithQuestions — add difficulty scales with digit count', () => {
+  it('easy add: always 0 carries (every digit setting)', () => {
+    for (const digits of [2, 3, 4, 5]) {
+      const qs = generateArithQuestions(
+        baseSettings({ operation: 'add', difficulty: 'easy', digitMode: { kind: 'exact', digits } }),
+        40
+      );
+      qs.forEach(q => {
+        expect(countCarries(q.operand1, q.operand2), `digits=${digits}`).toBe(0);
+      });
+    }
   });
 
-  it('medium add: exactly 1 carry', () => {
+  it('medium 3-digit add: 1 carry (max-1 ceil(3/3))', () => {
     const qs = generateArithQuestions(
       baseSettings({ operation: 'add', difficulty: 'medium', digitMode: { kind: 'exact', digits: 3 } }),
       40
@@ -65,12 +67,32 @@ describe('generateArithQuestions — add difficulty buckets', () => {
     qs.forEach(q => expect(countCarries(q.operand1, q.operand2)).toBe(1));
   });
 
-  it('hard add: ≥2 carries', () => {
+  it('medium 5-digit add: 1..2 carries (ceil(5/3) = 2)', () => {
+    const qs = generateArithQuestions(
+      baseSettings({ operation: 'add', difficulty: 'medium', digitMode: { kind: 'exact', digits: 5 } }),
+      40
+    );
+    qs.forEach(q => {
+      const c = countCarries(q.operand1, q.operand2);
+      expect(c).toBeGreaterThanOrEqual(1);
+      expect(c).toBeLessThanOrEqual(2);
+    });
+  });
+
+  it('hard 3-digit add: ≥2 carries', () => {
     const qs = generateArithQuestions(
       baseSettings({ operation: 'add', difficulty: 'hard', digitMode: { kind: 'exact', digits: 3 } }),
       40
     );
     qs.forEach(q => expect(countCarries(q.operand1, q.operand2)).toBeGreaterThanOrEqual(2));
+  });
+
+  it('hard 5-digit add: ≥3 carries (more than ceil(5/3) = 2)', () => {
+    const qs = generateArithQuestions(
+      baseSettings({ operation: 'add', difficulty: 'hard', digitMode: { kind: 'exact', digits: 5 } }),
+      40
+    );
+    qs.forEach(q => expect(countCarries(q.operand1, q.operand2)).toBeGreaterThanOrEqual(3));
   });
 });
 
@@ -96,37 +118,43 @@ describe('generateArithQuestions — subtract', () => {
   });
 });
 
-describe('generateArithQuestions — multiply respects digit setting', () => {
-  it('5-digit hard multiply produces a 5-digit operand', () => {
+describe('generateArithQuestions — multiply uses level not difficulty/digits', () => {
+  const levels: Array<[ArithSettings['multiplyLevel'], number, number]> = [
+    ['facts', 1, 1],
+    ['d2x1', 2, 1],
+    ['d2x2', 2, 2],
+    ['d3x1', 3, 1],
+    ['d3x2', 3, 2],
+    ['d4x1', 4, 1],
+    ['d5x1', 5, 1],
+  ];
+
+  it.each(levels)("multiplyLevel '%s' produces operand digits [%i, %i]", (level, expectedD1, expectedD2) => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'multiply', difficulty: 'hard', digitMode: { kind: 'exact', digits: 5 } }),
+      baseSettings({ operation: 'multiply', multiplyLevel: level }),
       20
     );
     qs.forEach(q => {
-      const max = Math.max(digitsOf(q.operand1), digitsOf(q.operand2));
-      expect(max).toBe(5);
+      // operand1 has expectedD1 digits, operand2 has expectedD2 digits.
+      // (Generator emits in the order [larger, smaller] when level dictates.)
+      expect(digitsOf(q.operand1)).toBe(expectedD1);
+      expect(digitsOf(q.operand2)).toBe(expectedD2);
     });
   });
 
-  it('4-digit hard multiply produces a 4-digit operand', () => {
+  it('multiplyLevel ignores the digitMode and difficulty settings', () => {
     const qs = generateArithQuestions(
-      baseSettings({ operation: 'multiply', difficulty: 'hard', digitMode: { kind: 'exact', digits: 4 } }),
+      baseSettings({
+        operation: 'multiply',
+        multiplyLevel: 'd5x1',
+        difficulty: 'easy',
+        digitMode: { kind: 'exact', digits: 1 },
+      }),
       20
     );
     qs.forEach(q => {
-      const max = Math.max(digitsOf(q.operand1), digitsOf(q.operand2));
-      expect(max).toBe(4);
-    });
-  });
-
-  it('3-digit hard multiply produces a 3-digit operand (with 2-digit other)', () => {
-    const qs = generateArithQuestions(
-      baseSettings({ operation: 'multiply', difficulty: 'hard', digitMode: { kind: 'exact', digits: 3 } }),
-      20
-    );
-    qs.forEach(q => {
-      const max = Math.max(digitsOf(q.operand1), digitsOf(q.operand2));
-      expect(max).toBe(3);
+      expect(digitsOf(q.operand1)).toBe(5);
+      expect(digitsOf(q.operand2)).toBe(1);
     });
   });
 });
