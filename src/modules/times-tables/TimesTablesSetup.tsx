@@ -105,14 +105,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
   const handlePrintDownload = (pages: number, perPage: number, name: string) => {
     if (selectedTables.length === 0) return;
     const sortedTables = [...selectedTables].sort((a, b) => a - b);
-    const opLabelSuffix: Record<Operation, string> = {
-      multiply: '×',
-      divide: '÷',
-      square: '²',
-      sqrt: '√',
-      all: '×÷²√',
-    };
-    const tablesLabel = sortedTables.map(t => `${t}${opLabelSuffix[operation]}`).join(', ');
+    const tablesLabel = `${formatTablesRange(sortedTables)} • ${formatPdfOpsLabel(operation)}`;
     const pagesArr = Array.from({ length: pages }, () =>
       generateQuestions(sortedTables, perPage, operation)
     );
@@ -542,4 +535,28 @@ function buildPrintSummary(operation: Operation, tables: number[]): string {
       ? '1–12'
       : sorted.join(', ');
   return `${opLabel[operation]} • Tables ${tablesLabel}`;
+}
+
+// Compact "Tables 1–12" / "Tables 1, 3, 5" / "Table 7" for the PDF header.
+function formatTablesRange(sorted: number[]): string {
+  if (sorted.length === 0) return 'no tables';
+  if (sorted.length === 1) return `Table ${sorted[0]}`;
+  const min = sorted[0];
+  const max = sorted[sorted.length - 1];
+  // Contiguous? sorted has every integer from min..max
+  if (sorted.length === max - min + 1) return `Tables ${min}–${max}`;
+  return `Tables ${sorted.join(', ')}`;
+}
+
+// Helvetica's WinAnsi encoding has no glyph for U+221A (√), so spell it out
+// when the operation includes square roots. Other glyphs (×, ÷, ²) are in
+// WinAnsi and render correctly.
+function formatPdfOpsLabel(operation: Operation): string {
+  switch (operation) {
+    case 'multiply': return '×';
+    case 'divide':   return '÷';
+    case 'square':   return 'x²';
+    case 'sqrt':     return 'square roots';
+    case 'all':      return '× ÷ x² square roots';
+  }
 }

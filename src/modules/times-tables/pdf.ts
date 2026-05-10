@@ -61,7 +61,7 @@ function drawPage(
   // Subtitle
   doc.setFontSize(10);
   doc.setTextColor(80);
-  doc.text(`${questionCount} Questions — Testing: ${tablesLabel}`, left, top + 15);
+  doc.text(`${questionCount} Questions — ${tablesLabel}`, left, top + 15);
   doc.setTextColor(0);
 
   // Questions grid
