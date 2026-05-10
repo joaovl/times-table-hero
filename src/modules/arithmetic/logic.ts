@@ -10,13 +10,23 @@ export type MultiplyLevel = 'facts' | 'd2x1' | 'd2x2' | 'd3x1' | 'd3x2' | 'd4x1'
 export const MULTIPLY_LEVELS: MultiplyLevel[] = ['facts', 'd2x1', 'd2x2', 'd3x1', 'd3x2', 'd4x1', 'd5x1'];
 
 export const MULTIPLY_LEVEL_LABEL: Record<MultiplyLevel, string> = {
-  facts: '×1d',
-  d2x1: '2×1',
-  d2x2: '2×2',
-  d3x1: '3×1',
-  d3x2: '3×2',
-  d4x1: '4×1',
-  d5x1: '5×1',
+  facts: '1-digit × 1-digit',
+  d2x1: '2-digit × 1-digit',
+  d2x2: '2-digit × 2-digit',
+  d3x1: '3-digit × 1-digit',
+  d3x2: '3-digit × 2-digit',
+  d4x1: '4-digit × 1-digit',
+  d5x1: '5-digit × 1-digit',
+};
+
+export const MULTIPLY_LEVEL_EXAMPLE: Record<MultiplyLevel, string> = {
+  facts: 'e.g. 5 × 7',
+  d2x1: 'e.g. 23 × 7',
+  d2x2: 'e.g. 23 × 45',
+  d3x1: 'e.g. 234 × 7',
+  d3x2: 'e.g. 234 × 56',
+  d4x1: 'e.g. 1234 × 7',
+  d5x1: 'e.g. 12345 × 7',
 };
 
 export interface ArithQuestion {

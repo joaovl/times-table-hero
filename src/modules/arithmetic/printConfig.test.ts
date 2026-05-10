@@ -62,13 +62,13 @@ describe('buildArithSummary', () => {
   it('multiply summary shows only operation + level (digits/difficulty irrelevant)', () => {
     expect(
       buildArithSummary('multiply', { kind: 'exact', digits: 5 }, 'easy', 'd5x1')
-    ).toBe('× • multiply 5×1');
+    ).toBe('× • multiply 5-digit × 1-digit');
   });
 
   it("'all' summary shows op mix, digits, difficulty, and multiply level", () => {
     expect(
       buildArithSummary('all', { kind: 'exact', digits: 2 }, 'hard', 'd2x2')
-    ).toBe('All (+ − ×) • exactly 2-digit • hard • multiply 2×2');
+    ).toBe('All (+ − ×) • exactly 2-digit • hard • multiply 2-digit × 2-digit');
   });
 
   it('summary stays compact (≤ 80 chars even for the longest case)', () => {

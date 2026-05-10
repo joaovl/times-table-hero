@@ -6,7 +6,7 @@ import { UserSelector } from '@/components/UserSelector';
 import { PrintWorksheetModal } from '@/components/PrintWorksheetModal';
 import type { UserProfile } from '@/lib/userStorage';
 import type { ArithOp, ArithSettings, Difficulty, DigitMode, MultiplyLevel } from './logic';
-import { generateArithQuestions, MULTIPLY_LEVELS, MULTIPLY_LEVEL_LABEL } from './logic';
+import { generateArithQuestions, MULTIPLY_LEVELS, MULTIPLY_LEVEL_LABEL, MULTIPLY_LEVEL_EXAMPLE } from './logic';
 import { generateArithPdf } from './pdf';
 import {
   getSavedArithSettings,
@@ -230,21 +230,30 @@ export function ArithmeticSetup({
           </>
         )}
 
-        {/* Multiply Level — shown when multiply or all is selected. */}
+        {/* Multiply Level — shown when multiply or all is selected. Each
+            button shows the operand-size pattern; a small caption underneath
+            gives a concrete example so the parent immediately recognises
+            what kind of problems will be generated. */}
         {(operation === 'multiply' || operation === 'all') && (
           <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
             <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
               Multiply Level
             </h2>
-            <div className="grid grid-cols-4 gap-1 md:gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 md:gap-2">
               {MULTIPLY_LEVELS.map(lv => (
-                <button
-                  key={lv}
-                  onClick={() => setMultiplyLevel(lv)}
-                  className={buttonClass(multiplyLevel === lv)}
-                >
-                  <span className="text-[14px] md:text-[16px]">{MULTIPLY_LEVEL_LABEL[lv]}</span>
-                </button>
+                <div key={lv} className="flex flex-col gap-1 md:gap-1.5">
+                  <button
+                    onClick={() => setMultiplyLevel(lv)}
+                    className={buttonClass(multiplyLevel === lv)}
+                  >
+                    <span className="text-[12px] md:text-[14px] px-1 leading-tight">
+                      {MULTIPLY_LEVEL_LABEL[lv]}
+                    </span>
+                  </button>
+                  <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">
+                    {MULTIPLY_LEVEL_EXAMPLE[lv]}
+                  </p>
+                </div>
               ))}
             </div>
           </Card>
