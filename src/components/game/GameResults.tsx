@@ -3,6 +3,8 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { GameResults as GameResultsType } from './GamePlay';
 import { getProgress, getQuestionKey, saveSession } from '@/lib/gameStorage';
+import type { Question } from '@/lib/gameLogic';
+import { QuestionDisplay } from './QuestionDisplay';
 import { useEffect, useState } from 'react';
 import { Star, Flame } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -13,8 +15,6 @@ interface GameResultsProps {
   onNewGame: () => void;
   userId?: string;
 }
-
-const getSymbol = (op: 'multiply' | 'divide') => op === 'multiply' ? '×' : '÷';
 
 export function GameResults({ results, onPlayAgain, onNewGame, userId }: GameResultsProps) {
   const [improved, setImproved] = useState<string[]>([]);
@@ -53,40 +53,58 @@ export function GameResults({ results, onPlayAgain, onNewGame, userId }: GameRes
   }, [percentage]);
 
   useEffect(() => {
-    // Save session (convert to old format for storage compatibility)
     saveSession({
       date: new Date().toISOString(),
       score: results.score,
       total: results.total,
       difficulty: results.settings.difficulty,
       tables: results.settings.tables,
-      incorrectQuestions: results.incorrectQuestions.map(q => ({
-        multiplier: q.operand1,
-        multiplicand: q.operand2,
-        userAnswer: q.userAnswer,
-        correctAnswer: q.correctAnswer,
-      })),
+      incorrectQuestions: results.incorrectQuestions.map(q => {
+        if (q.kind === 'binary') {
+          return {
+            multiplier: q.operand1,
+            multiplicand: q.operand2,
+            userAnswer: q.userAnswer,
+            correctAnswer: q.correctAnswer,
+          };
+        }
+        return {
+          multiplier: q.operand,
+          multiplicand: q.correctAnswer,
+          userAnswer: q.userAnswer,
+          correctAnswer: q.correctAnswer,
+        };
+      }),
     }, userId);
 
-    // Check for improvements
     const progress = getProgress(userId);
     const improvedList: string[] = [];
     const challengingList: string[] = [];
 
     results.incorrectQuestions.forEach(q => {
-      const key = getQuestionKey(q.operand1, q.operand2);
+      if (q.kind !== 'binary' || q.op !== 'multiply') return;
+      const key = getQuestionKey({
+        kind: 'binary',
+        op: 'multiply',
+        operand1: q.operand1,
+        operand2: q.operand2,
+        answer: q.correctAnswer,
+      });
       const record = progress[key];
-      const symbol = getSymbol(q.operation);
       if (record && record.timesWrong > 1) {
-        challengingList.push(`${q.operand1} ${symbol} ${q.operand2}`);
+        challengingList.push(`${q.operand1} × ${q.operand2}`);
       }
     });
 
-    // Check if any previously wrong questions were correct this time
     Object.values(progress).forEach(record => {
+      if (record.op && record.op !== 'multiply') return;
       if (record.timesWrong > 0 && record.timesCorrect > 0) {
         const wasWrongThisSession = results.incorrectQuestions.some(
-          q => q.operand1 === record.multiplier && q.operand2 === record.multiplicand
+          q =>
+            q.kind === 'binary' &&
+            q.op === 'multiply' &&
+            q.operand1 === record.multiplier &&
+            q.operand2 === record.multiplicand
         );
         if (!wasWrongThisSession && results.settings.tables.includes(record.multiplier)) {
           improvedList.push(`${record.multiplier} × ${record.multiplicand}`);
@@ -96,7 +114,7 @@ export function GameResults({ results, onPlayAgain, onNewGame, userId }: GameRes
 
     setImproved(improvedList.slice(0, 5));
     setStillChallenging(challengingList);
-  }, [results]);
+  }, [results, userId]);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -159,14 +177,17 @@ export function GameResults({ results, onPlayAgain, onNewGame, userId }: GameRes
             <h3 className="mb-3 font-bold text-foreground">Questions to practise:</h3>
             <div className="space-y-2">
               {results.incorrectQuestions.map((q, idx) => {
-                const symbol = getSymbol(q.operation);
+                const asQuestion: Question =
+                  q.kind === 'binary'
+                    ? { kind: 'binary', op: q.op, operand1: q.operand1, operand2: q.operand2, answer: q.correctAnswer }
+                    : { kind: 'unary', op: q.op, operand: q.operand, answer: q.correctAnswer };
                 return (
                   <div
                     key={idx}
                     className="flex items-center justify-between rounded-lg bg-muted px-4 py-2"
                   >
                     <span className="font-medium">
-                      {q.operand1} {symbol} {q.operand2} = {q.correctAnswer}
+                      <QuestionDisplay q={asQuestion} /> = {q.correctAnswer}
                     </span>
                     {q.userAnswer !== null && (
                       <span className="text-sm text-destructive">
