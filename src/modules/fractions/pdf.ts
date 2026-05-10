@@ -1,6 +1,14 @@
 import jsPDF from 'jspdf';
 import type { FractionQuestion } from './logic';
-import { skillOp } from './logic';
+import {
+  skillOp,
+  toMixed,
+  isOpQuestion,
+  isIdQuestion,
+  isEqQuestion,
+  isCmpQuestion,
+  isMixedQuestion,
+} from './logic';
 
 export interface FractionPdfOptions {
   pages: FractionQuestion[][];
@@ -67,6 +75,116 @@ function drawFraction(
   return barW;
 }
 
+// Render a stacked fraction where one of num/den is shown as a blank line.
+// Used by `eq` skill. Returns the width consumed.
+function drawFractionWithBlank(
+  doc: jsPDF,
+  frac: { num: number; den: number },
+  missing: 'num' | 'den',
+  cx: number,
+  cy: number,
+  fs: number
+): number {
+  const numStr = missing === 'num' ? '' : String(frac.num);
+  const denStr = missing === 'den' ? '' : String(frac.den);
+  // Reserve space for a small blank line where the missing field would be.
+  const blankW = fs * 0.45;
+  const numW = missing === 'num' ? blankW : doc.getTextWidth(numStr);
+  const denW = missing === 'den' ? blankW : doc.getTextWidth(denStr);
+  const barW = Math.max(numW, denW) + 2;
+  const lineH = fs * 0.42;
+  const barLeft = cx;
+  const barRight = cx + barW;
+
+  if (missing === 'num') {
+    const lineY = cy - 1.5;
+    const lineL = barLeft + (barW - blankW) / 2;
+    doc.setLineWidth(0.3);
+    doc.line(lineL, lineY, lineL + blankW, lineY);
+  } else {
+    const numX = barLeft + (barW - numW) / 2;
+    doc.text(numStr, numX, cy - 1);
+  }
+
+  doc.setLineWidth(0.4);
+  doc.line(barLeft, cy + 0.4, barRight, cy + 0.4);
+
+  if (missing === 'den') {
+    const lineY = cy + lineH + 1;
+    const lineL = barLeft + (barW - blankW) / 2;
+    doc.setLineWidth(0.3);
+    doc.line(lineL, lineY, lineL + blankW, lineY);
+  } else {
+    const denX = barLeft + (barW - denW) / 2;
+    doc.text(denStr, denX, cy + lineH + 1);
+  }
+
+  return barW;
+}
+
+// Draw a circle of radius r centred at (cx, cy), partitioned into `total`
+// equal sectors with `shaded` of them filled grey. We approximate each
+// sector's fill with a triangle from the centre to the two chord endpoints,
+// then stroke the sector boundary lines and the outer circle. At the
+// total counts we use (<= 8), this reads cleanly as "n of total slices".
+function drawCircleFigure(
+  doc: jsPDF,
+  cx: number,
+  cy: number,
+  r: number,
+  total: number,
+  shaded: number
+) {
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.5);
+  for (let i = 0; i < total; i++) {
+    const a0 = (i / total) * Math.PI * 2 - Math.PI / 2;
+    const a1 = ((i + 1) / total) * Math.PI * 2 - Math.PI / 2;
+    const x0 = cx + r * Math.cos(a0);
+    const y0 = cy + r * Math.sin(a0);
+    const x1 = cx + r * Math.cos(a1);
+    const y1 = cy + r * Math.sin(a1);
+    if (i < shaded) {
+      doc.setFillColor(180, 180, 180);
+      doc.triangle(cx, cy, x0, y0, x1, y1, 'F');
+    }
+    doc.setDrawColor(0);
+    doc.line(cx, cy, x0, y0);
+  }
+  doc.circle(cx, cy, r, 'S');
+}
+
+// Draw a rectangle grid of `rows × cols` cells with the first `shaded`
+// cells filled grey. Lays out within a bounding box of width `w` and
+// height `h`, anchored at (x, y).
+function drawRectFigure(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  total: number,
+  shaded: number,
+  rows: number,
+  cols: number
+) {
+  const cellW = w / cols;
+  const cellH = h / rows;
+  for (let i = 0; i < total; i++) {
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    const cx = x + c * cellW;
+    const cy = y + r * cellH;
+    if (i < shaded) {
+      doc.setFillColor(180, 180, 180);
+      doc.rect(cx, cy, cellW, cellH, 'FD');
+    } else {
+      doc.setFillColor(255, 255, 255);
+      doc.rect(cx, cy, cellW, cellH, 'D');
+    }
+  }
+}
+
 function drawQuestion(
   doc: jsPDF,
   q: FractionQuestion,
@@ -81,28 +199,101 @@ function drawQuestion(
   const prefixW = doc.getTextWidth(prefix);
   let cursor = x + prefixW + 2;
 
-  const op = skillOp(q.skill);
-  const opStr = ` ${opSymbol(op)} `;
+  if (isOpQuestion(q)) {
+    const op = skillOp(q.skill);
+    const opStr = ` ${opSymbol(op)} `;
+    cursor += drawFraction(doc, q.a, cursor, y, fs) + 1;
+    const opW = doc.getTextWidth(opStr);
+    doc.text(opStr, cursor, y);
+    cursor += opW + 1;
+    cursor += drawFraction(doc, q.b, cursor, y, fs) + 1;
+    const eq = ' = ';
+    doc.text(eq, cursor, y);
+    cursor += doc.getTextWidth(eq) + 1;
+    doc.setLineWidth(0.3);
+    doc.line(cursor, y + 0.6, cursor + 14, y + 0.6);
+    return;
+  }
 
-  // a fraction
-  cursor += drawFraction(doc, q.a, cursor, y, fs) + 1;
+  if (isIdQuestion(q)) {
+    const figSize = fs * 1.4;
+    const figLeft = cursor;
+    const figTop = y - figSize / 2 - 0.5;
+    if (q.figure === 'circle') {
+      const r = figSize / 2 - 0.5;
+      const cx = figLeft + r + 0.5;
+      const cy = y;
+      drawCircleFigure(doc, cx, cy, r, q.total, q.shaded);
+      cursor = cx + r + 2;
+    } else {
+      const rows = q.rows ?? 1;
+      const cols = q.cols ?? q.total;
+      const ratio = rows / Math.max(cols, 1);
+      const w = figSize;
+      const h = Math.max(figSize * ratio, 4);
+      drawRectFigure(doc, figLeft, figTop, w, h, q.total, q.shaded, rows, cols);
+      cursor = figLeft + w + 2;
+    }
+    const eq = ' = ';
+    doc.text(eq, cursor, y);
+    cursor += doc.getTextWidth(eq) + 1;
+    // Answer slot: two short stacked blanks so the kid writes num/den.
+    const slotW = 8;
+    doc.setLineWidth(0.3);
+    doc.line(cursor, y - 2.5, cursor + slotW, y - 2.5);
+    doc.line(cursor, y - 0.2, cursor + slotW, y - 0.2);
+    doc.line(cursor, y + 2.1, cursor + slotW, y + 2.1);
+    return;
+  }
 
-  // operator
-  const opW = doc.getTextWidth(opStr);
-  doc.text(opStr, cursor, y);
-  cursor += opW + 1;
+  if (isEqQuestion(q)) {
+    cursor += drawFraction(doc, q.source, cursor, y, fs) + 1;
+    const eq = ' = ';
+    doc.text(eq, cursor, y);
+    cursor += doc.getTextWidth(eq) + 1;
+    cursor += drawFractionWithBlank(doc, q.target, q.missing, cursor, y, fs);
+    return;
+  }
 
-  // b fraction
-  cursor += drawFraction(doc, q.b, cursor, y, fs) + 1;
+  if (isCmpQuestion(q)) {
+    cursor += drawFraction(doc, q.a, cursor, y, fs) + 2;
+    // Small box where the kid writes the comparison symbol.
+    const boxW = 8;
+    const boxH = 8;
+    doc.setLineWidth(0.3);
+    doc.rect(cursor, y - boxH / 2, boxW, boxH, 'D');
+    cursor += boxW + 2;
+    cursor += drawFraction(doc, q.b, cursor, y, fs) + 1;
+    return;
+  }
 
-  // " = ___"
-  const eq = ' = ';
-  doc.text(eq, cursor, y);
-  cursor += doc.getTextWidth(eq) + 1;
-
-  // Answer blank as a short horizontal rule.
-  doc.setLineWidth(0.3);
-  doc.line(cursor, y + 0.6, cursor + 14, y + 0.6);
+  if (isMixedQuestion(q)) {
+    if (q.direction === 'to-mixed') {
+      cursor += drawFraction(doc, q.improper, cursor, y, fs) + 1;
+      const eq = ' = ';
+      doc.text(eq, cursor, y);
+      cursor += doc.getTextWidth(eq) + 1;
+      doc.setLineWidth(0.3);
+      doc.line(cursor, y + 0.6, cursor + 22, y + 0.6);
+    } else {
+      const wholeStr = String(q.mixed.whole);
+      doc.text(wholeStr, cursor, y);
+      cursor += doc.getTextWidth(wholeStr) + 2;
+      cursor += drawFraction(doc, { num: q.mixed.num, den: q.mixed.den }, cursor, y, fs) + 1;
+      const eq = ' = ';
+      doc.text(eq, cursor, y);
+      cursor += doc.getTextWidth(eq) + 1;
+      cursor += drawFractionWithBlank(
+        doc,
+        { num: 0, den: q.improper.den },
+        'num',
+        cursor,
+        y,
+        fs
+      );
+    }
+    return;
+  }
 }
 
 function drawPage(
@@ -158,8 +349,6 @@ function drawPage(
     const col = i % cols;
     const row = Math.floor(i / cols);
     const cellX = left + col * cellW + 2;
-    // Anchor the bar of the first fraction on the cell vertical centre so
-    // both num and den fit cleanly.
     const cellTop = gridTop + row * rowH;
     const yBar = cellTop + rowH / 2;
     const number = numberOffset + i + 1;
@@ -169,6 +358,31 @@ function drawPage(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.text('Good luck!', A4_W / 2, top + PRINT_H - 3, { align: 'center' });
+}
+
+// Compose the answer key string for a single question. ASCII only.
+export function answerKeyText(q: FractionQuestion, num: number): string {
+  if (isOpQuestion(q)) {
+    return `${num}) ${q.answer.num}/${q.answer.den}`;
+  }
+  if (isIdQuestion(q)) {
+    return `${num}) ${q.answer.num}/${q.answer.den}`;
+  }
+  if (isEqQuestion(q)) {
+    return `${num}) ${q.answer}`;
+  }
+  if (isCmpQuestion(q)) {
+    return `${num}) ${q.answer}`;
+  }
+  if (isMixedQuestion(q)) {
+    if (q.direction === 'to-mixed') {
+      const m = toMixed(q.improper);
+      if (m.num === 0) return `${num}) ${m.whole}`;
+      return `${num}) ${m.whole} ${m.num}/${m.den}`;
+    }
+    return `${num}) ${q.improper.num}/${q.improper.den}`;
+  }
+  return `${num}) ?`;
 }
 
 function drawAnswerKeyPage(
@@ -218,8 +432,7 @@ function drawAnswerKeyPage(
     const row = Math.floor(i / cols);
     const x = left + col * colW + 2;
     const y = gridTop + row * rowH + rowH / 2 + (fs * 0.352778) * 0.35;
-    // Answer key uses compact horizontal n/d notation.
-    doc.text(`${i + 1}) ${q.answer.num}/${q.answer.den}`, x, y);
+    doc.text(answerKeyText(q, i + 1), x, y);
   }
 }
 

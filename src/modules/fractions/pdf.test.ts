@@ -10,7 +10,12 @@ vi.mock('jspdf', () => {
     setFontSize() {}
     setTextColor() {}
     setLineWidth() {}
+    setDrawColor() {}
+    setFillColor() {}
     line() {}
+    circle() {}
+    rect() {}
+    triangle() {}
     addPage() {}
     save() {}
     output() {
@@ -281,5 +286,263 @@ describe('generateFractionsPdf — does not leak answer into question area', () 
       // no includeAnswerKey
     });
     expect(capturedTextCalls.some(t => t === '3/4')).toBe(false);
+  });
+});
+
+// ----- v2 skills (id / eq / cmp / mixed) --------------------------------
+
+describe('generateFractionsPdf — id skill', () => {
+  it('does not print the shaded/total fraction as text on the question page', () => {
+    // The question shows the figure; the kid writes the answer in the blank.
+    // We rely on the figure render (not text) to communicate the question.
+    generateFractionsPdf({
+      pages: [
+        [
+          {
+            skill: 'id',
+            figure: 'circle',
+            total: 4,
+            shaded: 3,
+            answer: { num: 3, den: 4 },
+          },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+    });
+    expect(capturedTextCalls.some(t => t === '3/4')).toBe(false);
+  });
+
+  it('emits the id answer in the answer key when requested', () => {
+    generateFractionsPdf({
+      pages: [
+        [
+          {
+            skill: 'id',
+            figure: 'rect',
+            total: 6,
+            shaded: 2,
+            rows: 2,
+            cols: 3,
+            answer: { num: 2, den: 6 },
+          },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 2/6');
+  });
+});
+
+describe('generateFractionsPdf — eq skill', () => {
+  it('renders source num/den and the visible target field', () => {
+    generateFractionsPdf({
+      pages: [
+        [
+          {
+            skill: 'eq',
+            source: { num: 1, den: 2 },
+            target: { num: 3, den: 6 },
+            missing: 'num',
+            answer: 3,
+          },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+    });
+    // Source 1/2 must show; the visible denominator 6 must show; the hidden
+    // numerator 3 must NOT be drawn on the question side.
+    expect(capturedTextCalls).toContain('1');
+    expect(capturedTextCalls).toContain('2');
+    expect(capturedTextCalls).toContain('6');
+    // 3 might also appear elsewhere (e.g. answer key) but it shouldn't be
+    // standalone in the question text. The actual print of '3' would only
+    // happen if drawFraction was called with frac.num=3 — drawFractionWithBlank
+    // is supposed to draw a blank instead. Hard to assert "3 wasn't drawn"
+    // without false positives, so we only check the visible side here.
+  });
+
+  it('emits the missing field as the answer-key value', () => {
+    generateFractionsPdf({
+      pages: [
+        [
+          {
+            skill: 'eq',
+            source: { num: 1, den: 2 },
+            target: { num: 3, den: 6 },
+            missing: 'num',
+            answer: 3,
+          },
+          {
+            skill: 'eq',
+            source: { num: 2, den: 3 },
+            target: { num: 4, den: 6 },
+            missing: 'den',
+            answer: 6,
+          },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 3');
+    expect(capturedTextCalls).toContain('2) 6');
+  });
+});
+
+describe('generateFractionsPdf — cmp skill', () => {
+  it('renders both fractions, no comparison symbol baked into the PDF', () => {
+    generateFractionsPdf({
+      pages: [
+        [
+          { skill: 'cmp', a: { num: 3, den: 4 }, b: { num: 5, den: 8 }, answer: '>' },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+    });
+    expect(capturedTextCalls).toContain('3');
+    expect(capturedTextCalls).toContain('4');
+    expect(capturedTextCalls).toContain('5');
+    expect(capturedTextCalls).toContain('8');
+    // The comparison symbol is in an empty box for the kid to fill.
+    expect(capturedTextCalls.some(t => t === '>')).toBe(false);
+  });
+
+  it('answer key prints the comparison symbol', () => {
+    generateFractionsPdf({
+      pages: [
+        [
+          { skill: 'cmp', a: { num: 3, den: 4 }, b: { num: 5, den: 8 }, answer: '>' },
+          { skill: 'cmp', a: { num: 1, den: 2 }, b: { num: 2, den: 4 }, answer: '=' },
+          { skill: 'cmp', a: { num: 1, den: 3 }, b: { num: 1, den: 2 }, answer: '<' },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) >');
+    expect(capturedTextCalls).toContain('2) =');
+    expect(capturedTextCalls).toContain('3) <');
+  });
+});
+
+describe('generateFractionsPdf — mixed skill', () => {
+  it('to-mixed direction shows the improper fraction in the question', () => {
+    generateFractionsPdf({
+      pages: [
+        [
+          {
+            skill: 'mixed',
+            direction: 'to-mixed',
+            improper: { num: 7, den: 3 },
+            mixed: { whole: 2, num: 1, den: 3 },
+          },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+    });
+    expect(capturedTextCalls).toContain('7');
+    expect(capturedTextCalls).toContain('3');
+  });
+
+  it('to-improper direction shows the whole part and the fractional part', () => {
+    generateFractionsPdf({
+      pages: [
+        [
+          {
+            skill: 'mixed',
+            direction: 'to-improper',
+            improper: { num: 7, den: 3 },
+            mixed: { whole: 2, num: 1, den: 3 },
+          },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+    });
+    // whole 2 is rendered as a leading integer.
+    expect(capturedTextCalls).toContain('2');
+    expect(capturedTextCalls).toContain('1');
+    expect(capturedTextCalls).toContain('3');
+  });
+
+  it('answer-key formats mixed-direction answers as "w n/d" (or "w" when proper part is 0)', () => {
+    generateFractionsPdf({
+      pages: [
+        [
+          {
+            skill: 'mixed',
+            direction: 'to-mixed',
+            improper: { num: 7, den: 3 },
+            mixed: { whole: 2, num: 1, den: 3 },
+          },
+          {
+            skill: 'mixed',
+            direction: 'to-improper',
+            improper: { num: 7, den: 3 },
+            mixed: { whole: 2, num: 1, den: 3 },
+          },
+          {
+            skill: 'mixed',
+            direction: 'to-mixed',
+            improper: { num: 6, den: 3 },
+            mixed: { whole: 2, num: 0, den: 3 },
+          },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 2 1/3');
+    expect(capturedTextCalls).toContain('2) 7/3');
+    expect(capturedTextCalls).toContain('3) 2');
+  });
+});
+
+describe('generateFractionsPdf — mixed-skill answer key encoding safety', () => {
+  it('answer-key entries for all v2 skills use only ASCII and printable characters', () => {
+    capturedTextCalls.length = 0;
+    generateFractionsPdf({
+      pages: [
+        [
+          {
+            skill: 'id',
+            figure: 'circle',
+            total: 5,
+            shaded: 2,
+            answer: { num: 2, den: 5 },
+          },
+          {
+            skill: 'eq',
+            source: { num: 1, den: 4 },
+            target: { num: 3, den: 12 },
+            missing: 'num',
+            answer: 3,
+          },
+          { skill: 'cmp', a: { num: 3, den: 4 }, b: { num: 5, den: 8 }, answer: '>' },
+          {
+            skill: 'mixed',
+            direction: 'to-mixed',
+            improper: { num: 11, den: 4 },
+            mixed: { whole: 2, num: 3, den: 4 },
+          },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    capturedTextCalls.forEach(t => {
+      expect(/[∀-⋿]/u.test(t), `unrenderable char in "${t}"`).toBe(false);
+      expect(t.includes('−'), `math-minus in "${t}"`).toBe(false);
+    });
   });
 });

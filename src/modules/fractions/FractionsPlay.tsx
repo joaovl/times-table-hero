@@ -1,30 +1,52 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { FractionQuestion, FractionSettings, Frac } from './logic';
+import type {
+  FractionQuestion,
+  FractionSettings,
+  Frac,
+  CmpSymbol,
+  MixedNumber,
+} from './logic';
 import {
   generateFractionQuestions,
   simplifyFrac,
   fracEquals,
   fracIsSimplified,
   skillOp,
+  toMixed,
+  isOpQuestion,
+  isIdQuestion,
+  isEqQuestion,
+  isCmpQuestion,
+  isMixedQuestion,
 } from './logic';
 import { FractionDisplay } from './FractionDisplay';
+
+// Generic user-answer payload — different skills have different shapes.
+// Stored in incorrectQuestions so the results screen can render whatever the
+// kid typed alongside the correct answer.
+export type FractionUserAnswer =
+  | { kind: 'frac'; value: Frac }
+  | { kind: 'cmp'; value: CmpSymbol }
+  | { kind: 'eq'; value: number; missing: 'num' | 'den' }
+  | { kind: 'mixed-improper'; value: Frac }
+  | { kind: 'mixed-mixed'; value: MixedNumber }
+  | { kind: 'none' };
+
+export interface FractionIncorrectEntry {
+  question: FractionQuestion;
+  userAnswer: FractionUserAnswer;
+}
 
 export interface FractionGameResult {
   score: number;
   total: number;
   bestStreak: number;
-  incorrectQuestions: Array<{
-    skill: FractionQuestion['skill'];
-    a: Frac;
-    b: Frac;
-    userAnswer: Frac | null;
-    correctAnswer: Frac;
-  }>;
+  incorrectQuestions: FractionIncorrectEntry[];
   settings: FractionSettings;
 }
 
@@ -36,20 +58,157 @@ interface Props {
 
 const opGlyph = (op: 'add' | 'sub') => (op === 'add' ? '+' : '−');
 
+// Render a small SVG circle with N sectors and `shaded` of them filled. Used
+// only for the `id` skill in online play.
+function CircleFigure({ total, shaded, size = 120 }: { total: number; shaded: number; size?: number }) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2 - 2;
+  const sectors: React.ReactElement[] = [];
+  for (let i = 0; i < total; i++) {
+    const a0 = (i / total) * Math.PI * 2 - Math.PI / 2;
+    const a1 = ((i + 1) / total) * Math.PI * 2 - Math.PI / 2;
+    const x0 = cx + r * Math.cos(a0);
+    const y0 = cy + r * Math.sin(a0);
+    const x1 = cx + r * Math.cos(a1);
+    const y1 = cy + r * Math.sin(a1);
+    const largeArc = (a1 - a0) > Math.PI ? 1 : 0;
+    const path =
+      total === 1
+        ? `M ${cx - r} ${cy} A ${r} ${r} 0 1 1 ${cx + r} ${cy} A ${r} ${r} 0 1 1 ${cx - r} ${cy} Z`
+        : `M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${largeArc} 1 ${x1} ${y1} Z`;
+    sectors.push(
+      <path
+        key={i}
+        d={path}
+        fill={i < shaded ? 'hsl(var(--primary))' : 'hsl(var(--muted))'}
+        stroke="hsl(var(--foreground))"
+        strokeWidth={1.2}
+      />
+    );
+  }
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${shaded} of ${total} sectors shaded`}>
+      {sectors}
+    </svg>
+  );
+}
+
+// Render a small SVG grid of cells with the first `shaded` of them filled.
+function RectFigure({
+  total,
+  shaded,
+  rows,
+  cols,
+  size = 140,
+}: {
+  total: number;
+  shaded: number;
+  rows: number;
+  cols: number;
+  size?: number;
+}) {
+  const cellW = size / cols;
+  const cellH = (size * (rows / Math.max(cols, 1))) / Math.max(rows, 1);
+  // Cap rect proportions so 1x12 isn't a needle.
+  const h = Math.max(cellH, size / 4);
+  const cells: React.ReactElement[] = [];
+  for (let i = 0; i < total; i++) {
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    cells.push(
+      <rect
+        key={i}
+        x={c * cellW}
+        y={r * h}
+        width={cellW}
+        height={h}
+        fill={i < shaded ? 'hsl(var(--primary))' : 'hsl(var(--muted))'}
+        stroke="hsl(var(--foreground))"
+        strokeWidth={1.2}
+      />
+    );
+  }
+  return (
+    <svg width={cols * cellW} height={rows * h} role="img" aria-label={`${shaded} of ${total} cells shaded`}>
+      {cells}
+    </svg>
+  );
+}
+
+// Render a mixed number inline: "2 1/3" with the fractional part stacked.
+function MixedDisplay({ m, size = 'md' }: { m: MixedNumber; size?: 'sm' | 'md' }) {
+  if (m.num === 0) {
+    return <span className={cn(size === 'sm' ? 'text-xl md:text-2xl' : 'text-3xl md:text-4xl', 'font-extrabold')}>{m.whole}</span>;
+  }
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className={cn(size === 'sm' ? 'text-xl md:text-2xl' : 'text-3xl md:text-4xl', 'font-extrabold')}>
+        {m.whole}
+      </span>
+      <FractionDisplay frac={{ num: m.num, den: m.den }} size={size === 'sm' ? 'sm' : 'md'} />
+    </span>
+  );
+}
+
+// Parse a typed answer for the `mixed` skill. Accepts:
+//   "2 1/3"     -> mixed
+//   "7/3"       -> improper
+//   "5"         -> whole only (mixed with num=0)
+// Returns null if the input doesn't parse.
+function parseMixedAnswer(
+  s: string
+): { kind: 'mixed'; value: MixedNumber } | { kind: 'improper'; value: Frac } | null {
+  const trimmed = s.trim();
+  if (!trimmed) return null;
+  // Mixed "w n/d"
+  const mixedMatch = trimmed.match(/^(-?\d+)\s+(-?\d+)\s*\/\s*(-?\d+)$/);
+  if (mixedMatch) {
+    const w = parseInt(mixedMatch[1], 10);
+    const n = parseInt(mixedMatch[2], 10);
+    const d = parseInt(mixedMatch[3], 10);
+    if (isNaN(w) || isNaN(n) || isNaN(d) || d === 0) return null;
+    return { kind: 'mixed', value: { whole: w, num: n, den: d } };
+  }
+  // Improper "n/d"
+  const fracMatch = trimmed.match(/^(-?\d+)\s*\/\s*(-?\d+)$/);
+  if (fracMatch) {
+    const n = parseInt(fracMatch[1], 10);
+    const d = parseInt(fracMatch[2], 10);
+    if (isNaN(n) || isNaN(d) || d === 0) return null;
+    return { kind: 'improper', value: { num: n, den: d } };
+  }
+  // Whole number only
+  const wholeMatch = trimmed.match(/^-?\d+$/);
+  if (wholeMatch) {
+    const w = parseInt(trimmed, 10);
+    if (isNaN(w)) return null;
+    return { kind: 'mixed', value: { whole: w, num: 0, den: 1 } };
+  }
+  return null;
+}
+
 export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
   const [questions, setQuestions] = useState<FractionQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
-  const [incorrect, setIncorrect] = useState<FractionGameResult['incorrectQuestions']>([]);
+  const [incorrect, setIncorrect] = useState<FractionIncorrectEntry[]>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
+  // Op-style inputs (also used by `id`).
   const [numInput, setNumInput] = useState('');
   const [denInput, setDenInput] = useState('');
+  // `eq` skill uses a single integer input for the missing field.
+  const [eqInput, setEqInput] = useState('');
+  // `mixed` skill uses a free-form text input.
+  const [mixedInput, setMixedInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const numRef = useRef<HTMLInputElement>(null);
+  const eqRef = useRef<HTMLInputElement>(null);
+  const mixedRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const count = settings.gameMode === 'questions' ? settings.questionCount : 200;
@@ -59,8 +218,16 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
   useEffect(() => {
     setNumInput('');
     setDenInput('');
-    setTimeout(() => numRef.current?.focus(), 50);
-  }, [currentIndex, questions.length]);
+    setEqInput('');
+    setMixedInput('');
+    setTimeout(() => {
+      const q = questions[currentIndex];
+      if (!q) return;
+      if (isEqQuestion(q)) eqRef.current?.focus();
+      else if (isMixedQuestion(q)) mixedRef.current?.focus();
+      else numRef.current?.focus();
+    }, 50);
+  }, [currentIndex, questions]);
 
   useEffect(() => {
     if (settings.gameMode !== 'time' || isComplete) return;
@@ -89,25 +256,9 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
     }
   }, [isComplete, score, questionsAnswered, bestStreak, incorrect, settings, onComplete]);
 
-  const submit = useCallback(
-    (value: Frac | null) => {
-      if (questions.length === 0) return;
-      const q = questions[currentIndex];
-      // Accept the correct answer in either its exact simplified form (when
-      // simplify is on we require simplified form), or in any equivalent form
-      // when simplify is off.
-      let isCorrect = false;
-      if (value !== null && value.den !== 0) {
-        if (settings.simplify) {
-          // Must equal the stored simplified answer AND be in simplest form.
-          isCorrect = fracEquals(value, q.answer) && fracIsSimplified(value);
-        } else {
-          isCorrect = fracEquals(value, q.answer);
-        }
-      }
-
+  const advance = useCallback(
+    (isCorrect: boolean) => {
       setQuestionsAnswered(p => p + 1);
-
       if (isCorrect) {
         setScore(p => p + 1);
         setStreak(p => {
@@ -119,12 +270,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
       } else {
         setStreak(0);
         setFeedback('incorrect');
-        setIncorrect(prev => [
-          ...prev,
-          { skill: q.skill, a: q.a, b: q.b, userAnswer: value, correctAnswer: q.answer },
-        ]);
       }
-
       const delay = isCorrect ? 800 : 1400;
       setTimeout(() => {
         setFeedback('none');
@@ -138,19 +284,168 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
         }
       }, delay);
     },
-    [currentIndex, questions, settings]
+    [currentIndex, questions.length, settings]
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const submitOp = useCallback(
+    (value: Frac | null) => {
+      if (questions.length === 0) return;
+      const q = questions[currentIndex];
+      if (!(isOpQuestion(q) || isIdQuestion(q))) return;
+      let isCorrect = false;
+      if (value !== null && value.den !== 0) {
+        if (isOpQuestion(q) && settings.simplify) {
+          isCorrect = fracEquals(value, q.answer) && fracIsSimplified(value);
+        } else {
+          // `id` accepts any equivalent form; op skills with simplify off too.
+          isCorrect = fracEquals(value, q.answer);
+        }
+      }
+      if (!isCorrect) {
+        setIncorrect(prev => [
+          ...prev,
+          {
+            question: q,
+            userAnswer: value ? { kind: 'frac', value } : { kind: 'none' },
+          },
+        ]);
+      }
+      advance(isCorrect);
+    },
+    [currentIndex, questions, settings, advance]
+  );
+
+  const submitEq = useCallback(
+    (value: number | null) => {
+      if (questions.length === 0) return;
+      const q = questions[currentIndex];
+      if (!isEqQuestion(q)) return;
+      const isCorrect = value !== null && value === q.answer;
+      if (!isCorrect) {
+        setIncorrect(prev => [
+          ...prev,
+          {
+            question: q,
+            userAnswer:
+              value !== null ? { kind: 'eq', value, missing: q.missing } : { kind: 'none' },
+          },
+        ]);
+      }
+      advance(isCorrect);
+    },
+    [currentIndex, questions, advance]
+  );
+
+  const submitCmp = useCallback(
+    (value: CmpSymbol) => {
+      if (questions.length === 0) return;
+      const q = questions[currentIndex];
+      if (!isCmpQuestion(q)) return;
+      const isCorrect = value === q.answer;
+      if (!isCorrect) {
+        setIncorrect(prev => [
+          ...prev,
+          { question: q, userAnswer: { kind: 'cmp', value } },
+        ]);
+      }
+      advance(isCorrect);
+    },
+    [currentIndex, questions, advance]
+  );
+
+  const submitMixed = useCallback(() => {
+    if (questions.length === 0) return;
+    const q = questions[currentIndex];
+    if (!isMixedQuestion(q)) return;
+    const parsed = parseMixedAnswer(mixedInput);
+    if (parsed === null) {
+      setIncorrect(prev => [...prev, { question: q, userAnswer: { kind: 'none' } }]);
+      advance(false);
+      return;
+    }
+    let isCorrect = false;
+    if (q.direction === 'to-mixed') {
+      // Correct = mixed form matches q.mixed (whole, num, den all equal — but
+      // accept any equivalent fractional part via cross-mult on the fraction
+      // when whole matches; also accept improper form that equals q.improper).
+      if (parsed.kind === 'mixed') {
+        const m = parsed.value;
+        const sameWhole = m.whole === q.mixed.whole;
+        const sameFrac =
+          (m.num === 0 && q.mixed.num === 0) ||
+          (m.den !== 0 &&
+            q.mixed.den !== 0 &&
+            m.num * q.mixed.den === q.mixed.num * m.den);
+        isCorrect = sameWhole && sameFrac;
+      } else {
+        // Improper form: only accepted if equivalent to the source improper.
+        isCorrect =
+          parsed.value.den !== 0 &&
+          fracEquals(parsed.value, q.improper);
+      }
+    } else {
+      // to-improper: prefer improper form, but accept mixed form too.
+      if (parsed.kind === 'improper') {
+        isCorrect = fracEquals(parsed.value, q.improper);
+      } else {
+        // Convert mixed to improper and compare.
+        const asImp: Frac = {
+          num: parsed.value.whole * parsed.value.den + parsed.value.num,
+          den: parsed.value.den,
+        };
+        isCorrect = asImp.den !== 0 && fracEquals(asImp, q.improper);
+      }
+    }
+    if (!isCorrect) {
+      setIncorrect(prev => [
+        ...prev,
+        {
+          question: q,
+          userAnswer:
+            parsed.kind === 'mixed'
+              ? { kind: 'mixed-mixed', value: parsed.value }
+              : { kind: 'mixed-improper', value: parsed.value },
+        },
+      ]);
+    }
+    advance(isCorrect);
+  }, [currentIndex, questions, mixedInput, advance]);
+
+  const handleOpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const numP = parseInt(numInput, 10);
     const denP = parseInt(denInput, 10);
     if (isNaN(numP) || isNaN(denP) || denP === 0) {
-      submit(null);
+      submitOp(null);
       return;
     }
-    submit({ num: numP, den: denP });
+    submitOp({ num: numP, den: denP });
   };
+
+  const handleEqSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = parseInt(eqInput, 10);
+    if (isNaN(v)) {
+      submitEq(null);
+      return;
+    }
+    submitEq(v);
+  };
+
+  const handleMixedSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitMixed();
+  };
+
+  // Derived rendering helpers ---------------------------------------------
+
+  const correctOpDisplay = useMemo(() => {
+    if (questions.length === 0) return null;
+    const q = questions[currentIndex];
+    if (isOpQuestion(q)) return settings.simplify ? simplifyFrac(q.answer) : q.answer;
+    if (isIdQuestion(q)) return q.answer;
+    return null;
+  }, [questions, currentIndex, settings.simplify]);
 
   if (questions.length === 0) {
     return (
@@ -161,7 +456,6 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
   }
 
   const q = questions[currentIndex];
-  const op = skillOp(q.skill);
   const progress =
     settings.gameMode === 'questions'
       ? (currentIndex / settings.questionCount) * 100
@@ -172,8 +466,6 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
     const r = s % 60;
     return `${m}:${r.toString().padStart(2, '0')}`;
   };
-
-  const correctDisplay = settings.simplify ? simplifyFrac(q.answer) : q.answer;
 
   return (
     <div className="min-h-screen bg-background py-2 px-3 md:py-[26px] md:px-8">
@@ -227,56 +519,240 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
-          <div className="flex items-center justify-center gap-3 text-foreground">
-            <FractionDisplay frac={q.a} size="md" />
-            <span className="text-4xl md:text-5xl font-extrabold">{opGlyph(op)}</span>
-            <FractionDisplay frac={q.b} size="md" />
-            <span className="text-4xl md:text-5xl font-extrabold">=</span>
-          </div>
-          {feedback === 'incorrect' && (
-            <div className="mt-3 flex items-center justify-center gap-2 text-destructive">
-              <span className="text-2xl md:text-3xl font-bold">=</span>
-              <FractionDisplay frac={correctDisplay} size="sm" />
-            </div>
+          {isOpQuestion(q) && (
+            <>
+              <div className="flex items-center justify-center gap-3 text-foreground">
+                <FractionDisplay frac={q.a} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold">{opGlyph(skillOp(q.skill))}</span>
+                <FractionDisplay frac={q.b} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold">=</span>
+              </div>
+              {feedback === 'incorrect' && correctOpDisplay && (
+                <div className="mt-3 flex items-center justify-center gap-2 text-destructive">
+                  <span className="text-2xl md:text-3xl font-bold">=</span>
+                  <FractionDisplay frac={correctOpDisplay} size="sm" />
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
           )}
-          {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+
+          {isIdQuestion(q) && (
+            <>
+              <div className="flex flex-col items-center gap-3 text-foreground">
+                <div className="text-base md:text-lg font-semibold text-muted-foreground">
+                  What fraction is shaded?
+                </div>
+                {q.figure === 'circle' ? (
+                  <CircleFigure total={q.total} shaded={q.shaded} />
+                ) : (
+                  <RectFigure
+                    total={q.total}
+                    shaded={q.shaded}
+                    rows={q.rows ?? 1}
+                    cols={q.cols ?? q.total}
+                  />
+                )}
+              </div>
+              {feedback === 'incorrect' && correctOpDisplay && (
+                <div className="mt-3 flex items-center justify-center gap-2 text-destructive">
+                  <span className="text-2xl md:text-3xl font-bold">=</span>
+                  <FractionDisplay frac={correctOpDisplay} size="sm" />
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
+          )}
+
+          {isEqQuestion(q) && (
+            <>
+              <div className="flex items-center justify-center gap-3 text-foreground">
+                <FractionDisplay frac={q.source} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold">=</span>
+                {q.missing === 'num' ? (
+                  <div className="inline-flex flex-col items-center font-extrabold leading-none px-1.5">
+                    <span className="text-3xl md:text-4xl pb-1 text-primary">?</span>
+                    <span className="border-t-[3px] border-current w-full" />
+                    <span className="text-3xl md:text-4xl pt-1">{q.target.den}</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex flex-col items-center font-extrabold leading-none px-1.5">
+                    <span className="text-3xl md:text-4xl pb-1">{q.target.num}</span>
+                    <span className="border-t-[3px] border-current w-full" />
+                    <span className="text-3xl md:text-4xl pt-1 text-primary">?</span>
+                  </div>
+                )}
+              </div>
+              {feedback === 'incorrect' && (
+                <div className="mt-3 flex items-center justify-center gap-2 text-destructive">
+                  <span className="text-2xl md:text-3xl font-bold">=</span>
+                  <FractionDisplay frac={q.target} size="sm" />
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
+          )}
+
+          {isCmpQuestion(q) && (
+            <>
+              <div className="flex items-center justify-center gap-3 text-foreground">
+                <FractionDisplay frac={q.a} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold text-muted-foreground">?</span>
+                <FractionDisplay frac={q.b} size="md" />
+              </div>
+              {feedback === 'incorrect' && (
+                <div className="mt-3 text-destructive text-2xl md:text-3xl font-bold">
+                  Answer: {q.answer}
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
+          )}
+
+          {isMixedQuestion(q) && (
+            <>
+              <div className="flex items-center justify-center gap-3 text-foreground">
+                {q.direction === 'to-mixed' ? (
+                  <>
+                    <FractionDisplay frac={q.improper} size="md" />
+                    <span className="text-4xl md:text-5xl font-extrabold">=</span>
+                    <span className="text-3xl md:text-4xl font-extrabold text-muted-foreground">?</span>
+                  </>
+                ) : (
+                  <>
+                    <MixedDisplay m={q.mixed} size="md" />
+                    <span className="text-4xl md:text-5xl font-extrabold">=</span>
+                    <span className="text-3xl md:text-4xl font-extrabold text-muted-foreground">?/{q.improper.den}</span>
+                  </>
+                )}
+              </div>
+              {feedback === 'incorrect' && (
+                <div className="mt-3 flex items-center justify-center gap-2 text-destructive">
+                  <span className="text-2xl md:text-3xl font-bold">=</span>
+                  {q.direction === 'to-mixed' ? (
+                    <MixedDisplay m={toMixed(q.improper)} size="sm" />
+                  ) : (
+                    <FractionDisplay frac={q.improper} size="sm" />
+                  )}
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
           )}
         </Card>
 
         {feedback === 'none' && (
-          <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
-            <div className="flex items-center justify-center gap-2 md:gap-3">
-              <Input
-                ref={numRef}
-                type="number"
-                inputMode="numeric"
-                value={numInput}
-                onChange={e => setNumInput(e.target.value)}
-                placeholder="num"
-                aria-label="Numerator"
-                className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
-                autoFocus
-              />
-              <span className="text-3xl md:text-4xl font-extrabold text-foreground">/</span>
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={denInput}
-                onChange={e => setDenInput(e.target.value)}
-                placeholder="den"
-                aria-label="Denominator"
-                className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
-              disabled={numInput === '' || denInput === ''}
-            >
-              Check
-            </Button>
-          </form>
+          <>
+            {/* Op + id share the two-field n/d form. */}
+            {(isOpQuestion(q) || isIdQuestion(q)) && (
+              <form onSubmit={handleOpSubmit} className="space-y-2 md:space-y-[13px]">
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  <Input
+                    ref={numRef}
+                    type="number"
+                    inputMode="numeric"
+                    value={numInput}
+                    onChange={e => setNumInput(e.target.value)}
+                    placeholder="num"
+                    aria-label="Numerator"
+                    className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
+                    autoFocus
+                  />
+                  <span className="text-3xl md:text-4xl font-extrabold text-foreground">/</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={denInput}
+                    onChange={e => setDenInput(e.target.value)}
+                    placeholder="den"
+                    aria-label="Denominator"
+                    className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                  disabled={numInput === '' || denInput === ''}
+                >
+                  Check
+                </Button>
+              </form>
+            )}
+
+            {isEqQuestion(q) && (
+              <form onSubmit={handleEqSubmit} className="space-y-2 md:space-y-[13px]">
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  <Input
+                    ref={eqRef}
+                    type="number"
+                    inputMode="numeric"
+                    value={eqInput}
+                    onChange={e => setEqInput(e.target.value)}
+                    placeholder={q.missing === 'num' ? 'numerator' : 'denominator'}
+                    aria-label={q.missing === 'num' ? 'Missing numerator' : 'Missing denominator'}
+                    className="h-12 md:h-[64px] w-32 md:w-40 text-center text-2xl md:text-3xl font-bold"
+                    autoFocus
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                  disabled={eqInput === ''}
+                >
+                  Check
+                </Button>
+              </form>
+            )}
+
+            {isCmpQuestion(q) && (
+              <div className="grid grid-cols-3 gap-2 md:gap-3">
+                {(['<', '=', '>'] as const).map(sym => (
+                  <Button
+                    key={sym}
+                    onClick={() => submitCmp(sym)}
+                    className="py-4 md:py-[19px] text-2xl md:text-3xl font-extrabold shadow-button"
+                  >
+                    {sym}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            {isMixedQuestion(q) && (
+              <form onSubmit={handleMixedSubmit} className="space-y-2 md:space-y-[13px]">
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  <Input
+                    ref={mixedRef}
+                    type="text"
+                    inputMode="text"
+                    value={mixedInput}
+                    onChange={e => setMixedInput(e.target.value)}
+                    placeholder={q.direction === 'to-mixed' ? 'e.g. 2 1/3' : 'e.g. 7/3'}
+                    aria-label="Answer"
+                    className="h-12 md:h-[64px] w-48 md:w-60 text-center text-2xl md:text-3xl font-bold"
+                    autoFocus
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                  disabled={mixedInput.trim() === ''}
+                >
+                  Check
+                </Button>
+              </form>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -13,7 +13,16 @@ const DEFAULT_SETTINGS: FractionSettings = {
   timeLimit: 180,
 };
 
-const VALID_SKILLS: FractionSkill[] = ['add-same', 'sub-same', 'add-diff', 'sub-diff'];
+const VALID_SKILLS: FractionSkill[] = [
+  'add-same',
+  'sub-same',
+  'add-diff',
+  'sub-diff',
+  'id',
+  'eq',
+  'cmp',
+  'mixed',
+];
 
 function normaliseSkills(value: unknown, fallback: FractionSkill[]): FractionSkill[] {
   if (!Array.isArray(value)) return fallback;
