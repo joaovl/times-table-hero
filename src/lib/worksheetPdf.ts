@@ -1,10 +1,7 @@
 import jsPDF from 'jspdf';
+import type { Question } from './gameLogic';
 
-export interface PdfQuestion {
-  operand1: number;
-  operand2: number;
-  operation: 'multiply' | 'divide';
-}
+export type PdfQuestion = Question;
 
 export interface WorksheetPdfOptions {
   pages: PdfQuestion[][];
@@ -86,11 +83,52 @@ function drawPage(
     const cellX = left + col * colW;
     const cellCenterY = gridTop + row * rowH + rowH / 2;
     const baselineY = cellCenterY + (fs * 0.352778) * 0.35;
-    const symbol = q.operation === 'multiply' ? '×' : '÷';
-    const eq = `${q.operand1} ${symbol} ${q.operand2} =`;
-    doc.text(eq, cellX + 1, baselineY);
-    const eqW = doc.getTextWidth(eq);
-    const blankStart = cellX + 1 + eqW + 1.5;
+
+    let eqEndX: number;
+
+    if (q.kind === 'binary') {
+      const symbol = q.op === 'multiply' ? '×' : '÷';
+      const eq = `${q.operand1} ${symbol} ${q.operand2} =`;
+      doc.text(eq, cellX + 1, baselineY);
+      eqEndX = cellX + 1 + doc.getTextWidth(eq);
+    } else if (q.op === 'square') {
+      const baseStr = `${q.operand}`;
+      doc.text(baseStr, cellX + 1, baselineY);
+      const baseW = doc.getTextWidth(baseStr);
+      const supSize = fs * 0.6;
+      doc.setFontSize(supSize);
+      doc.text('2', cellX + 1 + baseW + 0.4, baselineY - fs * 0.3);
+      const supW = doc.getTextWidth('2');
+      doc.setFontSize(fs);
+      const eqStr = ' =';
+      doc.text(eqStr, cellX + 1 + baseW + 0.4 + supW + 0.5, baselineY);
+      eqEndX = cellX + 1 + baseW + 0.4 + supW + 0.5 + doc.getTextWidth(eqStr);
+    } else {
+      const radicandStr = `${q.operand}`;
+      const radicandW = doc.getTextWidth(radicandStr);
+      const hookHeight = fs * 0.4;
+      const hookWidth = fs * 0.18;
+      const overbarPadding = 0.6;
+
+      const hookBottomX = cellX + 1;
+      const hookBottomY = baselineY;
+      const hookTopX = hookBottomX + hookWidth;
+      const hookTopY = baselineY - hookHeight;
+      const overbarStartX = hookTopX;
+      const overbarEndX = hookTopX + radicandW + overbarPadding * 2;
+      const overbarY = hookTopY;
+
+      doc.setLineWidth(0.3);
+      doc.line(hookBottomX, hookBottomY, hookTopX, hookTopY);
+      doc.line(overbarStartX, overbarY, overbarEndX, overbarY);
+
+      doc.text(radicandStr, hookTopX + overbarPadding, baselineY);
+      const eqStr = ' =';
+      doc.text(eqStr, overbarEndX + 0.5, baselineY);
+      eqEndX = overbarEndX + 0.5 + doc.getTextWidth(eqStr);
+    }
+
+    const blankStart = eqEndX + 1.5;
     const blankEnd = Math.min(cellX + colW - 1, blankStart + 10);
     if (blankEnd > blankStart) {
       doc.setLineWidth(0.3);
