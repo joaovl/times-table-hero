@@ -4,17 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { GameSettings, Question } from '@/lib/gameLogic';
+import type { GameSettings, Question } from './logic';
 import {
   generateQuestions,
   generateWrongAnswers,
   shuffleOptions,
   getRandomPositiveMessage,
-} from '@/lib/gameLogic';
-import { recordAnswer } from '@/lib/gameStorage';
+} from './logic';
+import { recordAnswer } from './storage';
 import { QuestionDisplay } from './QuestionDisplay';
 
-interface GamePlayProps {
+interface TimesTablesPlayProps {
   settings: GameSettings;
   onComplete: (results: GameResults) => void;
   onQuit: () => void;
@@ -48,7 +48,7 @@ export interface GameResults {
 
 type FeedbackState = 'none' | 'correct' | 'incorrect';
 
-export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps) {
+export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesTablesPlayProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);

@@ -1,15 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GameSetup } from '@/components/game/GameSetup';
-import { GamePlay, GameResults as GameResultsType } from '@/components/game/GamePlay';
-import { GameResults } from '@/components/game/GameResults';
+import { TimesTablesSetup } from './TimesTablesSetup';
+import { TimesTablesPlay, GameResults as GameResultsType } from './TimesTablesPlay';
+import { TimesTablesResults } from './TimesTablesResults';
 import { NewUserModal } from '@/components/NewUserModal';
 import { UserProfile, getCurrentUser, getUserById } from '@/lib/userStorage';
-import type { GameSettings } from '@/lib/gameLogic';
+import type { GameSettings } from './logic';
 
 type GameState = 'setup' | 'playing' | 'results';
 
-const Index = () => {
+const TimesTablesIndex = () => {
   const navigate = useNavigate();
   const [gameState, setGameState] = useState<GameState>('setup');
   const [settings, setSettings] = useState<GameSettings | null>(null);
@@ -58,29 +58,28 @@ const Index = () => {
 
   const handleUserCreated = (userId: string) => {
     const user = getUserById(userId);
-    if (user) {
-      setCurrentUser(user);
-    }
+    if (user) setCurrentUser(user);
     setShowNewUserModal(false);
   };
 
   const handleNavigateToPrint = () => {
-    navigate('/print');
+    navigate('/times-tables/print');
   };
 
   return (
     <>
       {gameState === 'setup' && (
-        <GameSetup
+        <TimesTablesSetup
           onStart={handleStart}
           currentUser={currentUser}
           onUserChange={handleUserChange}
           onNewUser={handleNewUser}
           onNavigateToPrint={handleNavigateToPrint}
+          onNavigateToHub={() => navigate('/')}
         />
       )}
       {gameState === 'playing' && settings && (
-        <GamePlay
+        <TimesTablesPlay
           settings={settings}
           onComplete={handleComplete}
           onQuit={handleQuit}
@@ -88,14 +87,13 @@ const Index = () => {
         />
       )}
       {gameState === 'results' && results && (
-        <GameResults
+        <TimesTablesResults
           results={results}
           onPlayAgain={handlePlayAgain}
           onNewGame={handleNewGame}
           userId={currentUser?.id}
         />
       )}
-
       {showNewUserModal && (
         <NewUserModal
           onClose={() => setShowNewUserModal(false)}
@@ -106,4 +104,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default TimesTablesIndex;

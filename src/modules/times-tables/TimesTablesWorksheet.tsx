@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { getWorksheetPrintFontSize } from '@/lib/typography';
-import { generateWorksheetPdf } from '@/lib/worksheetPdf';
-import { generateQuestions } from '@/lib/gameLogic';
-import type { Operation } from '@/lib/gameLogic';
-import { QuestionDisplay } from '@/components/game/QuestionDisplay';
+import { generateWorksheetPdf } from './pdf';
+import { generateQuestions } from './logic';
+import type { Operation } from './logic';
+import { QuestionDisplay } from './QuestionDisplay';
 
-interface WorksheetProps {
+interface TimesTablesWorksheetProps {
   tables: number[];
   operation: Operation;
   questionCount: number;
@@ -33,14 +33,14 @@ function getLayoutSpec(count: number): { fontSize: string; rowHeight: string; co
   return { fontSize, rowHeight: '9.4mm', columns: 5 };                      // 125 questions max
 }
 
-export function Worksheet({
+export function TimesTablesWorksheet({
   tables,
   operation,
   questionCount,
   pageCount = 1,
   studentName,
   onBack,
-}: WorksheetProps) {
+}: TimesTablesWorksheetProps) {
   // Cap at 100 for even columns (100 / 5 = 20 rows)
   const actualCount = Math.min(questionCount, 100);
   const actualPages = Math.max(1, Math.min(pageCount, 20));

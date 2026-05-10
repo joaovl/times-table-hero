@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import type { Question } from './gameLogic';
+import type { Question } from './logic';
 
 export type PdfQuestion = Question;
 

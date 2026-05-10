@@ -1,4 +1,4 @@
-import type { Question } from '@/lib/gameLogic';
+import type { Question } from './logic';
 
 interface Props {
   q: Question;

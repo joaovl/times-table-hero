@@ -6,9 +6,9 @@ import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
 import { NewUserModal } from '@/components/NewUserModal';
 import { UserProfile, getCurrentUser, getUserById } from '@/lib/userStorage';
-import { Worksheet } from '@/components/Worksheet';
+import { TimesTablesWorksheet } from './TimesTablesWorksheet';
 import { getSetupClasses } from '@/lib/typography';
-import { getSavedPrintSettings, savePrintSettings } from '@/lib/gameStorage';
+import { getSavedPrintSettings, savePrintSettings } from './storage';
 
 type Operation = 'multiply' | 'divide' | 'square' | 'sqrt' | 'all';
 
@@ -16,7 +16,7 @@ const TABLES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const QUESTION_COUNTS = [20, 40, 60, 80, 100];
 const PAGE_COUNTS = [1, 3, 5, 10, 20];
 
-const PrintResources = () => {
+const TimesTablesPrint = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [showNewUserModal, setShowNewUserModal] = useState(false);
@@ -90,12 +90,12 @@ const PrintResources = () => {
   };
 
   const handleBackToMenu = () => {
-    navigate('/');
+    navigate('/times-tables');
   };
 
   if (showWorksheet) {
     return (
-      <Worksheet
+      <TimesTablesWorksheet
         tables={selectedTables}
         operation={operation}
         questionCount={questionCount}
@@ -269,4 +269,4 @@ const PrintResources = () => {
   );
 };
 
-export default PrintResources;
+export default TimesTablesPrint;

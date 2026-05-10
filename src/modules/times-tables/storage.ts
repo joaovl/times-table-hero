@@ -1,6 +1,6 @@
 // Progress tracking with localStorage, namespaced by userId
 
-import type { Question, BinaryOp, UnaryOp } from './gameLogic';
+import type { Question, BinaryOp, UnaryOp } from './logic';
 
 export interface QuestionRecord {
   multiplier: number;

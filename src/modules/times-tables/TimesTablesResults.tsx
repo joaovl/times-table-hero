@@ -1,22 +1,22 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { GameResults as GameResultsType } from './GamePlay';
-import { getProgress, getQuestionKey, saveSession } from '@/lib/gameStorage';
-import type { Question } from '@/lib/gameLogic';
+import type { GameResults as GameResultsType } from './TimesTablesPlay';
+import { getProgress, getQuestionKey, saveSession } from './storage';
+import type { Question } from './logic';
 import { QuestionDisplay } from './QuestionDisplay';
 import { useEffect, useState } from 'react';
 import { Star, Flame } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-interface GameResultsProps {
+interface TimesTablesResultsProps {
   results: GameResultsType;
   onPlayAgain: () => void;
   onNewGame: () => void;
   userId?: string;
 }
 
-export function GameResults({ results, onPlayAgain, onNewGame, userId }: GameResultsProps) {
+export function TimesTablesResults({ results, onPlayAgain, onNewGame, userId }: TimesTablesResultsProps) {
   const [improved, setImproved] = useState<string[]>([]);
   const [stillChallenging, setStillChallenging] = useState<string[]>([]);
 

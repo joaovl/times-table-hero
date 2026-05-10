@@ -18,8 +18,8 @@ import {
   getQuestionKey,
   recordAnswer,
   getProgress,
-} from './gameStorage';
-import type { Question } from './gameLogic';
+} from './storage';
+import type { Question } from './logic';
 
 beforeEach(() => {
   localStorage.clear();

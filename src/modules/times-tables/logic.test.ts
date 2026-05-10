@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { generateQuestions, generateWrongAnswers, shuffleOptions } from './gameLogic';
-import type { Question } from './gameLogic';
+import { generateQuestions, generateWrongAnswers, shuffleOptions } from './logic';
+import type { Question } from './logic';
 
 const isMultiply = (q: Question) => q.kind === 'binary' && q.op === 'multiply';
 const isDivide = (q: Question) => q.kind === 'binary' && q.op === 'divide';

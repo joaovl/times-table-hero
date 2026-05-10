@@ -1,13 +1,13 @@
-import { useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import PrintResources from "./pages/PrintResources";
-import NotFound from "./pages/NotFound";
-import { getTheme, applyTheme } from "@/lib/themeStorage";
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Hub from './pages/Hub';
+import TimesTablesIndex from './modules/times-tables/TimesTablesIndex';
+import TimesTablesPrint from './modules/times-tables/TimesTablesPrint';
+import NotFound from './pages/NotFound';
+import { getTheme, applyTheme } from '@/lib/themeStorage';
 
 const App = () => {
   useEffect(() => {
-    // Apply saved theme on app load
     const theme = getTheme();
     applyTheme(theme);
   }, []);
@@ -15,8 +15,9 @@ const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/print" element={<PrintResources />} />
+        <Route path="/" element={<Hub />} />
+        <Route path="/times-tables" element={<TimesTablesIndex />} />
+        <Route path="/times-tables/print" element={<TimesTablesPrint />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

@@ -3,18 +3,19 @@ import { Menu, Printer, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { Difficulty, GameMode, GameSettings, Operation } from '@/lib/gameLogic';
-import { getTotalStats, getSavedSettings, saveSettings } from '@/lib/gameStorage';
+import type { Difficulty, GameMode, GameSettings, Operation } from './logic';
+import { getTotalStats, getSavedSettings, saveSettings } from './storage';
 import type { UserProfile } from '@/lib/userStorage';
 import { UserSelector } from '@/components/UserSelector';
 import { PRESET_THEMES, DEFAULT_THEME, getTheme, saveTheme, resetTheme } from '@/lib/themeStorage';
 
-interface GameSetupProps {
+interface TimesTablesSetupProps {
   onStart: (settings: GameSettings) => void;
   currentUser: UserProfile | null;
   onUserChange: (user: UserProfile | null) => void;
   onNewUser: () => void;
   onNavigateToPrint?: () => void;
+  onNavigateToHub?: () => void;
 }
 
 const TABLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -30,7 +31,7 @@ const TIME_LIMITS = [
   { label: '15 min', value: 900 },
 ];
 
-export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNavigateToPrint }: GameSetupProps) {
+export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser, onNavigateToPrint, onNavigateToHub }: TimesTablesSetupProps) {
   const [selectedTables, setSelectedTables] = useState<number[]>(TABLES);
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [gameMode, setGameMode] = useState<GameMode>('time');
@@ -140,6 +141,14 @@ export function GameSetup({ onStart, currentUser, onUserChange, onNewUser, onNav
   return (
     <div className="min-h-screen bg-background p-7">
       <div className="mx-auto max-w-[600px]">
+        {onNavigateToHub && (
+          <button
+            onClick={onNavigateToHub}
+            className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base mb-2"
+          >
+            ← Hub
+          </button>
+        )}
         {/* Title */}
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary flex items-center justify-center gap-2 mb-1 md:mb-2">
           <img src="/favicon.png" alt="Maths Challenge" className="w-6 h-6 md:w-10 md:h-10" />
