@@ -12,6 +12,7 @@ import {
   getRandomPositiveMessage,
 } from '@/lib/gameLogic';
 import { recordAnswer } from '@/lib/gameStorage';
+import { QuestionDisplay } from './QuestionDisplay';
 
 interface GamePlayProps {
   settings: GameSettings;
@@ -20,17 +21,28 @@ interface GamePlayProps {
   userId?: string;
 }
 
+export type GameResultIncorrect =
+  | {
+      kind: 'binary';
+      op: 'multiply' | 'divide';
+      operand1: number;
+      operand2: number;
+      userAnswer: number | null;
+      correctAnswer: number;
+    }
+  | {
+      kind: 'unary';
+      op: 'square' | 'sqrt';
+      operand: number;
+      userAnswer: number | null;
+      correctAnswer: number;
+    };
+
 export interface GameResults {
   score: number;
   total: number;
   bestStreak: number;
-  incorrectQuestions: Array<{
-    operand1: number;
-    operand2: number;
-    operation: 'multiply' | 'divide';
-    userAnswer: number | null;
-    correctAnswer: number;
-  }>;
+  incorrectQuestions: GameResultIncorrect[];
   settings: GameSettings;
 }
 
@@ -51,8 +63,6 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const getOperationSymbol = (op: 'multiply' | 'divide') => op === 'multiply' ? '×' : '÷';
 
   // Generate questions on mount
   useEffect(() => {
@@ -112,13 +122,9 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
   const handleAnswer = useCallback((userAnswer: number | null) => {
     const currentQuestion = questions[currentIndex];
     const isCorrect = userAnswer === currentQuestion.answer;
-    const symbol = getOperationSymbol(currentQuestion.operation);
 
-    // Track answered questions
     setQuestionsAnswered(prev => prev + 1);
-
-    // Record progress (using operand2 as the "table" for tracking)
-    recordAnswer(currentQuestion.operand1, currentQuestion.operand2, isCorrect, userId);
+    recordAnswer(currentQuestion, isCorrect, userId);
 
     if (isCorrect) {
       setScore(prev => prev + 1);
@@ -132,20 +138,33 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
     } else {
       setStreak(0);
       setFeedback('incorrect');
-      setFeedbackMessage(`${currentQuestion.operand1} ${symbol} ${currentQuestion.operand2} = ${currentQuestion.answer}`);
-      setIncorrectQuestions(prev => [
-        ...prev,
-        {
-          operand1: currentQuestion.operand1,
-          operand2: currentQuestion.operand2,
-          operation: currentQuestion.operation,
-          userAnswer,
-          correctAnswer: currentQuestion.answer,
-        },
-      ]);
+      setFeedbackMessage('');
+      if (currentQuestion.kind === 'binary') {
+        setIncorrectQuestions(prev => [
+          ...prev,
+          {
+            kind: 'binary',
+            op: currentQuestion.op,
+            operand1: currentQuestion.operand1,
+            operand2: currentQuestion.operand2,
+            userAnswer,
+            correctAnswer: currentQuestion.answer,
+          },
+        ]);
+      } else {
+        setIncorrectQuestions(prev => [
+          ...prev,
+          {
+            kind: 'unary',
+            op: currentQuestion.op,
+            operand: currentQuestion.operand,
+            userAnswer,
+            correctAnswer: currentQuestion.answer,
+          },
+        ]);
+      }
     }
 
-    // Move to next question after delay (longer for incorrect so kid reads correct answer)
     const delay = isCorrect ? 800 : 1400;
     setTimeout(() => {
       setFeedback('none');
@@ -159,7 +178,7 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
         setCurrentIndex(nextIndex);
       }
     }, delay);
-  }, [currentIndex, questions, settings]);
+  }, [currentIndex, questions, settings, userId]);
 
   const handleSubmitTyped = (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,7 +195,6 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
   }
 
   const currentQuestion = questions[currentIndex];
-  const symbol = getOperationSymbol(currentQuestion.operation);
   const progress = settings.gameMode === 'questions'
     ? (currentIndex / settings.questionCount) * 100
     : ((settings.timeLimit - timeLeft) / settings.timeLimit) * 100;
@@ -247,7 +265,7 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
           {feedback === 'none' ? (
             <>
               <div className="mb-1 md:mb-2 text-5xl md:text-6xl lg:text-7xl font-extrabold text-foreground">
-                {currentQuestion.operand1} {symbol} {currentQuestion.operand2}
+                <QuestionDisplay q={currentQuestion} />
               </div>
               <div className="text-2xl md:text-3xl font-bold text-muted-foreground">=  ?</div>
             </>
@@ -260,7 +278,7 @@ export function GamePlay({ settings, onComplete, onQuit, userId }: GamePlayProps
                 {feedback === 'correct' ? feedbackMessage : 'Not quite!'}
               </div>
               <div className="text-3xl md:text-4xl font-bold text-foreground">
-                {currentQuestion.operand1} {symbol} {currentQuestion.operand2} = {currentQuestion.answer}
+                <QuestionDisplay q={currentQuestion} /> = {currentQuestion.answer}
               </div>
             </>
           )}
