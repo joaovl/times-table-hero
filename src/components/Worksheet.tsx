@@ -2,20 +2,17 @@ import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { getWorksheetPrintFontSize } from '@/lib/typography';
 import { generateWorksheetPdf } from '@/lib/worksheetPdf';
+import { generateQuestions } from '@/lib/gameLogic';
+import type { Operation } from '@/lib/gameLogic';
+import { QuestionDisplay } from '@/components/game/QuestionDisplay';
 
 interface WorksheetProps {
   tables: number[];
-  operation: 'multiply' | 'divide' | 'both';
+  operation: Operation;
   questionCount: number;
   pageCount?: number;
   studentName?: string;
   onBack: () => void;
-}
-
-interface Question {
-  operand1: number;
-  operand2: number;
-  operation: 'multiply' | 'divide';
 }
 
 // Layout specifications based on A4 calculations:
@@ -36,67 +33,6 @@ function getLayoutSpec(count: number): { fontSize: string; rowHeight: string; co
   return { fontSize, rowHeight: '9.4mm', columns: 5 };                      // 125 questions max
 }
 
-function generateQuestions(
-  tables: number[],
-  operation: 'multiply' | 'divide' | 'both',
-  count: number
-): Question[] {
-  // First, generate ALL possible unique questions
-  const allQuestions: Question[] = [];
-  const divisionTables = tables.filter(t => t !== 0);
-
-  // Generate multiplication questions
-  if (operation === 'multiply' || operation === 'both') {
-    for (const table of tables) {
-      for (let other = 0; other <= 12; other++) {
-        allQuestions.push({
-          operand1: table,
-          operand2: other,
-          operation: 'multiply',
-        });
-      }
-    }
-  }
-
-  // Generate division questions
-  if (operation === 'divide' || operation === 'both') {
-    for (const table of divisionTables) {
-      for (let other = 0; other <= 12; other++) {
-        const product = table * other;
-        allQuestions.push({
-          operand1: product,
-          operand2: table,
-          operation: 'divide',
-        });
-      }
-    }
-  }
-
-  // Shuffle all questions
-  for (let i = allQuestions.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
-  }
-
-  // If we need more questions than unique ones available, repeat the pool
-  const questions: Question[] = [];
-  while (questions.length < count) {
-    const remaining = count - questions.length;
-    const toAdd = allQuestions.slice(0, Math.min(remaining, allQuestions.length));
-    questions.push(...toAdd);
-
-    // Reshuffle for variety if we need to repeat
-    if (questions.length < count) {
-      for (let i = allQuestions.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
-      }
-    }
-  }
-
-  return questions.slice(0, count);
-}
-
 export function Worksheet({
   tables,
   operation,
@@ -112,7 +48,7 @@ export function Worksheet({
   const pages = useMemo(
     () =>
       Array.from({ length: actualPages }, () =>
-        generateQuestions(tables, operation, actualCount)
+        generateQuestions(tables, actualCount, operation)
       ),
     [tables, operation, actualCount, actualPages]
   );
@@ -121,7 +57,14 @@ export function Worksheet({
   const layout = getLayoutSpec(actualCount);
 
   const sortedTables = [...tables].sort((a, b) => a - b);
-  const tableSuffix = operation === 'divide' ? '÷' : operation === 'both' ? '×÷' : '×';
+  const opLabelSuffix: Record<Operation, string> = {
+    multiply: '×',
+    divide: '÷',
+    square: '²',
+    sqrt: '√',
+    all: '×÷²√',
+  };
+  const tableSuffix = opLabelSuffix[operation];
   const tablesLabel = sortedTables.map(t => `${t}${tableSuffix}`).join(', ');
 
   const handlePrint = () => {
@@ -133,8 +76,6 @@ export function Worksheet({
     });
     doc.save('maths-challenge.pdf');
   };
-
-  const getSymbol = (op: 'multiply' | 'divide') => op === 'multiply' ? '×' : '÷';
 
   return (
     <div className="min-h-screen bg-white">
@@ -332,7 +273,7 @@ export function Worksheet({
         <div className="questions-grid">
           {previewQuestions.map((q, idx) => (
             <div key={idx} className="question text-sm">
-              {q.operand1} {getSymbol(q.operation)} {q.operand2} =<span className="answer-blank">&nbsp;</span>
+              <QuestionDisplay q={q} /> =<span className="answer-blank">&nbsp;</span>
             </div>
           ))}
         </div>
