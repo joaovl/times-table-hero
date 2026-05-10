@@ -2,6 +2,15 @@ import jsPDF from 'jspdf';
 import type { ShapeKind, ShapeQuestion } from './logic';
 import { answerString, promptFor } from './logic';
 
+/** Format a numeric value for in-figure labels — drops trailing zeros so
+ *  a whole number reads as "5" rather than "5.00". Mirrors logic.ts's
+ *  internal helper but kept local so pdf.ts has no extra imports. */
+function fmt(n: number): string {
+  if (Number.isInteger(n)) return String(n);
+  const s = n.toFixed(2);
+  return s.replace(/\.?0+$/, '');
+}
+
 export interface ShapePdfOptions {
   pages: ShapeQuestion[][];
   title: string;
@@ -103,6 +112,109 @@ function drawNamedShape(
   drawPolygon(doc, regularPolygonVertices(n, cx, cy, radius));
 }
 
+function drawRightTriangle(
+  doc: jsPDF,
+  q: ShapeQuestion,
+  cx: number,
+  cy: number,
+  boxW: number
+) {
+  // Right triangle: right angle at the bottom-left corner. The drawn
+  // figure has a fixed visual aspect — the labels carry the actual
+  // numeric base and height.
+  const w = boxW;
+  const h = w * 0.62;
+  const x0 = cx - w / 2;
+  const yB = cy + h / 2;
+  const xR = x0 + w;
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(0);
+  doc.line(x0, yB - h, x0, yB);
+  doc.line(x0, yB, xR, yB);
+  doc.line(x0, yB - h, xR, yB);
+  // Small right-angle marker at the bottom-left corner.
+  const m = Math.min(2.5, w * 0.06);
+  doc.line(x0 + m, yB, x0 + m, yB - m);
+  doc.line(x0, yB - m, x0 + m, yB - m);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  // Base label below the bottom edge.
+  doc.text(`base = ${fmt(q.width ?? 0)} ${q.units}`, cx, yB + 4, { align: 'center' });
+  // Height label to the left of the vertical side.
+  doc.text(`h = ${fmt(q.height ?? 0)} ${q.units}`, x0 - 1.5, yB - h / 2, {
+    align: 'right',
+    baseline: 'middle',
+  });
+}
+
+function drawCircleWithRadius(
+  doc: jsPDF,
+  q: ShapeQuestion,
+  cx: number,
+  cy: number,
+  drawR: number
+) {
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(0);
+  doc.circle(cx, cy, drawR);
+  // Radius line from centre to the rightmost edge.
+  doc.line(cx, cy, cx + drawR, cy);
+  // Small dot at the centre.
+  doc.setFillColor(0, 0, 0);
+  doc.circle(cx, cy, 0.5, 'F');
+  // Label above the radius line.
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(`r = ${fmt(q.radius ?? 0)} ${q.units}`, cx + drawR / 2, cy - 1, {
+    align: 'center',
+  });
+}
+
+function drawAngleFigure(
+  doc: jsPDF,
+  q: ShapeQuestion,
+  cx: number,
+  cy: number,
+  armLen: number
+) {
+  // Two rays from a common vertex. The vertex sits a bit down-and-left of
+  // the cell centre so the rotated ray has room to swing upward without
+  // running into the cell border. We don't label the numeric angle — the
+  // kid identifies acute/right/obtuse from the figure.
+  const angleDeg = q.angle ?? 90;
+  const angleRad = (angleDeg * Math.PI) / 180;
+  const vx = cx - armLen * 0.25;
+  const vy = cy + armLen * 0.25;
+  const r1x = vx + armLen;
+  const r1y = vy;
+  // PDF y grows downward; subtract the sin term to rotate CCW visually.
+  const r2x = vx + armLen * Math.cos(angleRad);
+  const r2y = vy - armLen * Math.sin(angleRad);
+  doc.setLineWidth(0.6);
+  doc.setDrawColor(0);
+  doc.line(vx, vy, r1x, r1y);
+  doc.line(vx, vy, r2x, r2y);
+  // Approximate the arc as a short polyline (8 segments) — keeps the
+  // primitives count small and the visual unambiguous.
+  const arcR = armLen * 0.28;
+  const segs = 8;
+  let prevX = vx + arcR;
+  let prevY = vy;
+  doc.setLineWidth(0.4);
+  for (let i = 1; i <= segs; i++) {
+    const t = (i / segs) * angleRad;
+    const x = vx + arcR * Math.cos(t);
+    const y = vy - arcR * Math.sin(t);
+    doc.line(prevX, prevY, x, y);
+    prevX = x;
+    prevY = y;
+  }
+  // Tiny vertex dot.
+  doc.setFillColor(0, 0, 0);
+  doc.circle(vx, vy, 0.5, 'F');
+}
+
 function drawDimensionedRect(
   doc: jsPDF,
   q: ShapeQuestion,
@@ -160,6 +272,15 @@ function drawCell(
   if (q.skill === 'perimeter-rect' || q.skill === 'area-rect') {
     const drawW = Math.min(figBoxW - 6, radius * 1.75);
     drawDimensionedRect(doc, q, cx, cy, drawW);
+  } else if (q.skill === 'area-tri') {
+    const drawW = Math.min(figBoxW - 6, radius * 1.6);
+    drawRightTriangle(doc, q, cx, cy, drawW);
+  } else if (q.skill === 'area-circle' || q.skill === 'circumference') {
+    const drawR = Math.max(6, Math.min(radius, figBoxW / 2 - 8));
+    drawCircleWithRadius(doc, q, cx, cy, drawR);
+  } else if (q.skill === 'angle-name') {
+    const armLen = Math.min(radius * 1.4, figBoxW / 2 - 2);
+    drawAngleFigure(doc, q, cx, cy, armLen);
   } else if (q.shape) {
     drawNamedShape(doc, q.shape, cx, cy, radius);
   }

@@ -42,11 +42,11 @@ describe('buildShapesSummary', () => {
       .toBe('name-2d, count-sides, perimeter-rect • m • medium');
   });
 
-  it('all four skills + every unit option', () => {
+  it('all eight skills + every unit option', () => {
     SHAPE_UNIT_OPTIONS.forEach(u => {
       const out = buildShapesSummary([...SHAPE_SKILL_OPTIONS], u, 'hard');
       expect(out).toBe(
-        `name-2d, count-sides, perimeter-rect, area-rect • ${u} • hard`
+        `name-2d, count-sides, perimeter-rect, area-rect, area-tri, area-circle, circumference, angle-name • ${u} • hard`
       );
     });
   });
@@ -61,9 +61,12 @@ describe('buildShapesSummary', () => {
     expect(buildShapesSummary(['name-2d'], 'cm', 'hard')).toContain('hard');
   });
 
-  it('stays compact (≤ 80 chars for the longest combination)', () => {
+  it('stays reasonably compact (≤ 130 chars for the longest combination)', () => {
+    // With 8 skills the summary line is around 110 chars at its longest;
+    // the threshold here is loose so a 9th skill (e.g. a future v2 entry)
+    // would still pass without an update.
     const longest = buildShapesSummary([...SHAPE_SKILL_OPTIONS], 'mm', 'medium');
-    expect(longest.length).toBeLessThanOrEqual(80);
+    expect(longest.length).toBeLessThanOrEqual(130);
   });
 });
 
@@ -73,5 +76,9 @@ describe('skillLabel', () => {
     expect(skillLabel('count-sides')).toBe('Count sides');
     expect(skillLabel('perimeter-rect')).toBe('Perimeter (rect)');
     expect(skillLabel('area-rect')).toBe('Area (rect)');
+    expect(skillLabel('area-tri')).toBe('Area (triangle)');
+    expect(skillLabel('area-circle')).toBe('Area (circle)');
+    expect(skillLabel('circumference')).toBe('Circumference');
+    expect(skillLabel('angle-name')).toBe('Name angle');
   });
 });

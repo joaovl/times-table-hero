@@ -1,16 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ANGLE_CATEGORIES,
   answerString,
   generateShapeQuestions,
   isAnswerCorrect,
   maxDimensionForDifficulty,
+  PI_APPROX,
   pickNameDistractors,
   promptFor,
   SHAPE_KIND_OPTIONS,
   SHAPE_SIDE_COUNT,
   SHAPE_SKILL_OPTIONS,
+  unitsSquared,
 } from './logic';
-import type { ShapeDifficulty, ShapeSettings, ShapeSkill, ShapeUnits } from './logic';
+import type {
+  AngleCategory,
+  ShapeDifficulty,
+  ShapeSettings,
+  ShapeSkill,
+  ShapeUnits,
+} from './logic';
 
 const baseSettings = (over: Partial<ShapeSettings>): ShapeSettings => ({
   skills: ['name-2d'],
@@ -229,10 +238,13 @@ describe('answerString', () => {
     ).toBe('14 cm');
   });
 
-  it('area-rect appends units', () => {
+  it('area-rect appends squared units', () => {
+    // v1.1: area answers carry the squared-unit suffix (cm² / mm² …)
+    // so the answer key is dimensionally correct alongside the new
+    // area-tri / area-circle skills.
     expect(
       answerString({ skill: 'area-rect', width: 3, height: 4, units: 'mm', answer: 12 })
-    ).toBe('12 mm');
+    ).toBe('12 mm²');
   });
 });
 
@@ -262,5 +274,307 @@ describe('isAnswerCorrect', () => {
     const q = { skill: 'count-sides' as const, shape: 'square' as const, units: 'cm' as const, answer: 4 };
     expect(isAnswerCorrect(q, '')).toBe(false);
     expect(isAnswerCorrect(q, '   ')).toBe(false);
+  });
+
+  it('numeric area-rect accepts the integer with or without unit suffix', () => {
+    const q = {
+      skill: 'area-rect' as const,
+      width: 3,
+      height: 4,
+      units: 'cm' as const,
+      answer: 12,
+    };
+    expect(isAnswerCorrect(q, '12')).toBe(true);
+    expect(isAnswerCorrect(q, '12 cm²')).toBe(true);
+    expect(isAnswerCorrect(q, '12 cm2')).toBe(true);
+    expect(isAnswerCorrect(q, '12 sq cm')).toBe(true);
+    expect(isAnswerCorrect(q, '13')).toBe(false);
+  });
+});
+
+describe('SHAPE_SKILL_OPTIONS contains all eight v1 skills', () => {
+  it('lists name-2d, count-sides, perimeter-rect, area-rect, area-tri, area-circle, circumference, angle-name', () => {
+    expect(SHAPE_SKILL_OPTIONS).toEqual([
+      'name-2d',
+      'count-sides',
+      'perimeter-rect',
+      'area-rect',
+      'area-tri',
+      'area-circle',
+      'circumference',
+      'angle-name',
+    ]);
+  });
+});
+
+describe('unitsSquared', () => {
+  it('appends the U+00B2 superscript-2 to the unit', () => {
+    expect(unitsSquared('cm')).toBe('cm²');
+    expect(unitsSquared('mm')).toBe('mm²');
+    expect(unitsSquared('m')).toBe('m²');
+    expect(unitsSquared('in')).toBe('in²');
+  });
+
+  it('² character code point is 0x00B2 (in WinAnsi)', () => {
+    expect(unitsSquared('cm').charCodeAt(2)).toBe(0x00b2);
+  });
+});
+
+describe('PI_APPROX', () => {
+  it('uses 3.14 (the kid-arithmetic approximation)', () => {
+    expect(PI_APPROX).toBe(3.14);
+  });
+});
+
+describe('generateShapeQuestions — area-tri', () => {
+  it('answer ≈ 0.5 * base * height (rounded to 2 dp)', () => {
+    const qs = generateShapeQuestions(baseSettings({ skills: ['area-tri'] }), 100);
+    qs.forEach(q => {
+      expect(q.skill).toBe('area-tri');
+      expect(q.width).toBeDefined();
+      expect(q.height).toBeDefined();
+      const expected = Math.round(0.5 * q.width! * q.height! * 100) / 100;
+      expect(q.answer).toBeCloseTo(expected, 5);
+    });
+  });
+
+  it('easy difficulty produces integer base and height', () => {
+    const qs = generateShapeQuestions(
+      baseSettings({ skills: ['area-tri'], difficulty: 'easy' }),
+      80
+    );
+    qs.forEach(q => {
+      expect(Number.isInteger(q.width)).toBe(true);
+      expect(Number.isInteger(q.height)).toBe(true);
+      expect(q.width!).toBeGreaterThanOrEqual(1);
+      expect(q.width!).toBeLessThanOrEqual(10);
+    });
+  });
+
+  it('medium difficulty may produce one-decimal dimensions', () => {
+    const qs = generateShapeQuestions(
+      baseSettings({ skills: ['area-tri'], difficulty: 'medium' }),
+      200
+    );
+    const hasDecimal = qs.some(q => !Number.isInteger(q.width!) || !Number.isInteger(q.height!));
+    // With 200 samples and ~90% non-integer probability per dimension this
+    // is overwhelmingly likely; the test asserts the generator is capable
+    // of producing decimals at all.
+    expect(hasDecimal).toBe(true);
+  });
+});
+
+describe('generateShapeQuestions — area-circle', () => {
+  it('answer ≈ 3.14 * r²', () => {
+    const qs = generateShapeQuestions(baseSettings({ skills: ['area-circle'] }), 100);
+    qs.forEach(q => {
+      expect(q.skill).toBe('area-circle');
+      expect(q.radius).toBeDefined();
+      const expected = Math.round(PI_APPROX * q.radius! * q.radius! * 100) / 100;
+      expect(q.answer).toBeCloseTo(expected, 5);
+    });
+  });
+});
+
+describe('generateShapeQuestions — circumference', () => {
+  it('answer ≈ 2 * 3.14 * r', () => {
+    const qs = generateShapeQuestions(baseSettings({ skills: ['circumference'] }), 100);
+    qs.forEach(q => {
+      expect(q.skill).toBe('circumference');
+      expect(q.radius).toBeDefined();
+      const expected = Math.round(2 * PI_APPROX * q.radius! * 100) / 100;
+      expect(q.answer).toBeCloseTo(expected, 5);
+    });
+  });
+});
+
+describe('generateShapeQuestions — angle-name', () => {
+  it('category matches the angle range', () => {
+    const qs = generateShapeQuestions(baseSettings({ skills: ['angle-name'] }), 300);
+    qs.forEach(q => {
+      expect(q.skill).toBe('angle-name');
+      expect(q.category).toBeDefined();
+      expect(q.angle).toBeDefined();
+      if (q.category === 'right') {
+        expect(q.angle).toBe(90);
+      } else if (q.category === 'acute') {
+        expect(q.angle!).toBeGreaterThan(0);
+        expect(q.angle!).toBeLessThan(90);
+      } else if (q.category === 'obtuse') {
+        expect(q.angle!).toBeGreaterThan(90);
+        expect(q.angle!).toBeLessThan(180);
+      }
+    });
+  });
+
+  it('all three categories appear over a large sample', () => {
+    const qs = generateShapeQuestions(baseSettings({ skills: ['angle-name'] }), 300);
+    const seen = new Set(qs.map(q => q.category));
+    ANGLE_CATEGORIES.forEach((c: AngleCategory) => expect(seen.has(c)).toBe(true));
+  });
+});
+
+describe('answerString — new skills', () => {
+  it('area-tri appends squared units', () => {
+    const q = {
+      skill: 'area-tri' as const,
+      width: 6,
+      height: 4,
+      units: 'cm' as const,
+      answer: 12,
+    };
+    expect(answerString(q)).toBe('12 cm²');
+  });
+
+  it('area-circle appends squared units (decimal preserved)', () => {
+    const q = {
+      skill: 'area-circle' as const,
+      radius: 3,
+      units: 'cm' as const,
+      answer: 28.26,
+    };
+    expect(answerString(q)).toBe('28.26 cm²');
+  });
+
+  it('circumference uses the linear unit', () => {
+    const q = {
+      skill: 'circumference' as const,
+      radius: 5,
+      units: 'm' as const,
+      answer: 31.4,
+    };
+    expect(answerString(q)).toBe('31.4 m');
+  });
+
+  it('angle-name returns the category string', () => {
+    const q = {
+      skill: 'angle-name' as const,
+      angle: 45,
+      category: 'acute' as const,
+      units: 'cm' as const,
+      answer: 45,
+    };
+    expect(answerString(q)).toBe('acute');
+  });
+
+  it('whole-number area answers drop trailing zeros', () => {
+    const q = {
+      skill: 'area-tri' as const,
+      width: 4,
+      height: 5,
+      units: 'cm' as const,
+      answer: 10,
+    };
+    expect(answerString(q)).toBe('10 cm²');
+  });
+});
+
+describe('isAnswerCorrect — new skills', () => {
+  it('area-tri accepts a numeric answer with or without unit suffix', () => {
+    const q = {
+      skill: 'area-tri' as const,
+      width: 6,
+      height: 4,
+      units: 'cm' as const,
+      answer: 12,
+    };
+    expect(isAnswerCorrect(q, '12')).toBe(true);
+    expect(isAnswerCorrect(q, '12 cm²')).toBe(true);
+    expect(isAnswerCorrect(q, '12 cm2')).toBe(true);
+    expect(isAnswerCorrect(q, '12 sq cm')).toBe(true);
+    expect(isAnswerCorrect(q, '12 cm')).toBe(true);
+    expect(isAnswerCorrect(q, '11')).toBe(false);
+  });
+
+  it('area-circle tolerates rounding error within 0.01', () => {
+    const q = {
+      skill: 'area-circle' as const,
+      radius: 3,
+      units: 'cm' as const,
+      answer: 28.26,
+    };
+    expect(isAnswerCorrect(q, '28.26')).toBe(true);
+    expect(isAnswerCorrect(q, '28.27')).toBe(true);
+    expect(isAnswerCorrect(q, '28.25')).toBe(true);
+    // 0.5 off — too far.
+    expect(isAnswerCorrect(q, '28.76')).toBe(false);
+  });
+
+  it('circumference accepts decimal answer with or without unit', () => {
+    const q = {
+      skill: 'circumference' as const,
+      radius: 5,
+      units: 'cm' as const,
+      answer: 31.4,
+    };
+    expect(isAnswerCorrect(q, '31.4')).toBe(true);
+    expect(isAnswerCorrect(q, '31.4 cm')).toBe(true);
+    expect(isAnswerCorrect(q, '30')).toBe(false);
+  });
+
+  it('angle-name accepts the category string case-insensitively', () => {
+    const q = {
+      skill: 'angle-name' as const,
+      angle: 45,
+      category: 'acute' as const,
+      units: 'cm' as const,
+      answer: 45,
+    };
+    expect(isAnswerCorrect(q, 'acute')).toBe(true);
+    expect(isAnswerCorrect(q, 'ACUTE')).toBe(true);
+    expect(isAnswerCorrect(q, '  Acute  ')).toBe(true);
+    expect(isAnswerCorrect(q, 'right')).toBe(false);
+    expect(isAnswerCorrect(q, 'obtuse')).toBe(false);
+  });
+});
+
+describe('promptFor — new skills', () => {
+  it('area-tri uses "Area?"', () => {
+    const q = {
+      skill: 'area-tri' as const,
+      width: 1,
+      height: 1,
+      units: 'cm' as const,
+      answer: 0.5,
+    };
+    expect(promptFor(q)).toBe('Area?');
+  });
+
+  it('area-circle prompt mentions 3.14 (no pi glyph)', () => {
+    const q = {
+      skill: 'area-circle' as const,
+      radius: 1,
+      units: 'cm' as const,
+      answer: 3.14,
+    };
+    const p = promptFor(q);
+    expect(p).toContain('Area?');
+    expect(p).toContain('3.14');
+    // No greek pi glyph — Helvetica WinAnsi can't render it.
+    expect(p).not.toMatch(/π/);
+  });
+
+  it('circumference prompt mentions 3.14 (no pi glyph)', () => {
+    const q = {
+      skill: 'circumference' as const,
+      radius: 1,
+      units: 'cm' as const,
+      answer: 6.28,
+    };
+    const p = promptFor(q);
+    expect(p).toContain('Circumference?');
+    expect(p).toContain('3.14');
+    expect(p).not.toMatch(/π/);
+  });
+
+  it('angle-name uses "Angle?"', () => {
+    const q = {
+      skill: 'angle-name' as const,
+      angle: 90,
+      category: 'right' as const,
+      units: 'cm' as const,
+      answer: 90,
+    };
+    expect(promptFor(q)).toBe('Angle?');
   });
 });

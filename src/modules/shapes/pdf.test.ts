@@ -85,6 +85,36 @@ const area = (w: number, h: number, units: ShapeQuestion['units'] = 'cm'): Shape
   answer: w * h,
 });
 
+const tri = (base: number, h: number, units: ShapeQuestion['units'] = 'cm'): ShapeQuestion => ({
+  skill: 'area-tri',
+  width: base,
+  height: h,
+  units,
+  answer: Math.round(0.5 * base * h * 100) / 100,
+});
+
+const circArea = (r: number, units: ShapeQuestion['units'] = 'cm'): ShapeQuestion => ({
+  skill: 'area-circle',
+  radius: r,
+  units,
+  answer: Math.round(3.14 * r * r * 100) / 100,
+});
+
+const circ = (r: number, units: ShapeQuestion['units'] = 'cm'): ShapeQuestion => ({
+  skill: 'circumference',
+  radius: r,
+  units,
+  answer: Math.round(2 * 3.14 * r * 100) / 100,
+});
+
+const angle = (deg: number, cat: 'acute' | 'right' | 'obtuse'): ShapeQuestion => ({
+  skill: 'angle-name',
+  angle: deg,
+  category: cat,
+  units: 'cm',
+  answer: deg,
+});
+
 describe('generateShapesPdf — question numbering', () => {
   it('renders "1." for a single question', () => {
     render([name('square')]);
@@ -180,14 +210,14 @@ describe('generateShapesPdf — answer key', () => {
     expect(capturedTextCalls).toContain('1) 24 cm');
   });
 
-  it('area answer formatted with units', () => {
+  it('area answer formatted with squared units', () => {
     generateShapesPdf({
       pages: [[area(6, 4, 'mm')]],
       title: 'Test',
       subtitle: '',
       includeAnswerKey: true,
     });
-    expect(capturedTextCalls).toContain('1) 24 mm');
+    expect(capturedTextCalls).toContain('1) 24 mm²');
   });
 
   it('name-2d answer is the shape name', () => {

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { ShapeKind, ShapeQuestion, ShapeSettings } from './logic';
 import {
+  ANGLE_CATEGORIES,
   answerString,
   generateShapeQuestions,
   isAnswerCorrect,
@@ -174,11 +175,21 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
     return `${m}:${r.toString().padStart(2, '0')}`;
   };
 
-  // Visual mode for the figure component.
-  const figureMode =
-    q.skill === 'perimeter-rect' || q.skill === 'area-rect'
-      ? ('rect-with-dims' as const)
-      : (q.shape ?? 'circle');
+  // Visual mode for the figure component. Each skill maps to a distinct
+  // figure layout — ShapeFigure consults `question.skill` first, so the
+  // mode here is a hint for the shape-only paths (name-2d / count-sides).
+  let figureMode: ShapeKind | 'rect-with-dims' | 'right-triangle' | 'circle-with-radius' | 'angle';
+  if (q.skill === 'perimeter-rect' || q.skill === 'area-rect') {
+    figureMode = 'rect-with-dims';
+  } else if (q.skill === 'area-tri') {
+    figureMode = 'right-triangle';
+  } else if (q.skill === 'area-circle' || q.skill === 'circumference') {
+    figureMode = 'circle-with-radius';
+  } else if (q.skill === 'angle-name') {
+    figureMode = 'angle';
+  } else {
+    figureMode = q.shape ?? 'circle';
+  }
 
   return (
     <div className="min-h-screen bg-background py-2 px-3 md:py-[26px] md:px-8">
@@ -253,15 +264,33 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
           </div>
         )}
 
-        {feedback === 'none' && q.skill !== 'name-2d' && (
+        {feedback === 'none' && q.skill === 'angle-name' && (
+          <div className="grid grid-cols-3 gap-2">
+            {ANGLE_CATEGORIES.map(c => (
+              <Button
+                key={c}
+                onClick={() => submit(c)}
+                className="py-4 text-lg font-bold capitalize shadow-button"
+              >
+                {c}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        {feedback === 'none' && q.skill !== 'name-2d' && q.skill !== 'angle-name' && (
           <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
             <Input
               ref={inputRef}
               type="text"
-              inputMode="numeric"
+              inputMode="decimal"
               value={typed}
               onChange={e => setTyped(e.target.value)}
-              placeholder={q.skill === 'count-sides' ? 'e.g. 4' : `answer in ${q.units}`}
+              placeholder={
+                q.skill === 'count-sides'
+                  ? 'e.g. 4'
+                  : `answer in ${q.units}`
+              }
               className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
               autoFocus
             />
