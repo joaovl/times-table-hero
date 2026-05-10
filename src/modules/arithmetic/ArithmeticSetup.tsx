@@ -177,6 +177,15 @@ export function ArithmeticSetup({
 
   const hints = DIFFICULTY_HINTS[operation];
 
+  // Header label for the digit / difficulty cards so 'all' mode doesn't
+  // present an ambiguous "Digits" next to "Multiply digits".
+  const addSubLabel =
+    operation === 'add'
+      ? 'Add'
+      : operation === 'subtract'
+        ? 'Subtract'
+        : 'Add & subtract';
+
   return (
     <div className="min-h-screen bg-background p-7">
       <div className="mx-auto max-w-[600px]">
@@ -215,12 +224,16 @@ export function ArithmeticSetup({
         </Card>
 
         {/* Digits + Difficulty drive add/subtract. Hidden when only multiply
-            is selected — multiply has its own level picker. Shown for 'all'
-            because 'all' includes add/subtract. */}
+            is selected — multiply has its own digit pickers. Shown for 'all'
+            because 'all' includes add/subtract. Header names the operations
+            it affects so 'all' mode doesn't leave the parent guessing which
+            "Digits" card is which. */}
         {operation !== 'multiply' && (
           <>
             <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-              <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Digits</h2>
+              <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
+                {addSubLabel} digits
+              </h2>
               <p className="text-[12px] md:text-[14px] text-muted-foreground mb-1">Exactly</p>
               <div className="grid grid-cols-5 gap-1 md:gap-2 mb-2">
                 {DIGIT_BUTTONS.map(d => (
@@ -248,7 +261,9 @@ export function ArithmeticSetup({
             </Card>
 
             <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-              <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Difficulty</h2>
+              <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
+                {addSubLabel} difficulty
+              </h2>
               <div className="grid grid-cols-3 gap-2">
                 {(['easy', 'medium', 'hard'] as const).map((d, idx) => (
                   <div key={d} className="flex flex-col gap-1 md:gap-1.5">
