@@ -179,10 +179,25 @@ const Hub = () => {
             </div>
           </Card>
 
-          <Card className="p-5 md:p-6 shadow-card opacity-60 md:col-span-2">
-            <div className="text-base md:text-lg font-bold text-muted-foreground text-center">Coming soon</div>
-            <div className="text-xs text-muted-foreground/80 text-center mt-1">
-              Shapes &middot; Charts
+          <Card
+            onClick={() => navigate('/shapes')}
+            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+          >
+            <div className="text-5xl md:text-6xl font-extrabold text-primary text-center mb-2">⬡</div>
+            <div className="text-lg md:text-xl font-bold text-foreground text-center">Shapes</div>
+            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
+              Name shapes &middot; sides &middot; perimeter &middot; area
+            </div>
+          </Card>
+
+          <Card
+            onClick={() => navigate('/charts')}
+            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+          >
+            <div className="text-5xl md:text-6xl font-extrabold text-primary text-center mb-2">📊</div>
+            <div className="text-lg md:text-xl font-bold text-foreground text-center">Charts</div>
+            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
+              Read bar charts &middot; compare &middot; total
             </div>
           </Card>
         </div>

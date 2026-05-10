@@ -5,6 +5,8 @@ import TimesTablesIndex from './modules/times-tables/TimesTablesIndex';
 import ArithmeticIndex from './modules/arithmetic/ArithmeticIndex';
 import TimeIndex from './modules/time/TimeIndex';
 import FractionsIndex from './modules/fractions/FractionsIndex';
+import ShapesIndex from './modules/shapes/ShapesIndex';
+import ChartsIndex from './modules/charts/ChartsIndex';
 import NotFound from './pages/NotFound';
 import { getTheme, applyTheme } from '@/lib/themeStorage';
 
@@ -26,6 +28,10 @@ const App = () => {
         <Route path="/time/print" element={<TimeIndex printOpen />} />
         <Route path="/fractions" element={<FractionsIndex />} />
         <Route path="/fractions/print" element={<FractionsIndex printOpen />} />
+        <Route path="/shapes" element={<ShapesIndex />} />
+        <Route path="/shapes/print" element={<ShapesIndex printOpen />} />
+        <Route path="/charts" element={<ChartsIndex />} />
+        <Route path="/charts/print" element={<ChartsIndex printOpen />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
