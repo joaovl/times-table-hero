@@ -51,8 +51,9 @@ const buttonClass = (active: boolean) =>
 
 const PRINT_PAGE_OPTIONS = [1, 3, 5, 10, 20];
 
-// All digit sizes fit up to 80 per A4 page in the 4-col grid (font scales).
-const PRINT_PER_PAGE_OPTIONS = [20, 30, 40, 60, 80];
+// 40 max keeps each row at ≥26mm so kids have room to write their answer
+// below the rule (column form) or after the equals sign (horizontal).
+const PRINT_PER_PAGE_OPTIONS = [10, 20, 30, 40];
 
 const opLabel = (op: ArithOp): string =>
   op === 'add' ? '+' : op === 'subtract' ? '−' : op === 'multiply' ? '×' : '+−×';
