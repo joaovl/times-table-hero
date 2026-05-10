@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { ArithQuestion, ArithSettings } from './logic';
-import { generateArithQuestions } from './logic';
+import { checkArithAnswer, divideUsesRemainderField, generateArithQuestions } from './logic';
 
 export interface ArithGameResult {
   score: number;
@@ -62,24 +62,25 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
   const [incorrect, setIncorrect] = useState<ArithGameResult['incorrectQuestions']>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [typed, setTyped] = useState('');
+  const [typedRemainder, setTypedRemainder] = useState('');
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const remainderInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const count = settings.gameMode === 'questions' ? settings.questionCount : 200;
-    // Force allowRemainders=false in online play because the kid only has a
-    // single typed-number input — there's no remainder field in the UI. The
-    // print path keeps the user's setting. (If/when a `[q] r [r]` two-field
-    // input lands here, drop this override.)
-    const playSettings: ArithSettings = { ...settings, allowRemainders: false };
-    setQuestions(generateArithQuestions(playSettings, count));
+    // Online play now supports remainders via a two-field `[q] r [r]` input
+    // (see the form below). The PDF path always honoured the user setting; we
+    // no longer need to clobber it here.
+    setQuestions(generateArithQuestions(settings, count));
   }, [settings]);
 
   useEffect(() => {
     setTyped('');
+    setTypedRemainder('');
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [currentIndex, questions.length]);
 
@@ -110,10 +111,10 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
     }
   }, [isComplete, score, questionsAnswered, bestStreak, incorrect, settings, onComplete]);
 
-  const submit = useCallback((value: number | null) => {
+  const submit = useCallback((quotient: number | null, remainder: number | null) => {
     if (questions.length === 0) return;
     const q = questions[currentIndex];
-    const isCorrect = value === q.answer;
+    const isCorrect = checkArithAnswer(q, quotient, remainder);
 
     setQuestionsAnswered(p => p + 1);
 
@@ -130,7 +131,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
       setFeedback('incorrect');
       setIncorrect(prev => [
         ...prev,
-        { op: q.op, operand1: q.operand1, operand2: q.operand2, userAnswer: value, correctAnswer: q.answer },
+        { op: q.op, operand1: q.operand1, operand2: q.operand2, userAnswer: quotient, correctAnswer: q.answer },
       ]);
     }
 
@@ -150,8 +151,12 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const parsed = parseInt(typed, 10);
-    submit(isNaN(parsed) ? null : parsed);
+    const parsedQ = parseInt(typed, 10);
+    const parsedR = parseInt(typedRemainder, 10);
+    submit(
+      isNaN(parsedQ) ? null : parsedQ,
+      isNaN(parsedR) ? null : parsedR
+    );
   };
 
   if (questions.length === 0) {
@@ -178,6 +183,12 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
   // like "672 ÷ 8 ="; 4+ digit dividends fall through to column form.
   const dividendDigits = String(q.operand1).length;
   const useHorizontalForDivide = q.op === 'divide' && dividendDigits <= 3;
+  const showRemainderField = divideUsesRemainderField(q);
+
+  // What the kid was supposed to type. Divide-with-remainder shows both halves
+  // so they can see what they got wrong.
+  const formatExpected = (qq: ArithQuestion) =>
+    divideUsesRemainderField(qq) ? `${qq.answer} r ${qq.remainder ?? 0}` : `${qq.answer}`;
 
   return (
     <div className="min-h-screen bg-background py-2 px-3 md:py-[26px] md:px-8">
@@ -226,7 +237,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
         >
           {useHorizontalForDivide ? <HorizontalDisplay q={q} /> : <ColumnDisplay q={q} />}
           {feedback === 'incorrect' && (
-            <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">= {q.answer}</div>
+            <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">= {formatExpected(q)}</div>
           )}
           {feedback === 'correct' && (
             <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
@@ -235,16 +246,52 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
 
         {feedback === 'none' && (
           <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
-            <Input
-              ref={inputRef}
-              type="number"
-              inputMode="numeric"
-              value={typed}
-              onChange={e => setTyped(e.target.value)}
-              placeholder="Type the answer"
-              className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
-              autoFocus
-            />
+            {showRemainderField ? (
+              <div className="flex items-center gap-2 md:gap-3">
+                <Input
+                  ref={inputRef}
+                  type="number"
+                  inputMode="numeric"
+                  value={typed}
+                  onChange={e => setTyped(e.target.value)}
+                  onKeyDown={e => {
+                    // Enter on the quotient field should jump to the remainder
+                    // field instead of submitting the (likely-empty) form.
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      remainderInputRef.current?.focus();
+                      remainderInputRef.current?.select();
+                    }
+                  }}
+                  placeholder="quotient"
+                  aria-label="Quotient"
+                  className="h-12 md:h-[64px] flex-1 text-center text-2xl md:text-4xl font-bold"
+                  autoFocus
+                />
+                <span className="font-mono text-2xl md:text-4xl font-extrabold text-foreground select-none">r</span>
+                <Input
+                  ref={remainderInputRef}
+                  type="number"
+                  inputMode="numeric"
+                  value={typedRemainder}
+                  onChange={e => setTypedRemainder(e.target.value)}
+                  placeholder="remainder"
+                  aria-label="Remainder"
+                  className="h-12 md:h-[64px] flex-1 text-center text-2xl md:text-4xl font-bold"
+                />
+              </div>
+            ) : (
+              <Input
+                ref={inputRef}
+                type="number"
+                inputMode="numeric"
+                value={typed}
+                onChange={e => setTyped(e.target.value)}
+                placeholder="Type the answer"
+                className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
+                autoFocus
+              />
+            )}
             <Button
               type="submit"
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"

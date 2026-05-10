@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { countCarries, countBorrows, generateArithQuestions } from './logic';
-import type { ArithSettings } from './logic';
+import {
+  countCarries,
+  countBorrows,
+  generateArithQuestions,
+  checkArithAnswer,
+  divideUsesRemainderField,
+} from './logic';
+import type { ArithQuestion, ArithSettings } from './logic';
 
 const baseSettings = (over: Partial<ArithSettings>): ArithSettings => ({
   operation: 'add',
@@ -457,6 +463,93 @@ describe('generateArithQuestions — add/subtract digit sets', () => {
     qs.forEach(q => {
       expect(allowed).toContain(digitsOf(q.operand1));
       expect(allowed).toContain(digitsOf(q.operand2));
+    });
+  });
+});
+
+describe('divideUsesRemainderField', () => {
+  it('true only for divide questions with a non-zero remainder', () => {
+    const exact: ArithQuestion = { op: 'divide', operand1: 24, operand2: 6, answer: 4 };
+    const remZero: ArithQuestion = { op: 'divide', operand1: 24, operand2: 6, answer: 4, remainder: 0 };
+    const remNonZero: ArithQuestion = { op: 'divide', operand1: 25, operand2: 6, answer: 4, remainder: 1 };
+    expect(divideUsesRemainderField(exact)).toBe(false);
+    expect(divideUsesRemainderField(remZero)).toBe(false);
+    expect(divideUsesRemainderField(remNonZero)).toBe(true);
+  });
+
+  it('always false for non-divide ops (even if remainder is accidentally set)', () => {
+    const add: ArithQuestion = { op: 'add', operand1: 1, operand2: 2, answer: 3 };
+    const mul: ArithQuestion = { op: 'multiply', operand1: 4, operand2: 5, answer: 20 };
+    expect(divideUsesRemainderField(add)).toBe(false);
+    expect(divideUsesRemainderField(mul)).toBe(false);
+  });
+});
+
+describe('checkArithAnswer', () => {
+  describe('non-divide ops ignore the remainder input', () => {
+    const add: ArithQuestion = { op: 'add', operand1: 17, operand2: 8, answer: 25 };
+
+    it('matches when quotient input equals the answer', () => {
+      expect(checkArithAnswer(add, 25, null)).toBe(true);
+      expect(checkArithAnswer(add, 25, 99)).toBe(true);
+    });
+
+    it('rejects when quotient input is wrong, regardless of remainder', () => {
+      expect(checkArithAnswer(add, 24, null)).toBe(false);
+      expect(checkArithAnswer(add, null, 0)).toBe(false);
+    });
+  });
+
+  describe('exact divide (no remainder field)', () => {
+    const q: ArithQuestion = { op: 'divide', operand1: 24, operand2: 6, answer: 4 };
+
+    it('accepts the right quotient with no remainder typed', () => {
+      expect(checkArithAnswer(q, 4, null)).toBe(true);
+    });
+
+    it('rejects the wrong quotient', () => {
+      expect(checkArithAnswer(q, 5, null)).toBe(false);
+    });
+
+    it('ignores remainder input entirely (no remainder field shown for exact divisions)', () => {
+      // A stray remainder typed for an exact division still passes — the
+      // remainder field would not have been rendered in the first place.
+      expect(checkArithAnswer(q, 4, 7)).toBe(true);
+    });
+  });
+
+  describe('divide with remainder', () => {
+    const q: ArithQuestion = { op: 'divide', operand1: 25, operand2: 6, answer: 4, remainder: 1 };
+
+    it('accepts when both quotient and remainder match', () => {
+      expect(checkArithAnswer(q, 4, 1)).toBe(true);
+    });
+
+    it('rejects when only the quotient matches', () => {
+      expect(checkArithAnswer(q, 4, 0)).toBe(false);
+      expect(checkArithAnswer(q, 4, 2)).toBe(false);
+      expect(checkArithAnswer(q, 4, null)).toBe(false);
+    });
+
+    it('rejects when only the remainder matches', () => {
+      expect(checkArithAnswer(q, 3, 1)).toBe(false);
+      expect(checkArithAnswer(q, null, 1)).toBe(false);
+    });
+
+    it('rejects when both are wrong', () => {
+      expect(checkArithAnswer(q, 5, 0)).toBe(false);
+      expect(checkArithAnswer(q, null, null)).toBe(false);
+    });
+  });
+
+  describe('divide question with remainder=0 (defensive — should round-trip through the single-input path)', () => {
+    // Generators omit remainder when it's 0, so this shape shouldn't appear in
+    // practice. But if it does, the answer-check should still behave like an
+    // exact division (no remainder field, only quotient checked).
+    const q: ArithQuestion = { op: 'divide', operand1: 24, operand2: 6, answer: 4, remainder: 0 };
+
+    it('passes with correct quotient and no remainder typed', () => {
+      expect(checkArithAnswer(q, 4, null)).toBe(true);
     });
   });
 });

@@ -49,6 +49,34 @@ export interface ArithQuestion {
   remainder?: number;
 }
 
+// Whether a divide question is rendered with a separate remainder input field
+// in online play (i.e. has a remainder slot the kid is expected to fill in).
+// True only for divide questions whose generated remainder is > 0; exact
+// divisions render with a single quotient input.
+export function divideUsesRemainderField(q: ArithQuestion): boolean {
+  return q.op === 'divide' && (q.remainder ?? 0) > 0;
+}
+
+// Compare a kid's typed answer to the expected one. For divide questions with
+// a remainder slot, both the quotient and the remainder must match (an empty
+// remainder field is treated as 0). For everything else, only the first
+// argument is consulted — `remainderInput` is ignored.
+//
+// `quotientInput` and `remainderInput` are the already-parsed numbers from the
+// input fields, or `null` if the field was empty / unparseable.
+export function checkArithAnswer(
+  q: ArithQuestion,
+  quotientInput: number | null,
+  remainderInput: number | null
+): boolean {
+  if (divideUsesRemainderField(q)) {
+    const expectedRemainder = q.remainder ?? 0;
+    const actualRemainder = remainderInput ?? 0;
+    return quotientInput === q.answer && actualRemainder === expectedRemainder;
+  }
+  return quotientInput === q.answer;
+}
+
 export interface ArithSettings {
   operation: ArithOp;
   difficulty: Difficulty;
