@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, Palette, Clock, BarChart3, Hash, PoundSterling, Percent, Sigma, Ruler, BookOpen } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -8,6 +8,69 @@ import { NewUserModal } from '@/components/NewUserModal';
 import { UserProfile, getCurrentUser, getUserById } from '@/lib/userStorage';
 import { PRESET_THEMES, DEFAULT_THEME, getTheme, saveTheme, resetTheme } from '@/lib/themeStorage';
 
+type YearFilter = 'all' | 3 | 4 | 5;
+
+const YEAR_KEY = 'hub-year-filter';
+
+// Each module's primary year coverage. Used by the Year picker to filter
+// which cards are shown. Years are inclusive — a module tagged [3,4,5] is
+// shown for any selection.
+type ModuleCard = {
+  slug: string;
+  title: string;
+  subtitle: string;
+  glyph?: string;        // text glyph (preferred when available, monochrome by default)
+  iconName?: 'clock' | 'bar-chart-3' | 'hash' | 'pound' | 'percent' | 'sigma' | 'ruler' | 'book-open';
+  years: Array<3 | 4 | 5>;
+};
+
+const MODULES: ModuleCard[] = [
+  { slug: 'times-tables', title: 'Times Tables', subtitle: '×  ÷  x²  √ · Tables 1–12', glyph: '×', years: [3, 4, 5] },
+  { slug: 'arithmetic', title: 'Arithmetic', subtitle: '+  −  ×  ÷ · 1–5 digits', glyph: '+', years: [3, 4, 5] },
+  { slug: 'time', title: 'Time', subtitle: 'Read analog clocks · Roman · durations', iconName: 'clock', years: [3, 4, 5] },
+  { slug: 'fractions', title: 'Fractions', subtitle: '+ − × · same and different denominators', glyph: '¾', years: [3, 4, 5] },
+  { slug: 'shapes', title: 'Shapes', subtitle: '2D · 3D · angles · area · coords', glyph: '⬡', years: [3, 4, 5] },
+  { slug: 'charts', title: 'Charts', subtitle: 'Bar · pie · line · timetable', iconName: 'bar-chart-3', years: [3, 4, 5] },
+  { slug: 'number-sense', title: 'Number Sense', subtitle: 'Place value · rounding · Roman · Y3–Y5', iconName: 'hash', years: [3, 4, 5] },
+  { slug: 'money', title: 'Money', subtitle: 'Add · change · totals · compare prices', iconName: 'pound', years: [3, 4, 5] },
+  { slug: 'decimals', title: 'Decimals', subtitle: 'Decimals · percentages · rounding · Y4–Y5', iconName: 'percent', years: [4, 5] },
+  { slug: 'number-theory', title: 'Number Theory', subtitle: 'Factors · multiples · primes · squares', iconName: 'sigma', years: [5] },
+  { slug: 'conversions', title: 'Conversions', subtitle: 'Units · perimeter · area · volume', iconName: 'ruler', years: [4, 5] },
+  { slug: 'word-problems', title: 'Word Problems', subtitle: 'One- and two-step problems · Y3–Y5', iconName: 'book-open', years: [3, 4, 5] },
+];
+
+function ModuleIcon({ iconName }: { iconName: NonNullable<ModuleCard['iconName']> }) {
+  const cls = 'w-14 h-14 md:w-[72px] md:h-[72px] text-primary';
+  switch (iconName) {
+    case 'clock': return <Clock className={cls} strokeWidth={2.5} aria-hidden="true" />;
+    case 'bar-chart-3': return <BarChart3 className={cls} strokeWidth={2.5} aria-hidden="true" />;
+    case 'hash': return <Hash className={cls} strokeWidth={2.5} aria-hidden="true" />;
+    case 'pound': return <PoundSterling className={cls} strokeWidth={2.5} aria-hidden="true" />;
+    case 'percent': return <Percent className={cls} strokeWidth={2.5} aria-hidden="true" />;
+    case 'sigma': return <Sigma className={cls} strokeWidth={2.5} aria-hidden="true" />;
+    case 'ruler': return <Ruler className={cls} strokeWidth={2.5} aria-hidden="true" />;
+    case 'book-open': return <BookOpen className={cls} strokeWidth={2.5} aria-hidden="true" />;
+  }
+}
+
+function loadYear(): YearFilter {
+  try {
+    const v = localStorage.getItem(YEAR_KEY);
+    if (v === '3' || v === '4' || v === '5') return Number(v) as 3 | 4 | 5;
+  } catch {
+    // localStorage may be unavailable (private mode); fall through.
+  }
+  return 'all';
+}
+
+function saveYear(y: YearFilter) {
+  try {
+    localStorage.setItem(YEAR_KEY, String(y));
+  } catch {
+    // silently ignore storage errors
+  }
+}
+
 const Hub = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -15,6 +78,7 @@ const Hub = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(getTheme());
+  const [yearFilter, setYearFilter] = useState<YearFilter>(loadYear);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,6 +103,16 @@ const Hub = () => {
     const u = getUserById(userId);
     if (u) setCurrentUser(u);
     setShowNewUserModal(false);
+  };
+
+  const visibleModules = useMemo(
+    () => (yearFilter === 'all' ? MODULES : MODULES.filter(m => m.years.includes(yearFilter))),
+    [yearFilter]
+  );
+
+  const pickYear = (y: YearFilter) => {
+    setYearFilter(y);
+    saveYear(y);
   };
 
   return (
@@ -130,159 +204,66 @@ const Hub = () => {
           <img src="/favicon.png" alt="Maths Challenge" className="w-6 h-6 md:w-10 md:h-10" />
           Maths Challenge
         </h1>
-        <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-4 md:mb-6">
+        <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3 md:mb-4">
           {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick what to practise today
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-          <Card
-            onClick={() => navigate('/times-tables')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="text-5xl md:text-6xl font-extrabold text-primary text-center mb-2">×</div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Times Tables</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              ×  ÷  x²  √ &middot; Tables 1–12
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/arithmetic')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="text-5xl md:text-6xl font-extrabold text-primary text-center mb-2">+</div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Arithmetic</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              +  −  ×  ÷ &middot; 1–5 digits
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/time')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="flex justify-center mb-2">
-              <Clock className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
-            </div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Time</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              Read analog clocks &middot; hour, half, quarter, 5-min
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/fractions')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="text-5xl md:text-6xl font-extrabold text-primary text-center mb-2">¾</div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Fractions</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              + − &middot; same and different denominators
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/shapes')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="text-5xl md:text-6xl font-extrabold text-primary text-center mb-2">⬡</div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Shapes</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              Name shapes &middot; sides &middot; perimeter &middot; area
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/charts')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="flex justify-center mb-2">
-              <BarChart3 className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
-            </div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Charts</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              Read bar charts &middot; compare &middot; total
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/number-sense')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="flex justify-center mb-2">
-              <Hash className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
-            </div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Number Sense</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              Place value &middot; rounding &middot; Roman &middot; Y3-Y5
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/money')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="flex justify-center mb-2">
-              <PoundSterling className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
-            </div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Money</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              Add &middot; change &middot; totals &middot; compare prices
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/decimals')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="flex justify-center mb-2">
-              <Percent className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
-            </div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Decimals</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              Decimals &middot; percentages &middot; rounding &middot; Y4-Y5
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/number-theory')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="flex justify-center mb-2">
-              <Sigma className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
-            </div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Number Theory</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              Factors &middot; multiples &middot; primes &middot; squares
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/conversions')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="flex justify-center mb-2">
-              <Ruler className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
-            </div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Conversions</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              Units &middot; perimeter &middot; area &middot; volume
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => navigate('/word-problems')}
-            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
-          >
-            <div className="flex justify-center mb-2">
-              <BookOpen className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
-            </div>
-            <div className="text-lg md:text-xl font-bold text-foreground text-center">Word Problems</div>
-            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-              One- and two-step problems &middot; Y3-Y5
-            </div>
-          </Card>
+        <div
+          role="radiogroup"
+          aria-label="School year"
+          className="mb-4 md:mb-6 flex items-center justify-center gap-2"
+        >
+          {(['all', 3, 4, 5] as YearFilter[]).map(y => {
+            const label = y === 'all' ? 'All' : `Y${y}`;
+            const active = yearFilter === y;
+            return (
+              <button
+                key={String(y)}
+                role="radio"
+                aria-checked={active}
+                onClick={() => pickYear(y)}
+                className={cn(
+                  'min-w-[52px] min-h-[40px] px-3 rounded-full text-sm font-bold transition-colors',
+                  active
+                    ? 'bg-primary text-primary-foreground shadow-button'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+          {visibleModules.map(m => (
+            <Card
+              key={m.slug}
+              onClick={() => navigate(`/${m.slug}`)}
+              className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+            >
+              {m.glyph ? (
+                <div className="text-5xl md:text-6xl font-extrabold text-primary text-center mb-2">
+                  {m.glyph}
+                </div>
+              ) : (
+                <div className="flex justify-center mb-2">
+                  <ModuleIcon iconName={m.iconName!} />
+                </div>
+              )}
+              <div className="text-lg md:text-xl font-bold text-foreground text-center">{m.title}</div>
+              <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
+                {m.subtitle}
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {visibleModules.length === 0 && (
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            No modules tagged for this year yet.
+          </p>
+        )}
       </div>
 
       {showNewUserModal && (
