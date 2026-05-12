@@ -7,6 +7,12 @@ import TimeIndex from './modules/time/TimeIndex';
 import FractionsIndex from './modules/fractions/FractionsIndex';
 import ShapesIndex from './modules/shapes/ShapesIndex';
 import ChartsIndex from './modules/charts/ChartsIndex';
+import NumberSenseIndex from './modules/number-sense/NumberSenseIndex';
+import MoneyIndex from './modules/money/MoneyIndex';
+import DecimalsIndex from './modules/decimals/DecimalsIndex';
+import NumberTheoryIndex from './modules/number-theory/NumberTheoryIndex';
+import ConversionsIndex from './modules/conversions/ConversionsIndex';
+import WordProblemsIndex from './modules/word-problems/WordProblemsIndex';
 import NotFound from './pages/NotFound';
 import { getTheme, applyTheme } from '@/lib/themeStorage';
 
@@ -32,6 +38,18 @@ const App = () => {
         <Route path="/shapes/print" element={<ShapesIndex printOpen />} />
         <Route path="/charts" element={<ChartsIndex />} />
         <Route path="/charts/print" element={<ChartsIndex printOpen />} />
+        <Route path="/number-sense" element={<NumberSenseIndex />} />
+        <Route path="/number-sense/print" element={<NumberSenseIndex printOpen />} />
+        <Route path="/money" element={<MoneyIndex />} />
+        <Route path="/money/print" element={<MoneyIndex printOpen />} />
+        <Route path="/decimals" element={<DecimalsIndex />} />
+        <Route path="/decimals/print" element={<DecimalsIndex printOpen />} />
+        <Route path="/number-theory" element={<NumberTheoryIndex />} />
+        <Route path="/number-theory/print" element={<NumberTheoryIndex printOpen />} />
+        <Route path="/conversions" element={<ConversionsIndex />} />
+        <Route path="/conversions/print" element={<ConversionsIndex printOpen />} />
+        <Route path="/word-problems" element={<WordProblemsIndex />} />
+        <Route path="/word-problems/print" element={<WordProblemsIndex printOpen />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Palette, Clock, BarChart3 } from 'lucide-react';
+import { Menu, Palette, Clock, BarChart3, Hash, PoundSterling, Percent, Sigma, Ruler, BookOpen } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
@@ -202,6 +202,84 @@ const Hub = () => {
             <div className="text-lg md:text-xl font-bold text-foreground text-center">Charts</div>
             <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
               Read bar charts &middot; compare &middot; total
+            </div>
+          </Card>
+
+          <Card
+            onClick={() => navigate('/number-sense')}
+            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+          >
+            <div className="flex justify-center mb-2">
+              <Hash className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
+            </div>
+            <div className="text-lg md:text-xl font-bold text-foreground text-center">Number Sense</div>
+            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
+              Place value &middot; rounding &middot; Roman &middot; Y3-Y5
+            </div>
+          </Card>
+
+          <Card
+            onClick={() => navigate('/money')}
+            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+          >
+            <div className="flex justify-center mb-2">
+              <PoundSterling className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
+            </div>
+            <div className="text-lg md:text-xl font-bold text-foreground text-center">Money</div>
+            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
+              Add &middot; change &middot; totals &middot; compare prices
+            </div>
+          </Card>
+
+          <Card
+            onClick={() => navigate('/decimals')}
+            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+          >
+            <div className="flex justify-center mb-2">
+              <Percent className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
+            </div>
+            <div className="text-lg md:text-xl font-bold text-foreground text-center">Decimals</div>
+            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
+              Decimals &middot; percentages &middot; rounding &middot; Y4-Y5
+            </div>
+          </Card>
+
+          <Card
+            onClick={() => navigate('/number-theory')}
+            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+          >
+            <div className="flex justify-center mb-2">
+              <Sigma className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
+            </div>
+            <div className="text-lg md:text-xl font-bold text-foreground text-center">Number Theory</div>
+            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
+              Factors &middot; multiples &middot; primes &middot; squares
+            </div>
+          </Card>
+
+          <Card
+            onClick={() => navigate('/conversions')}
+            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+          >
+            <div className="flex justify-center mb-2">
+              <Ruler className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
+            </div>
+            <div className="text-lg md:text-xl font-bold text-foreground text-center">Conversions</div>
+            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
+              Units &middot; perimeter &middot; area &middot; volume
+            </div>
+          </Card>
+
+          <Card
+            onClick={() => navigate('/word-problems')}
+            className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
+          >
+            <div className="flex justify-center mb-2">
+              <BookOpen className="w-14 h-14 md:w-[72px] md:h-[72px] text-primary" strokeWidth={2.5} aria-hidden="true" />
+            </div>
+            <div className="text-lg md:text-xl font-bold text-foreground text-center">Word Problems</div>
+            <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
+              One- and two-step problems &middot; Y3-Y5
             </div>
           </Card>
         </div>
