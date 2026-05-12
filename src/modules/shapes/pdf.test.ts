@@ -14,11 +14,16 @@ vi.mock('jspdf', () => {
     setLineWidth() {}
     setDrawColor() {}
     setFillColor() {}
+    setLineDashPattern(_p: number[], _o: number) {}
     line(x1: number, y1: number, x2: number, y2: number) {
       capturedLines.push({ x1, y1, x2, y2 });
     }
     circle(x: number, y: number, r: number) {
       capturedCircles.push({ x, y, r });
+    }
+    ellipse(_x: number, _y: number, _rx: number, _ry: number) {
+      // No tests assert ellipse counts but the FakeJsPDF needs the method
+      // so cylinder rendering doesn't throw.
     }
     addPage() {}
     save() {}
@@ -304,5 +309,234 @@ describe('generateShapesPdf — round-trip with generateShapeQuestions', () => {
     qs.forEach((q, i) => {
       expect(capturedTextCalls).toContain(`${i + 1}) ${q.answer} ${q.units}`);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// v3 (Y5) — 3D-solid, angle-measure, lines-of-symmetry, coord, translation.
+// ---------------------------------------------------------------------------
+
+const name3d = (solid: NonNullable<ShapeQuestion['solid']>): ShapeQuestion => ({
+  skill: 'name-3d',
+  solid,
+  units: 'cm',
+  answer: 0,
+});
+
+const faces = (solid: NonNullable<ShapeQuestion['solid']>, n: number): ShapeQuestion => ({
+  skill: 'count-faces',
+  solid,
+  units: 'cm',
+  answer: n,
+});
+
+const edges = (solid: NonNullable<ShapeQuestion['solid']>, n: number): ShapeQuestion => ({
+  skill: 'count-edges',
+  solid,
+  units: 'cm',
+  answer: n,
+});
+
+const vertices = (solid: NonNullable<ShapeQuestion['solid']>, n: number): ShapeQuestion => ({
+  skill: 'count-vertices',
+  solid,
+  units: 'cm',
+  answer: n,
+});
+
+const measure = (deg: number): ShapeQuestion => ({
+  skill: 'angle-measure',
+  angle: deg,
+  units: 'cm',
+  answer: deg,
+});
+
+const reflex = (deg: number, cat: 'acute' | 'right' | 'obtuse' | 'reflex'): ShapeQuestion => ({
+  skill: 'angle-name-reflex',
+  angle: deg,
+  category: cat,
+  units: 'cm',
+  answer: deg,
+});
+
+const sym = (shape: NonNullable<ShapeQuestion['shape']>, n: number): ShapeQuestion => ({
+  skill: 'lines-of-symmetry',
+  shape,
+  units: 'cm',
+  answer: n,
+});
+
+const coordRead = (x: number, y: number, gridMax = 5): ShapeQuestion => ({
+  skill: 'coord-read',
+  point: { x, y },
+  gridMax,
+  units: 'cm',
+  answer: x * 100 + y,
+});
+
+const coordPlot = (x: number, y: number, gridMax = 5): ShapeQuestion => ({
+  skill: 'coord-plot',
+  point: { x, y },
+  gridMax,
+  units: 'cm',
+  answer: x * 100 + y,
+});
+
+const translate = (x: number, y: number, dx: number, dy: number, gridMax = 5): ShapeQuestion => ({
+  skill: 'translation',
+  point: { x, y },
+  delta: { dx, dy },
+  gridMax,
+  units: 'cm',
+  answer: 0,
+});
+
+describe('generateShapesPdf — v3 prompts', () => {
+  it('renders prompts for each new skill', () => {
+    render([
+      name3d('cube'),
+      faces('cube', 6),
+      edges('cube', 12),
+      vertices('cube', 8),
+      measure(45),
+      reflex(270, 'reflex'),
+      sym('square', 4),
+      coordRead(3, 4),
+      coordPlot(3, 4),
+      translate(2, 3, 4, 2),
+    ]);
+    expect(capturedTextCalls).toContain('Faces?');
+    expect(capturedTextCalls).toContain('Edges?');
+    expect(capturedTextCalls).toContain('Vertices?');
+    expect(capturedTextCalls).toContain('Lines of symmetry?');
+    expect(capturedTextCalls).toContain('Coordinates? (x,y)');
+    expect(capturedTextCalls).toContain('Plot (3, 4)');
+    // name-3d and angle-name-reflex use the same "Name?" / "Angle?" as v1.
+    expect(capturedTextCalls).toContain('Name?');
+    // angle-measure prompt mentions "degrees".
+    expect(capturedTextCalls.some(t => t.includes('degrees'))).toBe(true);
+  });
+});
+
+describe('generateShapesPdf — v3 answer key', () => {
+  it('name-3d answer is the solid name', () => {
+    generateShapesPdf({
+      pages: [[name3d('cylinder')]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) cylinder');
+  });
+
+  it('count-faces answer is the integer', () => {
+    generateShapesPdf({
+      pages: [[faces('pyramid', 5)]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 5');
+  });
+
+  it('angle-measure answer includes °', () => {
+    generateShapesPdf({
+      pages: [[measure(135)]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 135°');
+  });
+
+  it('angle-name-reflex answer is the category', () => {
+    generateShapesPdf({
+      pages: [[reflex(270, 'reflex')]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) reflex');
+  });
+
+  it('coord-read answer is "(x, y)"', () => {
+    generateShapesPdf({
+      pages: [[coordRead(3, 4)]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) (3, 4)');
+  });
+
+  it('translation answer is the translated endpoint', () => {
+    generateShapesPdf({
+      pages: [[translate(2, 3, 4, 2)]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) (6, 5)');
+  });
+});
+
+describe('generateShapesPdf — v3 figures emit primitives', () => {
+  it('3D-solid skills draw lines (iso edges)', () => {
+    render([name3d('cube'), name3d('pyramid'), name3d('cone')]);
+    // Cube alone: ≥9 visible edges; cone: 2 slant + arc segments.
+    expect(capturedLines.length).toBeGreaterThan(10);
+  });
+
+  it('sphere draws a circle primitive', () => {
+    render([name3d('sphere')]);
+    expect(capturedCircles.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('coord-grid skills emit grid lines + tick labels', () => {
+    render([coordRead(3, 4)]);
+    // Grid: (gridMax+1) verticals + (gridMax+1) horizontals + 2 axis lines.
+    expect(capturedLines.length).toBeGreaterThan(10);
+    // Tick "3" should appear as a label.
+    expect(capturedTextCalls).toContain('3');
+  });
+});
+
+describe('generateShapesPdf — v3 encoding safety', () => {
+  // Same Unicode Math Operators block guard, applied across the new skills.
+  it('no Math Operators block chars in v3 figures + answer key', () => {
+    const qs: ShapeQuestion[] = [
+      name3d('cube'),
+      faces('cuboid', 6),
+      edges('cylinder', 2),
+      vertices('cone', 1),
+      measure(135),
+      reflex(270, 'reflex'),
+      sym('hexagon', 6),
+      coordRead(2, 5),
+      coordPlot(4, 1),
+      translate(1, 2, 3, 3, 10),
+    ];
+    generateShapesPdf({
+      pages: [qs],
+      title: 'Maths',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    capturedTextCalls.forEach(t => {
+      expect(MATH_OPERATORS_BLOCK.test(t), `unsafe char in "${t}"`).toBe(false);
+    });
+  });
+
+  it('angle-measure answer uses U+00B0 ° which is WinAnsi-safe', () => {
+    generateShapesPdf({
+      pages: [[measure(45)]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    const found = capturedTextCalls.find(t => t === '1) 45°');
+    expect(found).toBeDefined();
+    // The degree sign at index 5 in "1) 45°" is U+00B0.
+    expect(found!.charCodeAt(5)).toBe(0x00b0);
   });
 });

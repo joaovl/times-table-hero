@@ -1,10 +1,12 @@
 // Shapes module — geometry practice.
 //
-// v1 + v1.1: the eight skills below. Deferred to v2: name-3d, count-faces,
-// angle-measure, volume-cube, volume-cuboid. Mixed-unit problems and
-// two-decimal dimensions are also deferred (hard difficulty currently
-// behaves like medium for the new geometry skills — see
-// `dimensionSamplerForDifficulty`).
+// v1 + v1.1: the original eight 2D skills (name-2d through angle-name).
+// v3 (Y5 coverage) adds 3D-solid identification (name-3d, count-faces,
+// count-edges, count-vertices), angle measurement in degrees
+// (angle-measure), reflex angles (angle-name-reflex), lines of symmetry
+// (lines-of-symmetry), and first-quadrant coordinates (coord-read,
+// coord-plot, translation). Volume-of-cubes/cuboids is intentionally
+// left to the conversions module to avoid duplication.
 
 export type ShapeSkill =
   | 'name-2d'
@@ -14,7 +16,18 @@ export type ShapeSkill =
   | 'area-tri'
   | 'area-circle'
   | 'circumference'
-  | 'angle-name';
+  | 'angle-name'
+  // v3 — Y5-coverage skills.
+  | 'name-3d'
+  | 'count-faces'
+  | 'count-edges'
+  | 'count-vertices'
+  | 'angle-measure'
+  | 'angle-name-reflex'
+  | 'lines-of-symmetry'
+  | 'coord-read'
+  | 'coord-plot'
+  | 'translation';
 
 export type ShapeKind =
   | 'triangle'
@@ -25,12 +38,66 @@ export type ShapeKind =
   | 'octagon'
   | 'circle';
 
+/** Named 3D solids for the name-3d / count-* skills. */
+export type SolidKind = 'cube' | 'cuboid' | 'cylinder' | 'sphere' | 'cone' | 'pyramid';
+
+export const SOLID_KIND_OPTIONS: ReadonlyArray<SolidKind> = [
+  'cube',
+  'cuboid',
+  'cylinder',
+  'sphere',
+  'cone',
+  'pyramid',
+];
+
+// Face / edge / vertex counts for the named solids. Curved solids
+// (cylinder / sphere / cone) use the conventional UK-primary counts:
+//   cylinder = 3 faces (2 flat, 1 curved), 2 edges, 0 vertices
+//   sphere   = 1 face, 0 edges, 0 vertices
+//   cone     = 2 faces, 1 edge, 1 vertex (apex)
+// These match the most common KS2 mark schemes.
+export const SOLID_FACES: Record<SolidKind, number> = {
+  cube: 6,
+  cuboid: 6,
+  cylinder: 3,
+  sphere: 1,
+  cone: 2,
+  pyramid: 5,
+};
+
+export const SOLID_EDGES: Record<SolidKind, number> = {
+  cube: 12,
+  cuboid: 12,
+  cylinder: 2,
+  sphere: 0,
+  cone: 1,
+  pyramid: 8,
+};
+
+export const SOLID_VERTICES: Record<SolidKind, number> = {
+  cube: 8,
+  cuboid: 8,
+  cylinder: 0,
+  sphere: 0,
+  cone: 1,
+  pyramid: 5,
+};
+
 export type ShapeUnits = 'cm' | 'm' | 'mm' | 'in';
 export type ShapeDifficulty = 'easy' | 'medium' | 'hard';
 
-/** Possible answers for the angle-name skill. */
+/** Possible answers for the angle-name skill (non-reflex). */
 export type AngleCategory = 'acute' | 'right' | 'obtuse';
 export const ANGLE_CATEGORIES: ReadonlyArray<AngleCategory> = ['acute', 'right', 'obtuse'];
+
+/** Extended angle categories that include reflex (>180°). */
+export type AngleCategoryReflex = 'acute' | 'right' | 'obtuse' | 'reflex';
+export const ANGLE_CATEGORIES_REFLEX: ReadonlyArray<AngleCategoryReflex> = [
+  'acute',
+  'right',
+  'obtuse',
+  'reflex',
+];
 
 export const SHAPE_SKILL_OPTIONS: ReadonlyArray<ShapeSkill> = [
   'name-2d',
@@ -41,6 +108,16 @@ export const SHAPE_SKILL_OPTIONS: ReadonlyArray<ShapeSkill> = [
   'area-circle',
   'circumference',
   'angle-name',
+  'name-3d',
+  'count-faces',
+  'count-edges',
+  'count-vertices',
+  'angle-measure',
+  'angle-name-reflex',
+  'lines-of-symmetry',
+  'coord-read',
+  'coord-plot',
+  'translation',
 ];
 
 export const SHAPE_SKILL_LABEL: Record<ShapeSkill, string> = {
@@ -52,6 +129,43 @@ export const SHAPE_SKILL_LABEL: Record<ShapeSkill, string> = {
   'area-circle': 'Area (circle)',
   'circumference': 'Circumference',
   'angle-name': 'Name angle',
+  'name-3d': 'Name (3D)',
+  'count-faces': 'Count faces',
+  'count-edges': 'Count edges',
+  'count-vertices': 'Count vertices',
+  'angle-measure': 'Measure angle',
+  'angle-name-reflex': 'Name angle (+reflex)',
+  'lines-of-symmetry': 'Lines of symmetry',
+  'coord-read': 'Read coordinates',
+  'coord-plot': 'Plot coordinates',
+  'translation': 'Translate point',
+};
+
+/**
+ * Curriculum tags per skill. Maps to UK National Curriculum year groups
+ * (Y3..Y6) so a future hub/index page can show "which year does this
+ * skill belong to". Y5 work is the focus of v3.
+ */
+export const CURRICULUM_TAGS: Record<ShapeSkill, string[]> = {
+  'name-2d': ['Y2', 'Y3'],
+  'count-sides': ['Y2', 'Y3'],
+  'perimeter-rect': ['Y3', 'Y4'],
+  'area-rect': ['Y4', 'Y5'],
+  'area-tri': ['Y5', 'Y6'],
+  'area-circle': ['Y6'],
+  'circumference': ['Y6'],
+  'angle-name': ['Y4'],
+  // v3 — Y5 additions.
+  'name-3d': ['Y5'],
+  'count-faces': ['Y5'],
+  'count-edges': ['Y5'],
+  'count-vertices': ['Y5'],
+  'angle-measure': ['Y5'],
+  'angle-name-reflex': ['Y5'],
+  'lines-of-symmetry': ['Y4', 'Y5'],
+  'coord-read': ['Y4', 'Y5'],
+  'coord-plot': ['Y4', 'Y5'],
+  'translation': ['Y5'],
 };
 
 export const SHAPE_KIND_OPTIONS: ReadonlyArray<ShapeKind> = [
@@ -102,24 +216,38 @@ export function unitsSquared(units: ShapeUnits): string {
 
 export interface ShapeQuestion {
   skill: ShapeSkill;
-  /** For name-2d / count-sides: drives both render and answer. */
+  /** For name-2d / count-sides / lines-of-symmetry: drives both render
+   *  and answer. */
   shape?: ShapeKind;
+  /** For name-3d / count-faces / count-edges / count-vertices: the named
+   *  3D solid. */
+  solid?: SolidKind;
   /** For perimeter-rect / area-rect / area-tri: dimensions in chosen units. */
   width?: number;
   height?: number;
   /** For area-circle / circumference: radius in chosen units. */
   radius?: number;
-  /** For angle-name: the measured angle in degrees (used by the SVG +
-   *  PDF renderers). The canonical answer is the angle category. */
+  /** For angle-name / angle-measure / angle-name-reflex: the measured
+   *  angle in degrees (used by the SVG + PDF renderers). */
   angle?: number;
   /** For angle-name: the categorical answer string ('acute' / 'right' /
-   *  'obtuse'). For other skills, undefined. */
-  category?: AngleCategory;
+   *  'obtuse'). For angle-name-reflex this widens to include 'reflex'. */
+  category?: AngleCategoryReflex;
+  /** For coord-read / coord-plot / translation — the starting point or
+   *  the point to be plotted. */
+  point?: { x: number; y: number };
+  /** For translation — the (dx, dy) vector applied to `point`. The
+   *  canonical answer is the resulting point. */
+  delta?: { dx: number; dy: number };
+  /** Top of the coord grid range — drives the rendered grid size for
+   *  the coordinate skills. 5 for easy, 10 for medium, 20 for hard. */
+  gridMax?: number;
   units: ShapeUnits;
-  /** Numeric answer (count, perimeter, area, circumference). For naming
-   *  skills the canonical answer is a string (name / category); we still
-   *  store a number here so legacy callers (e.g. side count) don't need
-   *  to special-case the type. */
+  /** Numeric answer (count, perimeter, area, circumference, angle in
+   *  degrees, symmetry-line count). For naming and coordinate skills
+   *  the canonical answer is a string built from other fields — we
+   *  still store a number here so legacy callers (e.g. side count)
+   *  don't need to special-case the type. */
   answer: number;
 }
 
@@ -174,6 +302,74 @@ const NAMED_POLYGONS: ReadonlyArray<ShapeKind> = [
   'hexagon',
   'octagon',
 ];
+
+/**
+ * Lines of symmetry per shape, treating each ShapeKind as its regular form.
+ *   triangle  → equilateral, 3 lines
+ *   square    → 4 lines
+ *   rectangle → 2 lines (non-square rectangle)
+ *   pentagon  → regular, 5 lines
+ *   hexagon   → regular, 6 lines
+ *   octagon   → regular, 8 lines
+ *   circle    → infinite (we exclude it from the symmetry generator).
+ */
+export const SHAPE_LINES_OF_SYMMETRY: Record<ShapeKind, number> = {
+  triangle: 3,
+  square: 4,
+  rectangle: 2,
+  pentagon: 5,
+  hexagon: 6,
+  octagon: 8,
+  circle: 0,
+};
+
+// For lines-of-symmetry, easy uses simple, well-known regular shapes.
+// Medium / hard widen the pool. Circle is excluded — its "infinite" answer
+// doesn't fit an integer input.
+const SYMMETRY_EASY_POOL: ReadonlyArray<ShapeKind> = ['square', 'rectangle', 'triangle'];
+const SYMMETRY_MEDIUM_POOL: ReadonlyArray<ShapeKind> = [
+  'square',
+  'rectangle',
+  'triangle',
+  'pentagon',
+  'hexagon',
+];
+const SYMMETRY_HARD_POOL: ReadonlyArray<ShapeKind> = [
+  'square',
+  'rectangle',
+  'triangle',
+  'pentagon',
+  'hexagon',
+  'octagon',
+];
+
+/** Coordinate-grid maximum coord for the given difficulty. */
+export function coordGridMaxForDifficulty(d: ShapeDifficulty): number {
+  if (d === 'easy') return 5;
+  if (d === 'medium') return 10;
+  return 20;
+}
+
+/**
+ * The "nearest N degrees" step used for the angle-measure skill at each
+ * difficulty. Easy snaps to 30°, medium to 10°, hard to 5°.
+ */
+export function angleMeasureStepForDifficulty(d: ShapeDifficulty): number {
+  if (d === 'easy') return 30;
+  if (d === 'medium') return 10;
+  return 5;
+}
+
+/**
+ * Round an integer up/down to the nearest multiple of `step` (clamped to
+ * [min, max]). Used to keep an angle on a kid-friendly tick.
+ */
+function snapAngle(deg: number, step: number, min: number, max: number): number {
+  const snapped = Math.round(deg / step) * step;
+  if (snapped < min) return min;
+  if (snapped > max) return max;
+  return snapped;
+}
 
 /** Round to 2 decimal places — used to keep computed numeric answers
  *  comparable in a stable way. */
@@ -244,6 +440,76 @@ function buildQuestion(
       radius,
       units,
       answer: round2(2 * PI_APPROX * radius),
+    };
+  }
+  if (skill === 'name-3d' || skill === 'count-faces' || skill === 'count-edges' || skill === 'count-vertices') {
+    const solid = pick(SOLID_KIND_OPTIONS);
+    let answer = 0;
+    if (skill === 'count-faces') answer = SOLID_FACES[solid];
+    else if (skill === 'count-edges') answer = SOLID_EDGES[solid];
+    else if (skill === 'count-vertices') answer = SOLID_VERTICES[solid];
+    // name-3d's numeric answer is faces (handy fallback); the actual
+    // right answer is the solid name resolved at render time.
+    else answer = SOLID_FACES[solid];
+    return { skill, solid, units, answer };
+  }
+  if (skill === 'angle-measure') {
+    const step = angleMeasureStepForDifficulty(difficulty);
+    // Easy / medium: 30°..150° (non-reflex), snapped. Hard: 30°..330°
+    // (can be reflex), snapped to 5°.
+    const min = 30;
+    const max = difficulty === 'hard' ? 330 : 150;
+    const raw = randInt(min, max);
+    const angle = snapAngle(raw, step, min, max);
+    return { skill, angle, units, answer: angle };
+  }
+  if (skill === 'angle-name-reflex') {
+    const category = pick(ANGLE_CATEGORIES_REFLEX);
+    let angle: number;
+    if (category === 'right') angle = 90;
+    else if (category === 'acute') angle = randInt(15, 85);
+    else if (category === 'obtuse') angle = randInt(95, 170);
+    else angle = randInt(185, 340); // reflex
+    return { skill, angle, category, units, answer: angle };
+  }
+  if (skill === 'lines-of-symmetry') {
+    const pool =
+      difficulty === 'easy'
+        ? SYMMETRY_EASY_POOL
+        : difficulty === 'medium'
+          ? SYMMETRY_MEDIUM_POOL
+          : SYMMETRY_HARD_POOL;
+    const shape = pick(pool);
+    return { skill, shape, units, answer: SHAPE_LINES_OF_SYMMETRY[shape] };
+  }
+  if (skill === 'coord-read' || skill === 'coord-plot') {
+    const gridMax = coordGridMaxForDifficulty(difficulty);
+    // Avoid the (0,0) corner — boring. Pick something in 1..gridMax.
+    const x = randInt(1, gridMax);
+    const y = randInt(1, gridMax);
+    return { skill, point: { x, y }, gridMax, units, answer: x * 100 + y };
+  }
+  if (skill === 'translation') {
+    const gridMax = coordGridMaxForDifficulty(difficulty);
+    // Start point — leave headroom so the translation lands inside the
+    // grid. We pick the start in 0..gridMax-1, then sample dx/dy that
+    // keep the destination within the grid (and != start).
+    const sx = randInt(0, Math.max(0, gridMax - 1));
+    const sy = randInt(0, Math.max(0, gridMax - 1));
+    const maxDx = gridMax - sx;
+    const maxDy = gridMax - sy;
+    // dx,dy in 1..max each so the kid always moves at least one cell.
+    const dx = randInt(1, Math.max(1, maxDx));
+    const dy = randInt(1, Math.max(1, maxDy));
+    const ex = sx + dx;
+    const ey = sy + dy;
+    return {
+      skill,
+      point: { x: sx, y: sy },
+      delta: { dx, dy },
+      gridMax,
+      units,
+      answer: ex * 1000 + ey,
     };
   }
   // angle-name. Pick a category, then sample a representative angle.
@@ -329,6 +595,36 @@ export function promptFor(q: ShapeQuestion): string {
       return 'Circumference? (use 3.14 for pi)';
     case 'angle-name':
       return 'Angle?';
+    case 'name-3d':
+      return 'Name?';
+    case 'count-faces':
+      return 'Faces?';
+    case 'count-edges':
+      return 'Edges?';
+    case 'count-vertices':
+      return 'Vertices?';
+    case 'angle-measure':
+      // U+00B0 degree sign IS in WinAnsi so this is PDF-safe.
+      return 'Angle? (degrees)';
+    case 'angle-name-reflex':
+      return 'Angle?';
+    case 'lines-of-symmetry':
+      return 'Lines of symmetry?';
+    case 'coord-read':
+      return 'Coordinates? (x,y)';
+    case 'coord-plot':
+      if (q.point) return `Plot (${q.point.x}, ${q.point.y})`;
+      return 'Plot the point';
+    case 'translation': {
+      const dx = q.delta?.dx ?? 0;
+      const dy = q.delta?.dy ?? 0;
+      const sx = q.point?.x ?? 0;
+      const sy = q.point?.y ?? 0;
+      const hx = dx === 0 ? '' : `${Math.abs(dx)} ${dx > 0 ? 'right' : 'left'}`;
+      const hy = dy === 0 ? '' : `${Math.abs(dy)} ${dy > 0 ? 'up' : 'down'}`;
+      const parts = [hx, hy].filter(Boolean).join(', ');
+      return `Translate (${sx}, ${sy}) ${parts}. New coords?`;
+    }
   }
 }
 
@@ -340,11 +636,34 @@ export function answerString(q: ShapeQuestion): string {
   if (q.skill === 'name-2d') {
     return q.shape ? shapeName(q.shape) : '';
   }
-  if (q.skill === 'count-sides') {
+  if (q.skill === 'name-3d') {
+    return q.solid ?? '';
+  }
+  if (
+    q.skill === 'count-sides' ||
+    q.skill === 'count-faces' ||
+    q.skill === 'count-edges' ||
+    q.skill === 'count-vertices' ||
+    q.skill === 'lines-of-symmetry'
+  ) {
     return String(q.answer);
   }
-  if (q.skill === 'angle-name') {
+  if (q.skill === 'angle-name' || q.skill === 'angle-name-reflex') {
     return q.category ?? '';
+  }
+  if (q.skill === 'angle-measure') {
+    // ° (U+00B0) is in WinAnsi so this is safe in jsPDF Helvetica.
+    return `${q.angle ?? 0}°`;
+  }
+  if (q.skill === 'coord-read' || q.skill === 'coord-plot') {
+    const x = q.point?.x ?? 0;
+    const y = q.point?.y ?? 0;
+    return `(${x}, ${y})`;
+  }
+  if (q.skill === 'translation') {
+    const x = (q.point?.x ?? 0) + (q.delta?.dx ?? 0);
+    const y = (q.point?.y ?? 0) + (q.delta?.dy ?? 0);
+    return `(${x}, ${y})`;
   }
   if (q.skill === 'area-tri' || q.skill === 'area-circle' || q.skill === 'area-rect') {
     return `${formatNumber(q.answer)} ${unitsSquared(q.units)}`;
@@ -391,10 +710,28 @@ function stripUnitSuffix(s: string, units: ShapeUnits): string {
 }
 
 /**
+ * Parse a "x,y" / "(x, y)" coordinate string. Strips parentheses, splits
+ * on the first comma, and returns the integer pair. Returns null if the
+ * input is malformed.
+ */
+export function parseCoord(input: string): { x: number; y: number } | null {
+  if (typeof input !== 'string') return null;
+  const cleaned = input.trim().replace(/^\(|\)$/g, '').trim();
+  if (!cleaned) return null;
+  const parts = cleaned.split(/[,\s]+/).filter(Boolean);
+  if (parts.length !== 2) return null;
+  const x = Number(parts[0]);
+  const y = Number(parts[1]);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
+  return { x, y };
+}
+
+/**
  * Check a typed/selected answer against the question. For name-2d the
  * input is the shape name string; for angle-name it's the category
  * string; for the numeric skills it's a number string (with optional
- * unit suffix).
+ * unit suffix); for coord skills it's "x,y".
  */
 export function isAnswerCorrect(q: ShapeQuestion, typed: string): boolean {
   if (typeof typed !== 'string') return false;
@@ -403,8 +740,33 @@ export function isAnswerCorrect(q: ShapeQuestion, typed: string): boolean {
   if (q.skill === 'name-2d') {
     return trimmed === (q.shape ?? '');
   }
-  if (q.skill === 'angle-name') {
+  if (q.skill === 'name-3d') {
+    return trimmed === (q.solid ?? '');
+  }
+  if (q.skill === 'angle-name' || q.skill === 'angle-name-reflex') {
     return trimmed === (q.category ?? '');
+  }
+  if (q.skill === 'angle-measure') {
+    // Strip a trailing ° if the kid included it.
+    const stripped = trimmed.replace(/°$/, '').trim();
+    const n = Number(stripped);
+    if (!Number.isFinite(n)) return false;
+    // ±2° tolerance per spec — kids near-misses still get credit.
+    return Math.abs(n - (q.angle ?? -9999)) <= 2;
+  }
+  if (q.skill === 'coord-read' || q.skill === 'coord-plot' || q.skill === 'translation') {
+    const got = parseCoord(typed);
+    if (!got) return false;
+    let want: { x: number; y: number };
+    if (q.skill === 'translation') {
+      want = {
+        x: (q.point?.x ?? 0) + (q.delta?.dx ?? 0),
+        y: (q.point?.y ?? 0) + (q.delta?.dy ?? 0),
+      };
+    } else {
+      want = { x: q.point?.x ?? 0, y: q.point?.y ?? 0 };
+    }
+    return got.x === want.x && got.y === want.y;
   }
   // Numeric skills — accept the number with or without a unit suffix.
   const numericPart = stripUnitSuffix(typed, q.units);
@@ -416,6 +778,28 @@ export function isAnswerCorrect(q: ShapeQuestion, typed: string): boolean {
   if (q.skill === 'area-tri' || q.skill === 'area-circle' || q.skill === 'circumference') {
     return Math.abs(n - q.answer) < 0.011;
   }
-  // count-sides / perimeter-rect / area-rect — integer compare.
+  // count-* / perimeter-rect / area-rect / lines-of-symmetry — integer compare.
   return n === q.answer;
+}
+
+/**
+ * Pick three wrong solid-name distractors for a name-3d multiple-choice
+ * question. Mirrors pickNameDistractors but for solids.
+ */
+export function pickSolidDistractors(correct: SolidKind, n = 3): SolidKind[] {
+  const pool = SOLID_KIND_OPTIONS.filter(s => s !== correct);
+  const shuffled = [...pool];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, n);
+}
+
+/** Categorise an angle in degrees (supports reflex). */
+export function categoriseAngleReflex(deg: number): AngleCategoryReflex {
+  if (deg === 90) return 'right';
+  if (deg < 90) return 'acute';
+  if (deg < 180) return 'obtuse';
+  return 'reflex';
 }

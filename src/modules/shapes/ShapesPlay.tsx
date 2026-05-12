@@ -4,16 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { ShapeKind, ShapeQuestion, ShapeSettings } from './logic';
+import type { ShapeQuestion, ShapeSettings } from './logic';
 import {
   ANGLE_CATEGORIES,
+  ANGLE_CATEGORIES_REFLEX,
   answerString,
   generateShapeQuestions,
   isAnswerCorrect,
   pickNameDistractors,
+  pickSolidDistractors,
   promptFor,
 } from './logic';
 import { ShapeFigure } from './ShapeFigure';
+import type { ShapeFigureMode } from './ShapeFigure';
 
 export interface ShapesGameResult {
   score: number;
@@ -96,12 +99,18 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
 
   // Pre-compute multiple-choice options for the current name-2d question so
   // re-renders don't reshuffle. Keyed on currentIndex.
-  const mcChoices = useMemo<ShapeKind[] | null>(() => {
+  const mcChoices = useMemo<string[] | null>(() => {
     if (questions.length === 0) return null;
     const q = questions[currentIndex];
-    if (q.skill !== 'name-2d' || !q.shape) return null;
-    const distractors = pickNameDistractors(q.shape, 3);
-    return shuffle([q.shape, ...distractors]);
+    if (q.skill === 'name-2d' && q.shape) {
+      const distractors = pickNameDistractors(q.shape, 3);
+      return shuffle<string>([q.shape, ...distractors]);
+    }
+    if (q.skill === 'name-3d' && q.solid) {
+      const distractors = pickSolidDistractors(q.solid, 3);
+      return shuffle<string>([q.solid, ...distractors]);
+    }
+    return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, questions]);
 
@@ -178,7 +187,7 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
   // Visual mode for the figure component. Each skill maps to a distinct
   // figure layout — ShapeFigure consults `question.skill` first, so the
   // mode here is a hint for the shape-only paths (name-2d / count-sides).
-  let figureMode: ShapeKind | 'rect-with-dims' | 'right-triangle' | 'circle-with-radius' | 'angle';
+  let figureMode: ShapeFigureMode;
   if (q.skill === 'perimeter-rect' || q.skill === 'area-rect') {
     figureMode = 'rect-with-dims';
   } else if (q.skill === 'area-tri') {
@@ -187,9 +196,29 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
     figureMode = 'circle-with-radius';
   } else if (q.skill === 'angle-name') {
     figureMode = 'angle';
+  } else if (q.skill === 'angle-measure' || q.skill === 'angle-name-reflex') {
+    figureMode = 'angle-with-degrees';
+  } else if (
+    q.skill === 'name-3d' ||
+    q.skill === 'count-faces' ||
+    q.skill === 'count-edges' ||
+    q.skill === 'count-vertices'
+  ) {
+    figureMode = 'solid';
+  } else if (q.skill === 'lines-of-symmetry') {
+    figureMode = 'symmetry-shape';
+  } else if (q.skill === 'coord-read' || q.skill === 'coord-plot' || q.skill === 'translation') {
+    figureMode = 'coord-grid';
   } else {
     figureMode = q.shape ?? 'circle';
   }
+
+  // Skill bucketing for the input UI block at the bottom of the page.
+  const isMcShapeName = q.skill === 'name-2d' || q.skill === 'name-3d';
+  const isAngleMcSimple = q.skill === 'angle-name';
+  const isAngleMcReflex = q.skill === 'angle-name-reflex';
+  const isPlotPicker = q.skill === 'coord-plot';
+  const usesTypedInput = !isMcShapeName && !isAngleMcSimple && !isAngleMcReflex && !isPlotPicker;
 
   return (
     <div className="min-h-screen bg-background py-2 px-3 md:py-[26px] md:px-8">
@@ -250,7 +279,7 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
           )}
         </Card>
 
-        {feedback === 'none' && q.skill === 'name-2d' && mcChoices && (
+        {feedback === 'none' && isMcShapeName && mcChoices && (
           <div className="grid grid-cols-2 gap-2">
             {mcChoices.map(choice => (
               <Button
@@ -264,7 +293,7 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
           </div>
         )}
 
-        {feedback === 'none' && q.skill === 'angle-name' && (
+        {feedback === 'none' && isAngleMcSimple && (
           <div className="grid grid-cols-3 gap-2">
             {ANGLE_CATEGORIES.map(c => (
               <Button
@@ -278,19 +307,39 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
           </div>
         )}
 
-        {feedback === 'none' && q.skill !== 'name-2d' && q.skill !== 'angle-name' && (
+        {feedback === 'none' && isAngleMcReflex && (
+          <div className="grid grid-cols-2 gap-2">
+            {ANGLE_CATEGORIES_REFLEX.map(c => (
+              <Button
+                key={c}
+                onClick={() => submit(c)}
+                className="py-4 text-lg font-bold capitalize shadow-button"
+              >
+                {c}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        {feedback === 'none' && isPlotPicker && q.point && (
+          <PlotPicker
+            target={q.point}
+            gridMax={q.gridMax ?? 5}
+            onPick={(x, y) => submit(`${x},${y}`)}
+          />
+        )}
+
+        {feedback === 'none' && usesTypedInput && (
           <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
             <Input
               ref={inputRef}
               type="text"
-              inputMode="decimal"
+              inputMode={
+                q.skill === 'coord-read' || q.skill === 'translation' ? 'text' : 'decimal'
+              }
               value={typed}
               onChange={e => setTyped(e.target.value)}
-              placeholder={
-                q.skill === 'count-sides'
-                  ? 'e.g. 4'
-                  : `answer in ${q.units}`
-              }
+              placeholder={inputPlaceholder(q)}
               className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
               autoFocus
             />
@@ -304,6 +353,81 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
           </form>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Placeholder text for the free-form input field per skill. */
+function inputPlaceholder(q: ShapeQuestion): string {
+  switch (q.skill) {
+    case 'count-sides':
+    case 'count-faces':
+    case 'count-edges':
+    case 'count-vertices':
+    case 'lines-of-symmetry':
+      return 'e.g. 4';
+    case 'angle-measure':
+      return 'e.g. 45';
+    case 'coord-read':
+    case 'translation':
+      return 'e.g. 3,4';
+    default:
+      return `answer in ${q.units}`;
+  }
+}
+
+/**
+ * Button grid for the coord-plot skill. Renders a (gridMax+1) × (gridMax+1)
+ * tappable grid (origin at the bottom-left). Each button is at least
+ * 44×44 px so it meets the kid-friendly tap-target floor at gridMax ≤ 5;
+ * for larger grids the buttons shrink but stay legible.
+ */
+interface PlotPickerProps {
+  target: { x: number; y: number };
+  gridMax: number;
+  onPick: (x: number, y: number) => void;
+}
+
+function PlotPicker({ target, gridMax, onPick }: PlotPickerProps) {
+  const size = gridMax + 1; // count of buttons per axis
+  // Lay out rows top-to-bottom but with y descending so (0,0) sits at
+  // the bottom-left visually.
+  const rows: Array<Array<{ x: number; y: number }>> = [];
+  for (let y = gridMax; y >= 0; y--) {
+    const row: Array<{ x: number; y: number }> = [];
+    for (let x = 0; x <= gridMax; x++) row.push({ x, y });
+    rows.push(row);
+  }
+  // Use inline grid template so we can keep buttons square at any grid
+  // size without depending on a Tailwind grid-cols-N class for large N.
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+    gap: '4px',
+  };
+  return (
+    <div style={gridStyle}>
+      {rows.map(row =>
+        row.map(({ x, y }) => {
+          const isTarget = x === target.x && y === target.y;
+          return (
+            <button
+              key={`${x}-${y}`}
+              type="button"
+              aria-label={`Plot at ${x}, ${y}`}
+              onClick={() => onPick(x, y)}
+              className={cn(
+                'aspect-square min-w-[44px] min-h-[44px] rounded-md border border-card-border',
+                'bg-secondary text-muted-foreground font-bold transition-all',
+                'hover:bg-primary/30 active:scale-95',
+                isTarget && 'ring-2 ring-primary'
+              )}
+            >
+              {x},{y}
+            </button>
+          );
+        })
+      )}
     </div>
   );
 }

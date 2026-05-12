@@ -42,12 +42,16 @@ describe('buildShapesSummary', () => {
       .toBe('name-2d, count-sides, perimeter-rect • m • medium');
   });
 
-  it('all eight skills + every unit option', () => {
+  it('all skills + every unit option (skills preserved in canonical order)', () => {
     SHAPE_UNIT_OPTIONS.forEach(u => {
       const out = buildShapesSummary([...SHAPE_SKILL_OPTIONS], u, 'hard');
-      expect(out).toBe(
-        `name-2d, count-sides, perimeter-rect, area-rect, area-tri, area-circle, circumference, angle-name • ${u} • hard`
-      );
+      // The v1 prefix must come first; the v3 suffix follows in canonical
+      // order. We assert the substrings rather than the full string so
+      // future additions to SHAPE_SKILL_OPTIONS won't break this test.
+      expect(out.startsWith('name-2d, count-sides, perimeter-rect, area-rect, area-tri, area-circle, circumference, angle-name')).toBe(true);
+      expect(out).toContain('name-3d');
+      expect(out).toContain('translation');
+      expect(out).toContain(` • ${u} • hard`);
     });
   });
 
@@ -61,17 +65,16 @@ describe('buildShapesSummary', () => {
     expect(buildShapesSummary(['name-2d'], 'cm', 'hard')).toContain('hard');
   });
 
-  it('stays reasonably compact (≤ 130 chars for the longest combination)', () => {
-    // With 8 skills the summary line is around 110 chars at its longest;
-    // the threshold here is loose so a 9th skill (e.g. a future v2 entry)
-    // would still pass without an update.
+  it('stays reasonably compact for the longest combination', () => {
+    // v3 adds 10 more skills, so the threshold is bumped from the v1
+    // ~130-char cap. Still well within a single line in the print modal.
     const longest = buildShapesSummary([...SHAPE_SKILL_OPTIONS], 'mm', 'medium');
-    expect(longest.length).toBeLessThanOrEqual(130);
+    expect(longest.length).toBeLessThanOrEqual(260);
   });
 });
 
 describe('skillLabel', () => {
-  it('returns the human-readable label for each skill', () => {
+  it('returns the human-readable label for each v1 skill', () => {
     expect(skillLabel('name-2d')).toBe('Name (2D)');
     expect(skillLabel('count-sides')).toBe('Count sides');
     expect(skillLabel('perimeter-rect')).toBe('Perimeter (rect)');
@@ -80,5 +83,18 @@ describe('skillLabel', () => {
     expect(skillLabel('area-circle')).toBe('Area (circle)');
     expect(skillLabel('circumference')).toBe('Circumference');
     expect(skillLabel('angle-name')).toBe('Name angle');
+  });
+
+  it('returns labels for each v3 (Y5) skill', () => {
+    expect(skillLabel('name-3d')).toBe('Name (3D)');
+    expect(skillLabel('count-faces')).toBe('Count faces');
+    expect(skillLabel('count-edges')).toBe('Count edges');
+    expect(skillLabel('count-vertices')).toBe('Count vertices');
+    expect(skillLabel('angle-measure')).toBe('Measure angle');
+    expect(skillLabel('angle-name-reflex')).toBe('Name angle (+reflex)');
+    expect(skillLabel('lines-of-symmetry')).toBe('Lines of symmetry');
+    expect(skillLabel('coord-read')).toBe('Read coordinates');
+    expect(skillLabel('coord-plot')).toBe('Plot coordinates');
+    expect(skillLabel('translation')).toBe('Translate point');
   });
 });

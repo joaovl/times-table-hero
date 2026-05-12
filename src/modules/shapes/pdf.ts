@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import type { ShapeKind, ShapeQuestion } from './logic';
+import type { ShapeKind, ShapeQuestion, SolidKind } from './logic';
 import { answerString, promptFor } from './logic';
 
 /** Format a numeric value for in-figure labels — drops trailing zeros so
@@ -215,6 +215,290 @@ function drawAngleFigure(
   doc.circle(vx, vy, 0.5, 'F');
 }
 
+/**
+ * Draw an iso-projection of a 3D solid. Mirrors ShapeFigure's SolidFigure
+ * helper but uses jsPDF primitives. Hidden edges use a dashed pattern
+ * (jsPDF's setLineDashPattern).
+ */
+function drawSolid(
+  doc: jsPDF,
+  solid: SolidKind,
+  cx: number,
+  cy: number,
+  size: number
+) {
+  doc.setDrawColor(0);
+  // Use size as overall scale — most figures fit in a square of `size` mm.
+  const dxIso = (size * 0.35) * Math.cos(Math.PI / 6);
+  const dyIso = -(size * 0.35) * Math.sin(Math.PI / 6);
+
+  const setSolid = () => {
+    doc.setLineWidth(0.5);
+    if (typeof (doc as unknown as { setLineDashPattern?: (p: number[], o: number) => void }).setLineDashPattern === 'function') {
+      (doc as unknown as { setLineDashPattern: (p: number[], o: number) => void }).setLineDashPattern([], 0);
+    }
+  };
+  const setDashed = () => {
+    doc.setLineWidth(0.3);
+    if (typeof (doc as unknown as { setLineDashPattern?: (p: number[], o: number) => void }).setLineDashPattern === 'function') {
+      (doc as unknown as { setLineDashPattern: (p: number[], o: number) => void }).setLineDashPattern([0.8, 0.8], 0);
+    }
+  };
+
+  if (solid === 'cube' || solid === 'cuboid') {
+    const w = solid === 'cube' ? size * 0.55 : size * 0.7;
+    const h = solid === 'cube' ? size * 0.55 : size * 0.4;
+    const x0 = cx - w / 2 - dxIso / 2;
+    const y0 = cy - h / 2 - dyIso / 2;
+    const a = { x: x0, y: y0 + h };
+    const b = { x: x0 + w, y: y0 + h };
+    const c = { x: x0 + w, y: y0 };
+    const d = { x: x0, y: y0 };
+    const ap = { x: a.x + dxIso, y: a.y + dyIso };
+    const bp = { x: b.x + dxIso, y: b.y + dyIso };
+    const cp = { x: c.x + dxIso, y: c.y + dyIso };
+    const dp = { x: d.x + dxIso, y: d.y + dyIso };
+    setSolid();
+    const visible: Array<[typeof a, typeof a]> = [
+      [a, b], [b, c], [c, d], [d, a],
+      [d, dp], [c, cp], [b, bp],
+      [dp, cp], [cp, bp],
+    ];
+    visible.forEach(([p, q]) => doc.line(p.x, p.y, q.x, q.y));
+    setDashed();
+    const hidden: Array<[typeof a, typeof a]> = [
+      [a, ap], [ap, dp], [ap, bp],
+    ];
+    hidden.forEach(([p, q]) => doc.line(p.x, p.y, q.x, q.y));
+    setSolid();
+    return;
+  }
+
+  if (solid === 'cylinder') {
+    const rx = size * 0.34;
+    const ry = size * 0.10;
+    const halfH = size * 0.34;
+    setSolid();
+    // Top ellipse — approximated as an axis-aligned ellipse via jsPDF's
+    // ellipse() helper.
+    if (typeof (doc as unknown as { ellipse?: (x: number, y: number, rx: number, ry: number) => void }).ellipse === 'function') {
+      (doc as unknown as { ellipse: (x: number, y: number, rx: number, ry: number) => void }).ellipse(cx, cy - halfH, rx, ry);
+    }
+    // Sides.
+    doc.line(cx - rx, cy - halfH, cx - rx, cy + halfH);
+    doc.line(cx + rx, cy - halfH, cx + rx, cy + halfH);
+    // Visible front half of base: approximate the lower half-arc as a
+    // short polyline.
+    const segs = 10;
+    let prevX = cx - rx;
+    let prevY = cy + halfH;
+    for (let i = 1; i <= segs; i++) {
+      const t = (i / segs) * Math.PI;
+      const x = cx - rx * Math.cos(t);
+      const y = cy + halfH + ry * Math.sin(t);
+      doc.line(prevX, prevY, x, y);
+      prevX = x;
+      prevY = y;
+    }
+    // Hidden back half of base.
+    setDashed();
+    prevX = cx - rx;
+    prevY = cy + halfH;
+    for (let i = 1; i <= segs; i++) {
+      const t = (i / segs) * Math.PI;
+      const x = cx - rx * Math.cos(t);
+      const y = cy + halfH - ry * Math.sin(t);
+      doc.line(prevX, prevY, x, y);
+      prevX = x;
+      prevY = y;
+    }
+    setSolid();
+    return;
+  }
+
+  if (solid === 'sphere') {
+    setSolid();
+    doc.circle(cx, cy, size * 0.38);
+    // Equator hint: front half solid, back half dashed.
+    const rx = size * 0.38;
+    const ry = size * 0.12;
+    let prevX = cx - rx;
+    let prevY = cy;
+    const segs = 10;
+    for (let i = 1; i <= segs; i++) {
+      const t = (i / segs) * Math.PI;
+      const x = cx - rx * Math.cos(t);
+      const y = cy + ry * Math.sin(t);
+      doc.line(prevX, prevY, x, y);
+      prevX = x;
+      prevY = y;
+    }
+    setDashed();
+    prevX = cx - rx;
+    prevY = cy;
+    for (let i = 1; i <= segs; i++) {
+      const t = (i / segs) * Math.PI;
+      const x = cx - rx * Math.cos(t);
+      const y = cy - ry * Math.sin(t);
+      doc.line(prevX, prevY, x, y);
+      prevX = x;
+      prevY = y;
+    }
+    setSolid();
+    return;
+  }
+
+  if (solid === 'cone') {
+    setSolid();
+    const apexY = cy - size * 0.4;
+    const baseY = cy + size * 0.28;
+    const rx = size * 0.34;
+    const ry = size * 0.09;
+    doc.line(cx, apexY, cx - rx, baseY);
+    doc.line(cx, apexY, cx + rx, baseY);
+    // Front half of base.
+    const segs = 10;
+    let prevX = cx - rx;
+    let prevY = baseY;
+    for (let i = 1; i <= segs; i++) {
+      const t = (i / segs) * Math.PI;
+      const x = cx - rx * Math.cos(t);
+      const y = baseY + ry * Math.sin(t);
+      doc.line(prevX, prevY, x, y);
+      prevX = x;
+      prevY = y;
+    }
+    // Hidden back half of base.
+    setDashed();
+    prevX = cx - rx;
+    prevY = baseY;
+    for (let i = 1; i <= segs; i++) {
+      const t = (i / segs) * Math.PI;
+      const x = cx - rx * Math.cos(t);
+      const y = baseY - ry * Math.sin(t);
+      doc.line(prevX, prevY, x, y);
+      prevX = x;
+      prevY = y;
+    }
+    setSolid();
+    return;
+  }
+
+  // pyramid (square base).
+  setSolid();
+  const apex = { x: cx + dxIso / 2, y: cy - size * 0.38 };
+  const w = size * 0.55;
+  const fl = { x: cx - w / 2, y: cy + size * 0.28 };
+  const fr = { x: cx + w / 2, y: cy + size * 0.28 };
+  const br = { x: fr.x + dxIso, y: fr.y + dyIso };
+  const bl = { x: fl.x + dxIso, y: fl.y + dyIso };
+  doc.line(apex.x, apex.y, fl.x, fl.y);
+  doc.line(apex.x, apex.y, fr.x, fr.y);
+  doc.line(apex.x, apex.y, br.x, br.y);
+  doc.line(fl.x, fl.y, fr.x, fr.y);
+  doc.line(fr.x, fr.y, br.x, br.y);
+  setDashed();
+  doc.line(apex.x, apex.y, bl.x, bl.y);
+  doc.line(fl.x, fl.y, bl.x, bl.y);
+  doc.line(bl.x, bl.y, br.x, br.y);
+  setSolid();
+}
+
+/**
+ * Draw an empty (no marker) first-quadrant coordinate grid. `marker` is
+ * an optional point drawn as a filled dot — used for coord-read.
+ */
+function drawCoordGrid(
+  doc: jsPDF,
+  cx: number,
+  cy: number,
+  size: number,
+  gridMax: number,
+  marker: { x: number; y: number } | null
+) {
+  const usable = size * 0.86;
+  const step = usable / gridMax;
+  const x0 = cx - usable / 2;
+  const y0 = cy + usable / 2;
+  doc.setDrawColor(150);
+  doc.setLineWidth(0.15);
+  for (let i = 0; i <= gridMax; i++) {
+    // vertical grid line
+    doc.line(x0 + i * step, y0, x0 + i * step, y0 - usable);
+    // horizontal grid line
+    doc.line(x0, y0 - i * step, x0 + usable, y0 - i * step);
+  }
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.4);
+  doc.line(x0, y0, x0 + usable, y0); // x axis
+  doc.line(x0, y0, x0, y0 - usable); // y axis
+
+  // Tick labels.
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6);
+  const tickStep = gridMax <= 10 ? 1 : 2;
+  for (let t = 0; t <= gridMax; t += tickStep) {
+    doc.text(String(t), x0 + t * step, y0 + 2.2, { align: 'center' });
+    doc.text(String(t), x0 - 1, y0 - t * step + 0.6, { align: 'right' });
+  }
+
+  if (marker) {
+    doc.setFillColor(0, 0, 0);
+    doc.circle(x0 + marker.x * step, y0 - marker.y * step, 0.7, 'F');
+  }
+}
+
+/**
+ * Draw a "?°" labelled angle figure. The arc is shown so the kid can
+ * read off the value with a (mental) protractor. The label only renders
+ * for angle-measure, not angle-name-reflex.
+ */
+function drawAngleFigureWithLabel(
+  doc: jsPDF,
+  q: ShapeQuestion,
+  cx: number,
+  cy: number,
+  armLen: number
+) {
+  const angleDeg = q.angle ?? 90;
+  const angleRad = (angleDeg * Math.PI) / 180;
+  const vx = cx - armLen * 0.15;
+  const vy = cy + armLen * 0.2;
+  const r1x = vx + armLen;
+  const r1y = vy;
+  const r2x = vx + armLen * Math.cos(angleRad);
+  const r2y = vy - armLen * Math.sin(angleRad);
+  doc.setLineWidth(0.6);
+  doc.setDrawColor(0);
+  doc.line(vx, vy, r1x, r1y);
+  doc.line(vx, vy, r2x, r2y);
+  // Arc as a short polyline.
+  const arcR = armLen * 0.32;
+  const segs = Math.max(8, Math.round((angleDeg / 360) * 32));
+  let prevX = vx + arcR;
+  let prevY = vy;
+  doc.setLineWidth(0.4);
+  for (let i = 1; i <= segs; i++) {
+    const t = (i / segs) * angleRad;
+    const x = vx + arcR * Math.cos(t);
+    const y = vy - arcR * Math.sin(t);
+    doc.line(prevX, prevY, x, y);
+    prevX = x;
+    prevY = y;
+  }
+  doc.setFillColor(0, 0, 0);
+  doc.circle(vx, vy, 0.5, 'F');
+  if (q.skill === 'angle-measure') {
+    const midRad = angleRad / 2;
+    const labelR = arcR + 3.5;
+    const lx = vx + labelR * Math.cos(midRad);
+    const ly = vy - labelR * Math.sin(midRad);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('?°', lx, ly, { align: 'center', baseline: 'middle' });
+  }
+}
+
 function drawDimensionedRect(
   doc: jsPDF,
   q: ShapeQuestion,
@@ -281,6 +565,23 @@ function drawCell(
   } else if (q.skill === 'angle-name') {
     const armLen = Math.min(radius * 1.4, figBoxW / 2 - 2);
     drawAngleFigure(doc, q, cx, cy, armLen);
+  } else if (q.skill === 'angle-measure' || q.skill === 'angle-name-reflex') {
+    const armLen = Math.min(radius * 1.4, figBoxW / 2 - 2);
+    drawAngleFigureWithLabel(doc, q, cx, cy, armLen);
+  } else if (
+    q.skill === 'name-3d' ||
+    q.skill === 'count-faces' ||
+    q.skill === 'count-edges' ||
+    q.skill === 'count-vertices'
+  ) {
+    drawSolid(doc, q.solid ?? 'cube', cx, cy, Math.min(figBoxW, figBoxH) - 2);
+  } else if (q.skill === 'lines-of-symmetry' && q.shape) {
+    drawNamedShape(doc, q.shape, cx, cy, radius);
+  } else if (q.skill === 'coord-read') {
+    drawCoordGrid(doc, cx, cy, Math.min(figBoxW, figBoxH), q.gridMax ?? 5, q.point ?? null);
+  } else if (q.skill === 'coord-plot' || q.skill === 'translation') {
+    // Empty grid — kid plots / writes coords on the printed grid.
+    drawCoordGrid(doc, cx, cy, Math.min(figBoxW, figBoxH), q.gridMax ?? 5, null);
   } else if (q.shape) {
     drawNamedShape(doc, q.shape, cx, cy, radius);
   }
