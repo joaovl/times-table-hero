@@ -5,8 +5,15 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { ChartQuestion, ChartSettings } from './logic';
-import { generateChartQuestions, isAnswerCorrect, isPieSkill } from './logic';
+import {
+  generateChartQuestions,
+  isAnswerCorrect,
+  isLineSkill,
+  isPieSkill,
+  isTimetableSkill,
+} from './logic';
 import { BarChart } from './BarChart';
+import { LineChart } from './LineChart';
 import { PieChart } from './PieChart';
 
 export interface ChartsGameResult {
@@ -33,7 +40,32 @@ function formatCorrectAnswer(q: ChartQuestion): string {
   if (kind === 'fraction' && q.expectedFraction) {
     return `${q.expectedFraction.num}/${q.expectedFraction.den}`;
   }
+  if (kind === 'trend' && q.expectedTrend) return q.expectedTrend;
+  if (kind === 'time' && q.expectedTime) return q.expectedTime;
   return String(q.answer);
+}
+
+const TREND_CHOICES: Array<'rising' | 'falling' | 'flat'> = ['rising', 'falling', 'flat'];
+
+/**
+ * Deterministically pick `count` labels from `categories` that always include
+ * `expectedLabel`. Preserves x-axis ordering so the buttons read naturally.
+ */
+function pickLabelChoices(
+  categories: Array<{ label: string; value: number }>,
+  expectedLabel: string,
+  count: number,
+): string[] {
+  const labels = categories.map(c => c.label);
+  if (labels.length <= count) return labels;
+  // Include the expected label, plus the next labels in order. Wrap around
+  // if the expected label is near the end so we always emit `count` items.
+  const expectedIdx = Math.max(0, labels.indexOf(expectedLabel));
+  const out: string[] = [];
+  // Start a few before expected so it isn't always first.
+  const start = Math.max(0, Math.min(labels.length - count, expectedIdx - 1));
+  for (let i = 0; i < count; i++) out.push(labels[start + i]);
+  return out;
 }
 
 export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
@@ -173,6 +205,8 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
   const q = questions[currentIndex];
   const kind = q.expectedKind ?? 'number';
   const isPie = isPieSkill(q.skill);
+  const isLine = isLineSkill(q.skill);
+  const isTimetable = isTimetableSkill(q.skill);
   const progress =
     settings.gameMode === 'questions'
       ? (currentIndex / settings.questionCount) * 100
@@ -247,6 +281,47 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
                 width={320}
                 height={260}
               />
+            ) : isLine ? (
+              <LineChart
+                categories={q.categories}
+                highlightIndices={q.skill === 'read-line' ? q.targets : []}
+                width={360}
+                height={260}
+                unit={q.unit}
+              />
+            ) : isTimetable ? (
+              <div className="w-full overflow-x-auto">
+                <table className="mx-auto border-collapse text-sm md:text-base">
+                  <thead>
+                    <tr>
+                      <th className="border border-foreground/40 px-2 py-1 bg-muted font-bold">Station</th>
+                      {q.times && q.times[0] && q.times[0].map((_, idx) => (
+                        <th
+                          key={`th-${idx}`}
+                          className="border border-foreground/40 px-2 py-1 bg-muted font-bold"
+                        >
+                          Train {idx + 1}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(q.stations ?? []).map((station, sIdx) => (
+                      <tr key={`tr-${sIdx}`}>
+                        <td className="border border-foreground/40 px-2 py-1 font-medium">{station}</td>
+                        {(q.times?.[sIdx] ?? []).map((t, tIdx) => (
+                          <td
+                            key={`td-${sIdx}-${tIdx}`}
+                            className="border border-foreground/40 px-2 py-1 font-mono text-center"
+                          >
+                            {t}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <BarChart
                 categories={q.categories}
@@ -270,17 +345,57 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
 
         {feedback === 'none' && kind === 'label' && (
           <div className="grid grid-cols-2 gap-2 md:gap-3">
-            {q.categories.map((c, i) => (
+            {(q.skill === 'line-max'
+              ? pickLabelChoices(q.categories, q.expectedLabel ?? '', 4)
+              : q.categories.map(c => c.label)
+            ).map((label, i) => (
               <Button
-                key={`mc-${i}-${c.label}`}
+                key={`mc-${i}-${label}`}
                 type="button"
-                onClick={() => handleLabelChoice(c.label)}
+                onClick={() => handleLabelChoice(label)}
                 className="py-4 md:py-5 text-lg md:text-xl font-bold shadow-button bg-gradient-to-b from-primary via-primary/85 to-primary/65"
               >
-                {c.label}
+                {label}
               </Button>
             ))}
           </div>
+        )}
+
+        {feedback === 'none' && kind === 'trend' && (
+          <div className="grid grid-cols-3 gap-2 md:gap-3">
+            {TREND_CHOICES.map(t => (
+              <Button
+                key={`trend-${t}`}
+                type="button"
+                onClick={() => handleLabelChoice(t)}
+                className="py-4 md:py-5 text-lg md:text-xl font-bold shadow-button bg-gradient-to-b from-primary via-primary/85 to-primary/65"
+              >
+                {t}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        {feedback === 'none' && kind === 'time' && (
+          <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
+            <Input
+              ref={inputRef}
+              type="text"
+              inputMode="numeric"
+              value={typed}
+              onChange={e => setTyped(e.target.value)}
+              placeholder="HH:MM"
+              className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold tracking-wider"
+              autoFocus
+            />
+            <Button
+              type="submit"
+              className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+              disabled={typed.trim() === ''}
+            >
+              Check
+            </Button>
+          </form>
         )}
 
         {feedback === 'none' && kind === 'fraction' && (

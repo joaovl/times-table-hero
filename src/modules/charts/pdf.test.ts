@@ -315,6 +315,183 @@ describe('generateChartsPdf — pie skills', () => {
   });
 });
 
+describe('generateChartsPdf — line-graph skills', () => {
+  const linePool = (skill: 'read-line' | 'line-trend' | 'line-max') => {
+    const settings: ChartSettings = {
+      skills: [skill],
+      maxValue: 50,
+      numCategories: 5,
+      gameMode: 'questions',
+      questionCount: 4,
+      timeLimit: 0,
+    };
+    return generateChartQuestions(settings, 4);
+  };
+
+  it('renders the line trace as line segments between consecutive points', () => {
+    const qs = linePool('read-line');
+    capturedLines.length = 0;
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '' });
+    // Each question contributes (points-1) trace segments + gridlines + axes.
+    // Comfortable lower bound: 4 questions × 4 trace segments = 16, plus
+    // gridlines + axes per question.
+    expect(capturedLines.length).toBeGreaterThan(qs.length * 4);
+  });
+
+  it('renders every x-axis label for line charts', () => {
+    const qs = linePool('read-line');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '' });
+    qs.forEach(q => q.categories.forEach(c => expect(capturedTextCalls).toContain(c.label)));
+  });
+
+  it('answer key for line-trend shows the trend word', () => {
+    const qs = linePool('line-trend');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '', includeAnswerKey: true });
+    qs.forEach((q, i) => {
+      expect(capturedTextCalls).toContain(`${i + 1}) ${q.expectedTrend}`);
+    });
+  });
+
+  it('answer key for line-max shows the expected label', () => {
+    const qs = linePool('line-max');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '', includeAnswerKey: true });
+    qs.forEach((q, i) => {
+      expect(capturedTextCalls).toContain(`${i + 1}) ${q.expectedLabel}`);
+    });
+  });
+
+  it('answer key for read-line shows the numeric value', () => {
+    const qs = linePool('read-line');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '', includeAnswerKey: true });
+    qs.forEach((q, i) => {
+      expect(capturedTextCalls).toContain(`${i + 1}) ${q.answer}`);
+    });
+  });
+
+  it('no Math Operators block chars on full line worksheet', () => {
+    const settings: ChartSettings = {
+      skills: ['read-line', 'line-trend', 'line-max'],
+      maxValue: 50,
+      numCategories: 5,
+      gameMode: 'questions',
+      questionCount: 9,
+      timeLimit: 0,
+    };
+    const qs = generateChartQuestions(settings, 9);
+    generateChartsPdf({ pages: [qs], title: 'M', subtitle: '', includeAnswerKey: true });
+    capturedTextCalls.forEach(t => {
+      expect(MATH_OPERATORS_BLOCK.test(t), `unsafe char in "${t}"`).toBe(false);
+    });
+  });
+});
+
+describe('generateChartsPdf — timetable skills', () => {
+  const tablePool = (skill: 'timetable-read' | 'timetable-duration') => {
+    const settings: ChartSettings = {
+      skills: [skill],
+      maxValue: 50,
+      numCategories: 5,
+      gameMode: 'questions',
+      questionCount: 4,
+      timeLimit: 0,
+    };
+    return generateChartQuestions(settings, 4);
+  };
+
+  it('emits every station name into the table', () => {
+    const qs = tablePool('timetable-read');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '' });
+    qs.forEach(q =>
+      (q.stations ?? []).forEach(s => expect(capturedTextCalls).toContain(s))
+    );
+  });
+
+  it('emits every time cell into the table', () => {
+    const qs = tablePool('timetable-read');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '' });
+    qs.forEach(q =>
+      (q.times ?? []).forEach(row =>
+        row.forEach(t => expect(capturedTextCalls).toContain(t))
+      )
+    );
+  });
+
+  it('answer key for timetable-read shows HH:MM expected time', () => {
+    const qs = tablePool('timetable-read');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '', includeAnswerKey: true });
+    qs.forEach((q, i) => {
+      expect(capturedTextCalls).toContain(`${i + 1}) ${q.expectedTime}`);
+    });
+  });
+
+  it('answer key for timetable-duration shows the minutes', () => {
+    const qs = tablePool('timetable-duration');
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '', includeAnswerKey: true });
+    qs.forEach((q, i) => {
+      expect(capturedTextCalls).toContain(`${i + 1}) ${q.answer}`);
+    });
+  });
+
+  it('table is drawn with grid lines (outer rect + inner divisions)', () => {
+    const qs = tablePool('timetable-read');
+    capturedLines.length = 0;
+    capturedRects.length = 0;
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '' });
+    // 1 outer rect per timetable + inner h/v lines.
+    expect(capturedRects.length).toBeGreaterThanOrEqual(qs.length);
+    expect(capturedLines.length).toBeGreaterThan(qs.length); // many gridlines
+  });
+
+  it('no Math Operators block chars on full timetable worksheet', () => {
+    const settings: ChartSettings = {
+      skills: ['timetable-read', 'timetable-duration'],
+      maxValue: 50,
+      numCategories: 5,
+      gameMode: 'questions',
+      questionCount: 6,
+      timeLimit: 0,
+    };
+    const qs = generateChartQuestions(settings, 6);
+    generateChartsPdf({ pages: [qs], title: 'M', subtitle: '', includeAnswerKey: true });
+    capturedTextCalls.forEach(t => {
+      expect(MATH_OPERATORS_BLOCK.test(t), `unsafe char in "${t}"`).toBe(false);
+    });
+  });
+});
+
+describe('generateChartsPdf — multi-step-bar skill', () => {
+  it('renders as a bar chart (rect-per-bar)', () => {
+    const settings: ChartSettings = {
+      skills: ['multi-step-bar'],
+      maxValue: 50,
+      numCategories: 5,
+      gameMode: 'questions',
+      questionCount: 4,
+      timeLimit: 0,
+    };
+    const qs = generateChartQuestions(settings, 4);
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '' });
+    // At least 5 bars per question.
+    expect(capturedRects.length).toBeGreaterThanOrEqual(qs.length * 5);
+  });
+
+  it('answer key shows the numeric answer', () => {
+    const settings: ChartSettings = {
+      skills: ['multi-step-bar'],
+      maxValue: 50,
+      numCategories: 5,
+      gameMode: 'questions',
+      questionCount: 4,
+      timeLimit: 0,
+    };
+    const qs = generateChartQuestions(settings, 4);
+    generateChartsPdf({ pages: [qs], title: 'T', subtitle: '', includeAnswerKey: true });
+    qs.forEach((q, i) => {
+      expect(capturedTextCalls).toContain(`${i + 1}) ${q.answer}`);
+    });
+  });
+});
+
 describe('generateChartsPdf — round-trip', () => {
   it('every generated answer appears in the answer key in order', () => {
     const settings: ChartSettings = {

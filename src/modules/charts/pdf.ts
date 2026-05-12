@@ -1,6 +1,13 @@
 import jsPDF from 'jspdf';
 import type { ChartQuestion } from './logic';
-import { axisMax, axisTickCount, buildPieSlices, isPieSkill } from './logic';
+import {
+  axisMax,
+  axisTickCount,
+  buildPieSlices,
+  isLineSkill,
+  isPieSkill,
+  isTimetableSkill,
+} from './logic';
 
 export interface ChartsPdfOptions {
   pages: ChartQuestion[][];
@@ -221,6 +228,166 @@ function drawPieChart(
   doc.setDrawColor(0);
 }
 
+function drawLineChart(
+  doc: jsPDF,
+  q: ChartQuestion,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  // Plot region.
+  const plotX = x + CHART_PAD_LEFT;
+  const plotY = y + CHART_PAD_TOP;
+  const plotW = w - CHART_PAD_LEFT - CHART_PAD_RIGHT;
+  const plotH = h - CHART_PAD_TOP - CHART_PAD_BOTTOM;
+
+  const dataMax = q.categories.reduce((m, c) => Math.max(m, c.value), 0);
+  const yMax = axisMax(dataMax);
+  const ticks = axisTickCount(yMax);
+
+  // Gridlines.
+  doc.setDrawColor(200);
+  doc.setLineWidth(0.15);
+  for (let i = 1; i <= ticks; i++) {
+    const ty = plotY + plotH - (i / ticks) * plotH;
+    doc.line(plotX, ty, plotX + plotW, ty);
+  }
+
+  // Axes.
+  doc.setDrawColor(40);
+  doc.setLineWidth(0.4);
+  doc.line(plotX, plotY, plotX, plotY + plotH);
+  doc.line(plotX, plotY + plotH, plotX + plotW, plotY + plotH);
+
+  // Y-axis numeric labels.
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(40);
+  for (let i = 0; i <= ticks; i++) {
+    const v = Math.round((yMax * i) / ticks);
+    const ty = plotY + plotH - (i / ticks) * plotH;
+    doc.text(String(v), plotX - 1.2, ty + 0.8, { align: 'right' });
+  }
+
+  // Point geometry.
+  const n = Math.max(1, q.categories.length);
+  const stepX = n > 1 ? plotW / (n - 1) : plotW / 2;
+  const px = (i: number) => (n > 1 ? plotX + i * stepX : plotX + plotW / 2);
+  const py = (v: number) => plotY + plotH - (v / yMax) * plotH;
+
+  // Line trace as connected segments.
+  doc.setDrawColor(40);
+  doc.setLineWidth(0.5);
+  for (let i = 1; i < q.categories.length; i++) {
+    doc.line(px(i - 1), py(q.categories[i - 1].value), px(i), py(q.categories[i].value));
+  }
+
+  // Points + value labels.
+  const highlightSet = new Set(q.targets);
+  for (let i = 0; i < q.categories.length; i++) {
+    const c = q.categories[i];
+    const cx = px(i);
+    const cy = py(c.value);
+    const isHi = highlightSet.has(i);
+    doc.setDrawColor(40);
+    doc.setLineWidth(isHi ? 0.7 : 0.3);
+    doc.setFillColor(40, 40, 40);
+    // Small filled marker — circle via short polygon would over-engineer; use rect
+    // for predictable rendering across jsPDF builds.
+    const r = isHi ? 1.5 : 1.1;
+    doc.rect(cx - r, cy - r, r * 2, r * 2, 'FD');
+    if (isHi) {
+      // Outer ring as an unfilled rect (cheap, no extra primitive).
+      doc.setLineWidth(0.4);
+      doc.setDrawColor(40);
+      doc.setFillColor(255, 255, 255);
+      doc.rect(cx - r - 1.2, cy - r - 1.2, r * 2 + 2.4, r * 2 + 2.4, 'D');
+    }
+    doc.setFontSize(6.5);
+    doc.setTextColor(40);
+    doc.text(String(c.value), cx, cy - r - 1.6, { align: 'center' });
+  }
+
+  // X-axis labels.
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(n >= 6 ? 6 : 7);
+  doc.setTextColor(40);
+  for (let i = 0; i < q.categories.length; i++) {
+    const cx = px(i);
+    const ly = plotY + plotH + 3.2;
+    doc.text(q.categories[i].label, cx, ly, { align: 'center' });
+  }
+
+  doc.setTextColor(0);
+  doc.setDrawColor(0);
+}
+
+function drawTimetable(
+  doc: jsPDF,
+  q: ChartQuestion,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  const stations = q.stations ?? [];
+  const times = q.times ?? [];
+  if (stations.length === 0 || times.length === 0) return;
+
+  const cols = times[0].length + 1; // +1 for the station-name column
+  const rows = stations.length + 1; // +1 for the header row
+
+  // Slightly inset within the chart area.
+  const padX = 2;
+  const padY = 2;
+  const tx = x + padX;
+  const ty = y + padY;
+  const tw = w - padX * 2;
+  const th = h - padY * 2;
+
+  const colW = tw / cols;
+  const rowH = th / rows;
+
+  // Outer rect.
+  doc.setDrawColor(40);
+  doc.setLineWidth(0.4);
+  doc.rect(tx, ty, tw, th, 'D');
+
+  // Inner vertical lines.
+  doc.setLineWidth(0.25);
+  for (let c = 1; c < cols; c++) {
+    const cx = tx + c * colW;
+    doc.line(cx, ty, cx, ty + th);
+  }
+  // Inner horizontal lines.
+  for (let r = 1; r < rows; r++) {
+    const ry = ty + r * rowH;
+    doc.line(tx, ry, tx + tw, ry);
+  }
+
+  // Header text.
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(0);
+  doc.text('Station', tx + colW / 2, ty + rowH / 2 + 1, { align: 'center' });
+  for (let c = 0; c < cols - 1; c++) {
+    const headerLabel = `Train ${c + 1}`;
+    doc.text(headerLabel, tx + (c + 1) * colW + colW / 2, ty + rowH / 2 + 1, { align: 'center' });
+  }
+
+  // Body text.
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  for (let r = 0; r < stations.length; r++) {
+    const rowY = ty + (r + 1) * rowH + rowH / 2 + 1;
+    doc.text(stations[r], tx + colW / 2, rowY, { align: 'center' });
+    for (let c = 0; c < times[r].length; c++) {
+      doc.text(times[r][c], tx + (c + 1) * colW + colW / 2, rowY, { align: 'center' });
+    }
+  }
+}
+
 function drawCell(
   doc: jsPDF,
   q: ChartQuestion,
@@ -242,6 +409,10 @@ function drawCell(
   const chartH = cellH - promptH - 8;
   if (isPieSkill(q.skill)) {
     drawPieChart(doc, q, cellX + CELL_PAD, chartTop, cellW - CELL_PAD * 2, chartH);
+  } else if (isLineSkill(q.skill)) {
+    drawLineChart(doc, q, cellX + CELL_PAD, chartTop, cellW - CELL_PAD * 2, chartH);
+  } else if (isTimetableSkill(q.skill)) {
+    drawTimetable(doc, q, cellX + CELL_PAD, chartTop, cellW - CELL_PAD * 2, chartH);
   } else {
     drawBarChart(doc, q, cellX + CELL_PAD, chartTop, cellW - CELL_PAD * 2, chartH);
   }
@@ -337,6 +508,8 @@ function answerKeyText(q: ChartQuestion): string {
   if (kind === 'fraction' && q.expectedFraction) {
     return `${q.expectedFraction.num}/${q.expectedFraction.den}`;
   }
+  if (kind === 'trend' && q.expectedTrend) return q.expectedTrend;
+  if (kind === 'time' && q.expectedTime) return q.expectedTime;
   return String(q.answer);
 }
 

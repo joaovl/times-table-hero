@@ -1,17 +1,23 @@
 // Charts module — chart-reading practice.
 //
-// v1 scope: kid reads a bar chart and types a numeric answer for one of three
-// bar-chart skills (read-bar, compare-bar, total-bar). v2 adds two pie-chart
-// skills (read-pie — identify largest/smallest slice; pie-fraction — express a
-// slice as a fraction of the whole). Line charts and word-problems remain
-// deferred to v3.
+// v1 scope: bar-chart skills (read-bar, compare-bar, total-bar).
+// v2 adds pie-chart skills (read-pie, pie-fraction).
+// v3 adds Y5-coverage skills: line graphs (read-line, line-trend, line-max),
+// timetables (timetable-read, timetable-duration) and multi-step bar problems
+// (multi-step-bar).
 
 export type ChartSkill =
   | 'read-bar'
   | 'compare-bar'
   | 'total-bar'
   | 'read-pie'
-  | 'pie-fraction';
+  | 'pie-fraction'
+  | 'read-line'
+  | 'line-trend'
+  | 'line-max'
+  | 'timetable-read'
+  | 'timetable-duration'
+  | 'multi-step-bar';
 
 export const CHART_SKILL_OPTIONS: ReadonlyArray<ChartSkill> = [
   'read-bar',
@@ -19,6 +25,12 @@ export const CHART_SKILL_OPTIONS: ReadonlyArray<ChartSkill> = [
   'total-bar',
   'read-pie',
   'pie-fraction',
+  'read-line',
+  'line-trend',
+  'line-max',
+  'timetable-read',
+  'timetable-duration',
+  'multi-step-bar',
 ];
 
 export const CHART_SKILL_LABEL: Record<ChartSkill, string> = {
@@ -27,6 +39,30 @@ export const CHART_SKILL_LABEL: Record<ChartSkill, string> = {
   'total-bar': 'total-bar',
   'read-pie': 'read-pie',
   'pie-fraction': 'pie-fraction',
+  'read-line': 'read-line',
+  'line-trend': 'line-trend',
+  'line-max': 'line-max',
+  'timetable-read': 'timetable',
+  'timetable-duration': 'duration',
+  'multi-step-bar': 'multi-step',
+};
+
+/**
+ * UK National Curriculum tags. Exposed so the orchestrator (or a future
+ * curriculum-tagging UI) can group skills by year group.
+ */
+export const CURRICULUM_TAGS: Record<ChartSkill, { year: 'Y3' | 'Y4' | 'Y5'; strand: string }> = {
+  'read-bar': { year: 'Y3', strand: 'Statistics' },
+  'compare-bar': { year: 'Y3', strand: 'Statistics' },
+  'total-bar': { year: 'Y4', strand: 'Statistics' },
+  'read-pie': { year: 'Y4', strand: 'Statistics' },
+  'pie-fraction': { year: 'Y5', strand: 'Statistics' },
+  'read-line': { year: 'Y4', strand: 'Statistics' },
+  'line-trend': { year: 'Y5', strand: 'Statistics' },
+  'line-max': { year: 'Y4', strand: 'Statistics' },
+  'timetable-read': { year: 'Y5', strand: 'Statistics' },
+  'timetable-duration': { year: 'Y5', strand: 'Statistics' },
+  'multi-step-bar': { year: 'Y5', strand: 'Statistics' },
 };
 
 /** Pie-chart skills always use 4 categories regardless of the bar-chart setting. */
@@ -35,8 +71,32 @@ export const PIE_NUM_CATEGORIES = 4;
 /** Denominators kid-friendly enough that slice fractions reduce cleanly. */
 const PIE_DENOMINATORS = [8, 10, 12] as const;
 
+/** Line-chart skills always plot 5..7 points. */
+export const LINE_POINT_COUNTS = [5, 6, 7] as const;
+
+/** Trains/buses for the timetable skills. Always 3 stations, 3 services. */
+export const TIMETABLE_STATIONS = 3;
+export const TIMETABLE_SERVICES = 3;
+
 export function isPieSkill(skill: ChartSkill): boolean {
   return skill === 'read-pie' || skill === 'pie-fraction';
+}
+
+export function isLineSkill(skill: ChartSkill): boolean {
+  return skill === 'read-line' || skill === 'line-trend' || skill === 'line-max';
+}
+
+export function isTimetableSkill(skill: ChartSkill): boolean {
+  return skill === 'timetable-read' || skill === 'timetable-duration';
+}
+
+export type ChartType = 'bar' | 'pie' | 'line' | 'timetable';
+
+export function chartTypeFor(skill: ChartSkill): ChartType {
+  if (isPieSkill(skill)) return 'pie';
+  if (isLineSkill(skill)) return 'line';
+  if (isTimetableSkill(skill)) return 'timetable';
+  return 'bar';
 }
 
 export const CHART_MAX_VALUE_OPTIONS = [10, 50, 100, 1000] as const;
@@ -53,14 +113,35 @@ export interface Fraction {
   den: number;
 }
 
-export type ExpectedKind = 'number' | 'label' | 'fraction';
+export type ExpectedKind = 'number' | 'label' | 'fraction' | 'trend' | 'time';
+
+export type TrendAnswer = 'rising' | 'falling' | 'flat';
+
+/** Multi-step bar query — pick two bars, apply op. */
+export interface MultiStepQuery {
+  op: 'add' | 'sub' | 'diff';
+  aIdx: number;
+  bIdx: number;
+}
+
+/** Timetable query — pick a from/to station and a service row. */
+export interface TimetableQuery {
+  fromIdx: number;
+  toIdx: number;
+  /** Which service row to inspect. */
+  serviceIdx: number;
+  question: 'arrival' | 'duration';
+}
 
 export interface ChartQuestion {
   skill: ChartSkill;
+  /** Discriminator for the renderer to pick the right chart primitive. */
+  chartType?: ChartType;
   /**
-   * 4..7 categories for bar charts, exactly 4 for pie charts. Each `value`
-   * is an integer count. For pie charts the values are slice counts and sum
-   * to the pie denominator.
+   * 4..7 categories for bar charts, exactly 4 for pie charts, 5..7 points
+   * for line charts. Each `value` is an integer count. For pie charts the
+   * values are slice counts and sum to the pie denominator. For timetable
+   * skills this is empty — see `stations` / `times` instead.
    */
   categories: ChartCategory[];
   /**
@@ -70,20 +151,44 @@ export interface ChartQuestion {
    *   total-bar: every index (0..n-1).
    *   read-pie: exactly 1 target (largest or smallest slice).
    *   pie-fraction: exactly 1 target (the highlighted slice).
+   *   read-line: exactly 1 target (the queried point).
+   *   line-trend: empty.
+   *   line-max: exactly 1 target (the largest point).
+   *   multi-step-bar: exactly 2 distinct targets (a, b).
+   *   timetable-*: empty.
    */
   targets: number[];
   /** Human-readable prompt the kid sees, e.g. "How many votes did Tuesday get?". */
   prompt: string;
-  /** Expected numeric answer (used by bar-chart skills). */
+  /** Expected numeric answer (used by numeric skills). */
   answer: number;
   /** Kind of expected answer. Defaults to 'number'. */
   expectedKind?: ExpectedKind;
-  /** Set when expectedKind === 'label' (read-pie). */
+  /** Set when expectedKind === 'label'. */
   expectedLabel?: string;
   /** Set when expectedKind === 'fraction' (pie-fraction), already reduced. */
   expectedFraction?: Fraction;
+  /** Set when expectedKind === 'trend' (line-trend). */
+  expectedTrend?: TrendAnswer;
+  /** Set when expectedKind === 'time' (timetable-read), as canonical HH:MM. */
+  expectedTime?: string;
   /** Plain noun for the y-axis / prompt unit, e.g. "votes", "apples". */
   unit: string;
+
+  // Timetable-only fields.
+  /** Station names (rows) for timetable skills, e.g. ['London', 'Reading', 'Bath']. */
+  stations?: string[];
+  /**
+   * Departure/arrival times for timetable skills as HH:MM strings.
+   * times[stationIdx][serviceIdx] — same station per row, services as columns.
+   * Length: stations.length × services.
+   */
+  times?: string[][];
+  /** Query parameters for timetable skills. */
+  timetableQuery?: TimetableQuery;
+
+  /** Query parameters for multi-step bar skill. */
+  multiStepQuery?: MultiStepQuery;
 }
 
 export interface ChartSettings {
@@ -139,6 +244,43 @@ const POOLS: ReadonlyArray<LabelPool> = [
     unit: 'votes',
     labels: ['Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Purple', 'Orange'],
   },
+];
+
+/**
+ * Line-chart pools — ordered (time-series friendly) and use plain ASCII
+ * labels. We always pick a contiguous run from the start so the x-axis reads
+ * in natural order.
+ */
+interface OrderedPool {
+  readonly name: string;
+  readonly unit: string;
+  readonly labels: ReadonlyArray<string>;
+}
+
+const LINE_POOLS: ReadonlyArray<OrderedPool> = [
+  {
+    name: 'days',
+    unit: 'visitors',
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  },
+  {
+    name: 'months',
+    unit: 'sales',
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+  },
+  {
+    name: 'weeks',
+    unit: 'books read',
+    labels: ['Wk1', 'Wk2', 'Wk3', 'Wk4', 'Wk5', 'Wk6', 'Wk7'],
+  },
+];
+
+/** Station pools for timetable skills. Always pick the first N. */
+const STATION_POOLS: ReadonlyArray<ReadonlyArray<string>> = [
+  ['London', 'Reading', 'Bath', 'Bristol'],
+  ['Oxford', 'Didcot', 'Swindon', 'Cardiff'],
+  ['York', 'Leeds', 'Derby', 'Birmingham'],
+  ['Edinburgh', 'Newcastle', 'Durham', 'York'],
 ];
 
 function randInt(min: number, max: number): number {
@@ -341,13 +483,433 @@ function buildPieFraction(
   };
 }
 
+// -----------------------------------------------------------------------------
+// Line-chart helpers.
+
+function pickLinePool(prevName: string | null): OrderedPool {
+  if (LINE_POOLS.length <= 1 || !prevName) return pick(LINE_POOLS);
+  const others = LINE_POOLS.filter(p => p.name !== prevName);
+  return pick(others);
+}
+
+/**
+ * Generate `count` line-chart points with a clear trend signal so line-trend
+ * is unambiguous and line-max has a single winner.
+ *
+ *   - 'rising': strictly non-decreasing with a clear net rise.
+ *   - 'falling': strictly non-increasing with a clear net fall.
+ *   - 'flat': repeated value (+/- tiny jitter is avoided to keep it readable).
+ */
+function buildTrendValues(
+  count: number,
+  maxValue: number,
+  trend: TrendAnswer,
+): number[] {
+  const out: number[] = [];
+  if (trend === 'flat') {
+    const v = randInt(Math.max(1, Math.floor(maxValue / 4)), Math.max(2, Math.floor(maxValue / 2)));
+    for (let i = 0; i < count; i++) out.push(v);
+    return out;
+  }
+  // For rising/falling: walk a monotone sequence with random positive steps.
+  // Ensure the total span fits inside [1, maxValue].
+  const step = Math.max(1, Math.floor(maxValue / (count * 1.5)));
+  let cur =
+    trend === 'rising'
+      ? randInt(1, Math.max(1, Math.floor(maxValue / 4)))
+      : randInt(Math.max(2, Math.floor((maxValue * 3) / 4)), Math.max(3, maxValue - 1));
+  out.push(cur);
+  for (let i = 1; i < count; i++) {
+    const delta = randInt(1, Math.max(1, step));
+    cur = trend === 'rising' ? cur + delta : cur - delta;
+    // Clamp to [1, maxValue] without flattening neighbouring points.
+    if (cur < 1) cur = 1;
+    if (cur > maxValue) cur = maxValue;
+    out.push(cur);
+  }
+  return out;
+}
+
+/** Sample a value sequence with no specific trend constraint. Used by read-line. */
+function buildFreeValues(count: number, maxValue: number): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < count; i++) out.push(randInt(1, maxValue));
+  return out;
+}
+
+function buildLineCategories(pool: OrderedPool, count: number, values: number[]): ChartCategory[] {
+  // Take the first `count` labels so the x-axis is in natural order.
+  const labels = pool.labels.slice(0, count);
+  return labels.map((label, i) => ({ label, value: values[i] }));
+}
+
+function buildReadLine(categories: ChartCategory[], unit: string): {
+  targets: number[];
+  prompt: string;
+  answer: number;
+} {
+  const t = randInt(0, categories.length - 1);
+  return {
+    targets: [t],
+    prompt: `What was the number of ${unit} on ${categories[t].label}?`,
+    answer: categories[t].value,
+  };
+}
+
+function buildLineTrend(trend: TrendAnswer, unit: string): {
+  targets: number[];
+  prompt: string;
+  answer: number;
+  expectedTrend: TrendAnswer;
+} {
+  return {
+    targets: [],
+    prompt: `Is the trend of ${unit} rising, falling or flat?`,
+    answer: 0,
+    expectedTrend: trend,
+  };
+}
+
+function buildLineMax(categories: ChartCategory[], unit: string): {
+  targets: number[];
+  prompt: string;
+  answer: number;
+  expectedLabel: string;
+} {
+  let idx = 0;
+  for (let i = 1; i < categories.length; i++) {
+    if (categories[i].value > categories[idx].value) idx = i;
+  }
+  return {
+    targets: [idx],
+    prompt: `Which point had the most ${unit}?`,
+    answer: categories[idx].value,
+    expectedLabel: categories[idx].label,
+  };
+}
+
+/**
+ * Pick line values with a unique maximum (line-max needs an unambiguous
+ * winner). Up to a few attempts; tweak the largest if ties remain.
+ */
+function buildLineMaxValues(count: number, maxValue: number): number[] {
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const vs = buildFreeValues(count, maxValue);
+    const max = Math.max(...vs);
+    const tieCount = vs.filter(v => v === max).length;
+    if (tieCount === 1) return vs;
+  }
+  // Fallback: pick a clear winner by bumping one value past the rest.
+  const vs = buildFreeValues(count, Math.max(2, maxValue - 1));
+  const idx = randInt(0, count - 1);
+  vs[idx] = Math.min(maxValue, Math.max(...vs) + 1);
+  return vs;
+}
+
+// -----------------------------------------------------------------------------
+// Multi-step bar helper.
+
+function buildMultiStep(
+  categories: ChartCategory[],
+  unit: string,
+): {
+  targets: number[];
+  prompt: string;
+  answer: number;
+  multiStepQuery: MultiStepQuery;
+} {
+  const a = randInt(0, categories.length - 1);
+  let b = randInt(0, categories.length - 1);
+  while (b === a) b = randInt(0, categories.length - 1);
+  const ops: MultiStepQuery['op'][] = ['add', 'sub', 'diff'];
+  const op = pick(ops);
+  const A = categories[a];
+  const B = categories[b];
+  let answer = 0;
+  let prompt = '';
+  // For 'sub' we make sure the answer is non-negative by always subtracting
+  // the smaller value from the larger value but still naming both bars.
+  if (op === 'add') {
+    answer = A.value + B.value;
+    prompt = `What is the total of ${unit} for ${A.label} and ${B.label}?`;
+  } else if (op === 'sub') {
+    const xIdx = A.value >= B.value ? a : b;
+    const yIdx = A.value >= B.value ? b : a;
+    const x = categories[xIdx];
+    const y = categories[yIdx];
+    answer = Math.abs(A.value - B.value);
+    prompt = `How many ${unit} does ${x.label} have minus ${y.label}?`;
+    return {
+      targets: [xIdx, yIdx],
+      prompt,
+      answer,
+      multiStepQuery: { op: 'sub', aIdx: xIdx, bIdx: yIdx },
+    };
+  } else {
+    answer = Math.abs(A.value - B.value);
+    prompt = `What is the difference in ${unit} between ${A.label} and ${B.label}?`;
+  }
+  return {
+    targets: [a, b],
+    prompt,
+    answer,
+    multiStepQuery: { op, aIdx: a, bIdx: b },
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Timetable helpers.
+
+/** Format a minutes-since-midnight integer as HH:MM. */
+export function formatHHMM(minutes: number): string {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Parse a typed time as HH:MM or H:MM. Returns canonical "HH:MM" string on
+ * success; null otherwise. Accepts whitespace around tokens.
+ */
+export function parseTimeAnswer(raw: string): string | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const m = trimmed.match(/^(\d{1,2})\s*:\s*(\d{2})$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10);
+  if (!Number.isFinite(h) || !Number.isFinite(mm)) return null;
+  if (h < 0 || h > 23) return null;
+  if (mm < 0 || mm > 59) return null;
+  return `${h.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Build a timetable: TIMETABLE_STATIONS rows by TIMETABLE_SERVICES columns.
+ * Each service has a base departure time at the first station and successive
+ * leg durations (in minutes) added per station. Durations stay in [5, 60].
+ */
+function buildTimetable(): { stations: string[]; times: string[][] } {
+  const stationLabels = pick(STATION_POOLS).slice(0, TIMETABLE_STATIONS);
+  const stations = [...stationLabels];
+
+  // Per-service departure base + per-leg durations (independent of service).
+  // First service starts somewhere between 06:00 and 09:00. Subsequent
+  // services depart 30..90 minutes later, so the table reads as morning runs.
+  const legDurations: number[] = [];
+  for (let s = 1; s < TIMETABLE_STATIONS; s++) {
+    legDurations.push(randInt(15, 60));
+  }
+  const baseStart = randInt(6 * 60, 9 * 60);
+  const serviceStarts: number[] = [baseStart];
+  for (let i = 1; i < TIMETABLE_SERVICES; i++) {
+    serviceStarts.push(serviceStarts[i - 1] + randInt(30, 90));
+  }
+
+  const times: string[][] = [];
+  for (let stIdx = 0; stIdx < TIMETABLE_STATIONS; stIdx++) {
+    const row: string[] = [];
+    for (let svIdx = 0; svIdx < TIMETABLE_SERVICES; svIdx++) {
+      let t = serviceStarts[svIdx];
+      for (let leg = 0; leg < stIdx; leg++) t += legDurations[leg];
+      row.push(formatHHMM(t));
+    }
+    times.push(row);
+  }
+  return { stations, times };
+}
+
+function diffMinutes(from: string, to: string): number {
+  const [fh, fm] = from.split(':').map(n => parseInt(n, 10));
+  const [th, tm] = to.split(':').map(n => parseInt(n, 10));
+  return (th * 60 + tm) - (fh * 60 + fm);
+}
+
+function buildTimetableRead(
+  stations: string[],
+  times: string[][],
+): {
+  targets: number[];
+  prompt: string;
+  answer: number;
+  expectedTime: string;
+  timetableQuery: TimetableQuery;
+} {
+  const fromIdx = randInt(0, stations.length - 2);
+  const toIdx = randInt(fromIdx + 1, stations.length - 1);
+  const serviceIdx = randInt(0, times[0].length - 1);
+  const arrivalTime = times[toIdx][serviceIdx];
+  const fromTime = times[fromIdx][serviceIdx];
+  return {
+    targets: [],
+    prompt: `The train leaves ${stations[fromIdx]} at ${fromTime}. What time does it arrive at ${stations[toIdx]}?`,
+    answer: 0,
+    expectedTime: arrivalTime,
+    timetableQuery: { fromIdx, toIdx, serviceIdx, question: 'arrival' },
+  };
+}
+
+function buildTimetableDuration(
+  stations: string[],
+  times: string[][],
+): {
+  targets: number[];
+  prompt: string;
+  answer: number;
+  timetableQuery: TimetableQuery;
+} {
+  const fromIdx = randInt(0, stations.length - 2);
+  const toIdx = randInt(fromIdx + 1, stations.length - 1);
+  const serviceIdx = randInt(0, times[0].length - 1);
+  const fromTime = times[fromIdx][serviceIdx];
+  const toTime = times[toIdx][serviceIdx];
+  const minutes = diffMinutes(fromTime, toTime);
+  return {
+    targets: [],
+    prompt: `How many minutes does the journey from ${stations[fromIdx]} to ${stations[toIdx]} take?`,
+    answer: minutes,
+    timetableQuery: { fromIdx, toIdx, serviceIdx, question: 'duration' },
+  };
+}
+
 function buildQuestion(
   skill: ChartSkill,
   numCategories: number,
   maxValue: number,
   prevPoolName: string | null,
 ): { question: ChartQuestion; poolName: string } {
+  // Line-chart skills use their own pool family.
+  if (isLineSkill(skill)) {
+    const pool = pickLinePool(prevPoolName);
+    const count = pick(LINE_POINT_COUNTS);
+    let values: number[];
+    let trend: TrendAnswer | null = null;
+    if (skill === 'line-trend') {
+      const trends: TrendAnswer[] = ['rising', 'falling', 'flat'];
+      trend = pick(trends);
+      values = buildTrendValues(count, maxValue, trend);
+    } else if (skill === 'line-max') {
+      values = buildLineMaxValues(count, maxValue);
+    } else {
+      values = buildFreeValues(count, maxValue);
+    }
+    const categories = buildLineCategories(pool, count, values);
+    const unit = pool.unit;
+    if (skill === 'read-line') {
+      const built = buildReadLine(categories, unit);
+      return {
+        question: {
+          skill,
+          chartType: 'line',
+          categories,
+          targets: built.targets,
+          prompt: built.prompt,
+          answer: built.answer,
+          expectedKind: 'number',
+          unit,
+        },
+        poolName: pool.name,
+      };
+    }
+    if (skill === 'line-trend') {
+      const built = buildLineTrend(trend as TrendAnswer, unit);
+      return {
+        question: {
+          skill,
+          chartType: 'line',
+          categories,
+          targets: built.targets,
+          prompt: built.prompt,
+          answer: built.answer,
+          expectedKind: 'trend',
+          expectedTrend: built.expectedTrend,
+          unit,
+        },
+        poolName: pool.name,
+      };
+    }
+    // line-max
+    const built = buildLineMax(categories, unit);
+    return {
+      question: {
+        skill,
+        chartType: 'line',
+        categories,
+        targets: built.targets,
+        prompt: built.prompt,
+        answer: built.answer,
+        expectedKind: 'label',
+        expectedLabel: built.expectedLabel,
+        unit,
+      },
+      poolName: pool.name,
+    };
+  }
+
+  // Timetable skills — no label pool, fixed station table.
+  if (isTimetableSkill(skill)) {
+    const { stations, times } = buildTimetable();
+    if (skill === 'timetable-read') {
+      const built = buildTimetableRead(stations, times);
+      return {
+        question: {
+          skill,
+          chartType: 'timetable',
+          categories: [],
+          targets: built.targets,
+          prompt: built.prompt,
+          answer: built.answer,
+          expectedKind: 'time',
+          expectedTime: built.expectedTime,
+          stations,
+          times,
+          timetableQuery: built.timetableQuery,
+          unit: 'time',
+        },
+        poolName: 'timetable',
+      };
+    }
+    const built = buildTimetableDuration(stations, times);
+    return {
+      question: {
+        skill,
+        chartType: 'timetable',
+        categories: [],
+        targets: built.targets,
+        prompt: built.prompt,
+        answer: built.answer,
+        expectedKind: 'number',
+        stations,
+        times,
+        timetableQuery: built.timetableQuery,
+        unit: 'minutes',
+      },
+      poolName: 'timetable',
+    };
+  }
+
   const pool = pickPool(prevPoolName);
+
+  if (skill === 'multi-step-bar') {
+    const categories = randomCategories(pool, numCategories, maxValue);
+    const unit = pool.unit;
+    const built = buildMultiStep(categories, unit);
+    return {
+      question: {
+        skill,
+        chartType: 'bar',
+        categories,
+        targets: built.targets,
+        prompt: built.prompt,
+        answer: built.answer,
+        expectedKind: 'number',
+        multiStepQuery: built.multiStepQuery,
+        unit,
+      },
+      poolName: pool.name,
+    };
+  }
 
   if (skill === 'read-pie' || skill === 'pie-fraction') {
     const { categories, total } = randomPieCategories(pool);
@@ -475,6 +1037,16 @@ export function isAnswerCorrect(
   if (kind === 'label') {
     if (typeof typed !== 'string') return false;
     return typed.trim() === (q.expectedLabel ?? '');
+  }
+  if (kind === 'trend') {
+    if (typeof typed !== 'string') return false;
+    return typed.trim().toLowerCase() === (q.expectedTrend ?? '');
+  }
+  if (kind === 'time') {
+    if (typeof typed !== 'string') return false;
+    const parsed = parseTimeAnswer(typed);
+    if (parsed === null) return false;
+    return parsed === (q.expectedTime ?? '');
   }
   if (kind === 'fraction') {
     const expected = q.expectedFraction;

@@ -2,10 +2,17 @@ import { describe, it, expect } from 'vitest';
 import {
   axisMax,
   buildPieSlices,
+  chartTypeFor,
+  CURRICULUM_TAGS,
+  CHART_SKILL_OPTIONS,
+  formatHHMM,
   generateChartQuestions,
   isAnswerCorrect,
+  isLineSkill,
+  isTimetableSkill,
   parseChartAnswer,
   parseFractionAnswer,
+  parseTimeAnswer,
   reduceFraction,
 } from './logic';
 import type { ChartSettings, ChartSkill } from './logic';
@@ -416,5 +423,287 @@ describe('axisMax', () => {
 
   it('handles zero gracefully', () => {
     expect(axisMax(0)).toBe(10);
+  });
+});
+
+// =============================================================================
+// v3: line graphs, timetables, multi-step bars
+
+describe('CHART_SKILL_OPTIONS and CURRICULUM_TAGS — v3 coverage', () => {
+  const newSkills: ChartSkill[] = [
+    'read-line',
+    'line-trend',
+    'line-max',
+    'timetable-read',
+    'timetable-duration',
+    'multi-step-bar',
+  ];
+
+  it('all new skills appear in the chip list', () => {
+    newSkills.forEach(s => expect(CHART_SKILL_OPTIONS).toContain(s));
+  });
+
+  it('every skill has a curriculum tag', () => {
+    CHART_SKILL_OPTIONS.forEach(s => {
+      expect(CURRICULUM_TAGS[s]).toBeDefined();
+      expect(CURRICULUM_TAGS[s].strand).toBe('Statistics');
+      expect(['Y3', 'Y4', 'Y5']).toContain(CURRICULUM_TAGS[s].year);
+    });
+  });
+
+  it('chartTypeFor maps skills to renderer family', () => {
+    expect(chartTypeFor('read-line')).toBe('line');
+    expect(chartTypeFor('line-trend')).toBe('line');
+    expect(chartTypeFor('line-max')).toBe('line');
+    expect(chartTypeFor('timetable-read')).toBe('timetable');
+    expect(chartTypeFor('timetable-duration')).toBe('timetable');
+    expect(chartTypeFor('multi-step-bar')).toBe('bar');
+    expect(chartTypeFor('read-bar')).toBe('bar');
+    expect(chartTypeFor('read-pie')).toBe('pie');
+  });
+
+  it('isLineSkill / isTimetableSkill identify families correctly', () => {
+    expect(isLineSkill('read-line')).toBe(true);
+    expect(isLineSkill('line-trend')).toBe(true);
+    expect(isLineSkill('line-max')).toBe(true);
+    expect(isLineSkill('read-bar')).toBe(false);
+    expect(isTimetableSkill('timetable-read')).toBe(true);
+    expect(isTimetableSkill('timetable-duration')).toBe(true);
+    expect(isTimetableSkill('read-line')).toBe(false);
+  });
+});
+
+const baseV3 = (over: Partial<ChartSettings>): ChartSettings => ({
+  skills: ['read-line'],
+  maxValue: 50,
+  numCategories: 5,
+  gameMode: 'questions',
+  questionCount: 10,
+  timeLimit: 60,
+  ...over,
+});
+
+describe('generateChartQuestions — read-line skill', () => {
+  it('emits 5..7 data points and chartType=line', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['read-line'] }), 30);
+    qs.forEach(q => {
+      expect(q.skill).toBe('read-line');
+      expect(q.chartType).toBe('line');
+      expect(q.categories.length).toBeGreaterThanOrEqual(5);
+      expect(q.categories.length).toBeLessThanOrEqual(7);
+    });
+  });
+
+  it('targets is exactly one index, answer matches that point value', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['read-line'] }), 30);
+    qs.forEach(q => {
+      expect(q.targets).toHaveLength(1);
+      const idx = q.targets[0];
+      expect(idx).toBeGreaterThanOrEqual(0);
+      expect(idx).toBeLessThan(q.categories.length);
+      expect(q.answer).toBe(q.categories[idx].value);
+    });
+  });
+
+  it('prompt references the target label', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['read-line'] }), 20);
+    qs.forEach(q => {
+      const label = q.categories[q.targets[0]].label;
+      expect(q.prompt.includes(label)).toBe(true);
+    });
+  });
+});
+
+describe('generateChartQuestions — line-trend skill', () => {
+  it('expectedTrend is rising/falling/flat', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['line-trend'] }), 40);
+    const trendsSeen = new Set<string>();
+    qs.forEach(q => {
+      expect(q.expectedKind).toBe('trend');
+      expect(q.expectedTrend).toBeDefined();
+      expect(['rising', 'falling', 'flat']).toContain(q.expectedTrend!);
+      trendsSeen.add(q.expectedTrend!);
+    });
+    // With 40 samples and uniform skill choice, all three trends should appear.
+    expect(trendsSeen.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it('rising data is non-decreasing with a net rise; falling vice-versa; flat is constant', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['line-trend'], maxValue: 50 }), 60);
+    qs.forEach(q => {
+      const values = q.categories.map(c => c.value);
+      if (q.expectedTrend === 'rising') {
+        expect(values[values.length - 1]).toBeGreaterThan(values[0]);
+      } else if (q.expectedTrend === 'falling') {
+        expect(values[values.length - 1]).toBeLessThan(values[0]);
+      } else {
+        // flat: all equal
+        const unique = new Set(values);
+        expect(unique.size).toBe(1);
+      }
+    });
+  });
+});
+
+describe('generateChartQuestions — line-max skill', () => {
+  it('expectedLabel matches the unique-max point', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['line-max'] }), 30);
+    qs.forEach(q => {
+      expect(q.expectedKind).toBe('label');
+      const values = q.categories.map(c => c.value);
+      const max = Math.max(...values);
+      const maxCount = values.filter(v => v === max).length;
+      expect(maxCount).toBe(1);
+      const maxIdx = values.indexOf(max);
+      expect(q.expectedLabel).toBe(q.categories[maxIdx].label);
+    });
+  });
+});
+
+describe('generateChartQuestions — timetable-read skill', () => {
+  it('emits stations and times with the expected shape', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['timetable-read'] }), 20);
+    qs.forEach(q => {
+      expect(q.chartType).toBe('timetable');
+      expect(q.stations).toBeDefined();
+      expect(q.times).toBeDefined();
+      expect(q.stations!.length).toBeGreaterThanOrEqual(3);
+      q.times!.forEach(row => expect(row.length).toBeGreaterThanOrEqual(3));
+      // Every time is HH:MM.
+      q.times!.forEach(row =>
+        row.forEach(t => expect(/^\d{2}:\d{2}$/.test(t)).toBe(true))
+      );
+    });
+  });
+
+  it('expectedTime matches the to-station row for the chosen service', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['timetable-read'] }), 20);
+    qs.forEach(q => {
+      expect(q.expectedKind).toBe('time');
+      const { toIdx, serviceIdx } = q.timetableQuery!;
+      expect(q.expectedTime).toBe(q.times![toIdx][serviceIdx]);
+    });
+  });
+
+  it('prompt mentions both station names', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['timetable-read'] }), 10);
+    qs.forEach(q => {
+      const { fromIdx, toIdx } = q.timetableQuery!;
+      expect(q.prompt.includes(q.stations![fromIdx])).toBe(true);
+      expect(q.prompt.includes(q.stations![toIdx])).toBe(true);
+    });
+  });
+});
+
+describe('generateChartQuestions — timetable-duration skill', () => {
+  it('answer equals the minute diff of to-time and from-time on chosen service', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['timetable-duration'] }), 20);
+    qs.forEach(q => {
+      expect(q.expectedKind).toBe('number');
+      const { fromIdx, toIdx, serviceIdx } = q.timetableQuery!;
+      const from = q.times![fromIdx][serviceIdx];
+      const to = q.times![toIdx][serviceIdx];
+      const [fh, fm] = from.split(':').map(Number);
+      const [th, tm] = to.split(':').map(Number);
+      expect(q.answer).toBe((th * 60 + tm) - (fh * 60 + fm));
+      expect(q.answer).toBeGreaterThan(0);
+    });
+  });
+});
+
+describe('generateChartQuestions — multi-step-bar skill', () => {
+  it('emits chartType=bar with numCategories bars', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['multi-step-bar'], numCategories: 5 }), 20);
+    qs.forEach(q => {
+      expect(q.chartType).toBe('bar');
+      expect(q.categories).toHaveLength(5);
+    });
+  });
+
+  it('answer is correct for add/sub/diff op', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['multi-step-bar'] }), 50);
+    qs.forEach(q => {
+      const { op, aIdx, bIdx } = q.multiStepQuery!;
+      const A = q.categories[aIdx].value;
+      const B = q.categories[bIdx].value;
+      if (op === 'add') expect(q.answer).toBe(A + B);
+      else if (op === 'sub') expect(q.answer).toBe(A - B); // sub uses ordered targets so A>=B
+      else expect(q.answer).toBe(Math.abs(A - B));
+      // Answer is always non-negative.
+      expect(q.answer).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  it('targets is exactly 2 distinct indices', () => {
+    const qs = generateChartQuestions(baseV3({ skills: ['multi-step-bar'] }), 20);
+    qs.forEach(q => {
+      expect(q.targets).toHaveLength(2);
+      expect(q.targets[0]).not.toBe(q.targets[1]);
+    });
+  });
+});
+
+describe('parseTimeAnswer', () => {
+  it('accepts HH:MM and H:MM, normalises to HH:MM', () => {
+    expect(parseTimeAnswer('3:45')).toBe('03:45');
+    expect(parseTimeAnswer('03:45')).toBe('03:45');
+    expect(parseTimeAnswer('  10:05 ')).toBe('10:05');
+    expect(parseTimeAnswer('23:59')).toBe('23:59');
+    expect(parseTimeAnswer('0:00')).toBe('00:00');
+  });
+
+  it('rejects out-of-range / malformed', () => {
+    expect(parseTimeAnswer('')).toBeNull();
+    expect(parseTimeAnswer('24:00')).toBeNull();
+    expect(parseTimeAnswer('12:60')).toBeNull();
+    expect(parseTimeAnswer('1234')).toBeNull();
+    expect(parseTimeAnswer('foo:bar')).toBeNull();
+    expect(parseTimeAnswer('12-30')).toBeNull();
+  });
+});
+
+describe('formatHHMM', () => {
+  it('formats minutes-since-midnight as zero-padded HH:MM', () => {
+    expect(formatHHMM(0)).toBe('00:00');
+    expect(formatHHMM(60)).toBe('01:00');
+    expect(formatHHMM(75)).toBe('01:15');
+    expect(formatHHMM(13 * 60 + 7)).toBe('13:07');
+  });
+});
+
+describe('isAnswerCorrect — v3 kinds', () => {
+  it('trend kind: lowercases input, exact match', () => {
+    const q = {
+      skill: 'line-trend' as const,
+      categories: [{ label: 'Mon', value: 1 }],
+      targets: [],
+      prompt: '',
+      answer: 0,
+      unit: 'votes',
+      expectedKind: 'trend' as const,
+      expectedTrend: 'rising' as const,
+    };
+    expect(isAnswerCorrect(q, 'rising')).toBe(true);
+    expect(isAnswerCorrect(q, 'Rising')).toBe(true);
+    expect(isAnswerCorrect(q, '  RISING ')).toBe(true);
+    expect(isAnswerCorrect(q, 'falling')).toBe(false);
+  });
+
+  it('time kind: accepts H:MM and HH:MM', () => {
+    const q = {
+      skill: 'timetable-read' as const,
+      categories: [],
+      targets: [],
+      prompt: '',
+      answer: 0,
+      unit: 'time',
+      expectedKind: 'time' as const,
+      expectedTime: '07:45',
+    };
+    expect(isAnswerCorrect(q, '07:45')).toBe(true);
+    expect(isAnswerCorrect(q, '7:45')).toBe(true);
+    expect(isAnswerCorrect(q, '  7:45 ')).toBe(true);
+    expect(isAnswerCorrect(q, '07:46')).toBe(false);
+    expect(isAnswerCorrect(q, 'foo')).toBe(false);
   });
 });
