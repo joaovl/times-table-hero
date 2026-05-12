@@ -2,11 +2,16 @@
 // open-source examples exist (e.g. CodePen / SVG tutorials). Pure
 // primitives, no library dependency.
 
+import { numeralForHour } from './logic';
+import type { TimeNumerals } from './logic';
+
 interface Props {
   hours: number;   // 0..23 (display logic converts to 12h face)
   minutes: number; // 0..59
   size?: number;   // pixels (CSS); SVG scales via viewBox
   className?: string;
+  /** Numeral style on the clock face. Default 'arabic'. */
+  numerals?: TimeNumerals;
 }
 
 /**
@@ -20,7 +25,7 @@ interface Props {
  * Hour hand angle accounts for minute progression (i.e. at 3:30 the hour
  * hand is halfway between 3 and 4).
  */
-export function ClockDisplay({ hours, minutes, size = 200, className }: Props) {
+export function ClockDisplay({ hours, minutes, size = 200, className, numerals = 'arabic' }: Props) {
   // SVG coordinate space is a constant 100x100; the viewBox handles scaling.
   const cx = 50;
   const cy = 50;
@@ -57,7 +62,7 @@ export function ClockDisplay({ hours, minutes, size = 200, className }: Props) {
 
   // 12 hour numerals positioned just inside the tick ring.
   const numeralRadius = radius - 9;
-  const numerals = Array.from({ length: 12 }, (_, i) => {
+  const numeralsList = Array.from({ length: 12 }, (_, i) => {
     const hour = i + 1; // 1..12 at angles 30°, 60°, ..., 360°
     const angle = hour * 30 * (Math.PI / 180);
     const x = cx + numeralRadius * Math.sin(angle);
@@ -91,22 +96,28 @@ export function ClockDisplay({ hours, minutes, size = 200, className }: Props) {
         />
       ))}
 
-      {/* Hour numerals */}
-      {numerals.map(n => (
-        <text
-          key={n.hour}
-          x={n.x}
-          y={n.y}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize="8"
-          fontWeight="bold"
-          fill="currentColor"
-          fontFamily="sans-serif"
-        >
-          {n.hour}
-        </text>
-      ))}
+      {/* Hour numerals (Arabic, Roman, or mixed per `numerals` prop) */}
+      {numeralsList.map(n => {
+        const label = numeralForHour(n.hour, numerals);
+        // Roman labels (e.g. VIII) can be up to ~3.5x wider than Arabic;
+        // shrink the font size for Roman to keep them inside the tick ring.
+        const fs = label.length >= 4 ? 6 : label.length === 3 ? 6.5 : 8;
+        return (
+          <text
+            key={n.hour}
+            x={n.x}
+            y={n.y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={fs}
+            fontWeight="bold"
+            fill="currentColor"
+            fontFamily="sans-serif"
+          >
+            {label}
+          </text>
+        );
+      })}
 
       {/* Hour hand */}
       <line

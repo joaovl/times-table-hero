@@ -97,7 +97,7 @@ export function TimeResults({ result, onPlayAgain, onNewGame, userId }: Props) {
                   <span className="font-medium">
                     {q.prompt}
                     <span className="ml-2 text-xs text-muted-foreground">
-                      ({q.skill === 'arith' ? 'arith' : 'read'} · {q.format})
+                      ({q.skill === 'arith' ? 'arith' : q.skill === 'duration' ? 'duration' : 'read'} · {q.format})
                     </span>
                   </span>
                   <span className="flex items-center gap-2 text-sm">

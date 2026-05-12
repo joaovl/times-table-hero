@@ -4,8 +4,13 @@ import type {
   TimeFormat,
   TimeSkill,
   TimeArithDifficulty,
+  TimeNumerals,
 } from './logic';
-import { TIME_PRECISION_OPTIONS, TIME_SKILL_OPTIONS } from './logic';
+import {
+  TIME_PRECISION_OPTIONS,
+  TIME_SKILL_OPTIONS,
+  TIME_NUMERALS_OPTIONS,
+} from './logic';
 
 function key(base: string, userId?: string): string {
   return userId ? `time-${base}-${userId}` : `time-${base}`;
@@ -15,6 +20,7 @@ const DEFAULT_SETTINGS: TimeSettings = {
   skills: ['read'],
   precisions: ['hour'],
   format: '12h',
+  numerals: 'arabic',
   arithDifficulty: 'easy',
   gameMode: 'questions',
   questionCount: 10,
@@ -64,6 +70,12 @@ function normaliseArithDifficulty(value: unknown): TimeArithDifficulty {
   return DEFAULT_SETTINGS.arithDifficulty;
 }
 
+function normaliseNumerals(value: unknown): TimeNumerals {
+  const valid = new Set<string>(TIME_NUMERALS_OPTIONS);
+  if (typeof value === 'string' && valid.has(value)) return value as TimeNumerals;
+  return DEFAULT_SETTINGS.numerals;
+}
+
 export function getSavedTimeSettings(userId?: string): TimeSettings {
   try {
     const data = localStorage.getItem(key('settings', userId));
@@ -73,6 +85,7 @@ export function getSavedTimeSettings(userId?: string): TimeSettings {
       skills: normaliseSkills(parsed.skills),
       precisions: normalisePrecisions(parsed.precisions),
       format: normaliseFormat(parsed.format),
+      numerals: normaliseNumerals(parsed.numerals),
       arithDifficulty: normaliseArithDifficulty(parsed.arithDifficulty),
       gameMode: parsed.gameMode === 'time' ? 'time' : 'questions',
       questionCount: typeof parsed.questionCount === 'number'

@@ -1,6 +1,17 @@
 import jsPDF from 'jspdf';
-import type { TimeQuestion, TimeReadQuestion, TimeArithQuestion } from './logic';
-import { expectedAnswerString, formatArithEquation } from './logic';
+import type {
+  TimeQuestion,
+  TimeReadQuestion,
+  TimeArithQuestion,
+  TimeDurationQuestion,
+  TimeNumerals,
+} from './logic';
+import {
+  expectedAnswerString,
+  formatArithEquation,
+  formatDurationPrompt,
+  numeralForHour,
+} from './logic';
 
 export interface TimePdfOptions {
   pages: TimeQuestion[][];
@@ -9,6 +20,8 @@ export interface TimePdfOptions {
   studentName?: string;
   /** Append a final page that lists every answer in number order. */
   includeAnswerKey?: boolean;
+  /** Clock-face numeral style. Defaults to 'arabic' for back-compat. */
+  numerals?: TimeNumerals;
 }
 
 const A4_W = 210;
@@ -32,7 +45,8 @@ function drawClock(
   q: TimeReadQuestion,
   centerX: number,
   centerY: number,
-  radius: number
+  radius: number,
+  numerals: TimeNumerals = 'arabic'
 ) {
   // Face circle.
   doc.setLineWidth(0.4);
@@ -54,16 +68,24 @@ function drawClock(
     doc.line(x1, y1, x2, y2);
   }
 
-  // Hour numerals. Helvetica's WinAnsi covers 0-9 — encoding safe.
+  // Hour numerals. Helvetica's WinAnsi covers 0-9 and A-Z — encoding-safe
+  // for both Arabic ("3") and Roman ("III"/"VIII") labels.
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(Math.max(6, Math.round(radius * 0.6)));
+  const baseFs = Math.max(6, Math.round(radius * 0.6));
   const numeralRadius = radius - 4.2;
   for (let h = 1; h <= 12; h++) {
     const angle = (h * 30) * (Math.PI / 180);
     const x = centerX + numeralRadius * Math.sin(angle);
     const y = centerY - numeralRadius * Math.cos(angle);
+    const label = numeralForHour(h, numerals);
+    // Roman labels (VIII, XII) are 3-4 chars; shrink the font size to keep
+    // them inside the tick ring. Same trick the on-screen SVG uses.
+    const fs = label.length >= 4 ? Math.max(5, baseFs - 3)
+      : label.length === 3 ? Math.max(5, baseFs - 2)
+      : baseFs;
+    doc.setFontSize(fs);
     // jsPDF anchors text at baseline; nudge down slightly for visual centring.
-    doc.text(String(h), x, y + (radius * 0.18), { align: 'center', baseline: 'middle' });
+    doc.text(label, x, y + (radius * 0.18), { align: 'center', baseline: 'middle' });
   }
 
   // Hands. Hour hand: 30°/hour + 0.5°/minute. Minute hand: 6°/minute.
@@ -101,7 +123,8 @@ function drawReadCell(
   cellY: number,
   cellW: number,
   cellH: number,
-  num: number
+  num: number,
+  numerals: TimeNumerals = 'arabic'
 ) {
   // Question number at the top-left of the cell.
   doc.setFont('helvetica', 'normal');
@@ -115,7 +138,7 @@ function drawReadCell(
   const radius = Math.max(6, Math.min(clockBoxH, clockBoxW) / 2 - 1);
   const centerX = cellX + cellW / 2;
   const centerY = cellY + 6 + clockBoxH / 2;
-  drawClock(doc, q, centerX, centerY, radius);
+  drawClock(doc, q, centerX, centerY, radius, numerals);
 
   // Answer line: short underline near the bottom of the cell.
   const lineY = cellY + cellH - 3;
@@ -168,6 +191,43 @@ function drawArithCell(
   doc.line(lineX1, lineY, lineX2, lineY);
 }
 
+function drawDurationCell(
+  doc: jsPDF,
+  q: TimeDurationQuestion,
+  cellX: number,
+  cellY: number,
+  cellW: number,
+  cellH: number,
+  num: number
+) {
+  // Question number at the top-left of the cell.
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(`${num}.`, cellX + 2, cellY + 5);
+
+  // Prompt rendered as plain text, centred and word-wrapped if needed.
+  const centerX = cellX + cellW / 2;
+  const eqY = cellY + cellH / 2 - 2;
+  const prompt = formatDurationPrompt(q);
+  let fs = 10;
+  doc.setFont('helvetica', 'bold');
+  while (fs > 6) {
+    doc.setFontSize(fs);
+    if (doc.getTextWidth(prompt) <= cellW - 4) break;
+    fs -= 1;
+  }
+  doc.setFontSize(fs);
+  doc.text(prompt, centerX, eqY, { align: 'center', baseline: 'middle' });
+
+  // Answer line below the prompt.
+  const lineY = cellY + cellH - 3;
+  const lineW = Math.min(cellW * 0.6, 30);
+  const lineX1 = centerX - lineW / 2;
+  const lineX2 = centerX + lineW / 2;
+  doc.setLineWidth(0.3);
+  doc.line(lineX1, lineY, lineX2, lineY);
+}
+
 function drawCell(
   doc: jsPDF,
   q: TimeQuestion,
@@ -175,12 +235,15 @@ function drawCell(
   cellY: number,
   cellW: number,
   cellH: number,
-  num: number
+  num: number,
+  numerals: TimeNumerals = 'arabic'
 ) {
   if (q.skill === 'arith') {
     drawArithCell(doc, q, cellX, cellY, cellW, cellH, num);
+  } else if (q.skill === 'duration') {
+    drawDurationCell(doc, q, cellX, cellY, cellW, cellH, num);
   } else {
-    drawReadCell(doc, q, cellX, cellY, cellW, cellH, num);
+    drawReadCell(doc, q, cellX, cellY, cellW, cellH, num, numerals);
   }
 }
 
@@ -190,7 +253,8 @@ function drawPage(
   title: string,
   subtitle: string,
   studentName?: string,
-  numberOffset = 0
+  numberOffset = 0,
+  numerals: TimeNumerals = 'arabic'
 ) {
   const left = MARGIN;
   const top = MARGIN;
@@ -233,7 +297,7 @@ function drawPage(
     const cellX = left + col * cellW;
     const cellY = gridTop + row * rowH;
     const num = numberOffset + i + 1;
-    drawCell(doc, q, cellX, cellY, cellW, rowH, num);
+    drawCell(doc, q, cellX, cellY, cellW, rowH, num, numerals);
   }
 
   doc.setFont('helvetica', 'bold');
@@ -272,10 +336,13 @@ function drawAnswerKeyPage(
   const allQuestions: TimeQuestion[] = pages.flat();
   const total = allQuestions.length;
 
-  // Time-arith answers ("4:05 PM") are wider than read-clock ones ("3:45")
-  // so we drop from 5 columns to 4 when any arith question is present.
-  const hasArith = allQuestions.some(q => q.skill === 'arith');
-  const cols = hasArith ? 4 : 5;
+  // Time-arith ("4:05 PM") and duration ("2h 15m") answers are wider than
+  // read-clock ones ("3:45") so we drop from 5 columns to 4 when any of
+  // those question types is present.
+  const hasWideAnswer = allQuestions.some(
+    q => q.skill === 'arith' || q.skill === 'duration'
+  );
+  const cols = hasWideAnswer ? 4 : 5;
   const colW = PRINT_W / cols;
   const gridTop = top + HEADER_H;
   const gridH = PRINT_H - HEADER_H - FOOTER_H;
@@ -298,10 +365,11 @@ function drawAnswerKeyPage(
 
 export function generateTimePdf(opts: TimePdfOptions): jsPDF {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const numerals: TimeNumerals = opts.numerals ?? 'arabic';
   let runningOffset = 0;
   opts.pages.forEach((qs, idx) => {
     if (idx > 0) doc.addPage('a4', 'portrait');
-    drawPage(doc, qs, opts.title, opts.subtitle, opts.studentName, runningOffset);
+    drawPage(doc, qs, opts.title, opts.subtitle, opts.studentName, runningOffset, numerals);
     runningOffset += qs.length;
   });
   if (opts.includeAnswerKey) {

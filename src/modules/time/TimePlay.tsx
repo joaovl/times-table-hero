@@ -8,13 +8,14 @@ import type { TimeQuestion, TimeSettings } from './logic';
 import {
   expectedAnswerString,
   formatArithEquation,
+  formatDurationPrompt,
   generateTimeQuestions,
   isAnswerCorrect,
 } from './logic';
 import { ClockDisplay } from './ClockDisplay';
 
 export interface TimeIncorrect {
-  skill: 'read' | 'arith';
+  skill: 'read' | 'arith' | 'duration';
   /** Plain-text prompt shown in the "times to practise" list. For
    *  read-clock this is e.g. "Clock shows 3:45"; for arith it's the
    *  equation, e.g. "3:45 + 20 minutes". */
@@ -40,6 +41,7 @@ interface Props {
 
 function promptString(q: TimeQuestion): string {
   if (q.skill === 'arith') return formatArithEquation(q).replace(/\s*=\s*$/, '');
+  if (q.skill === 'duration') return formatDurationPrompt(q);
   const t = q.format === '24h' ? q.answer24h : q.answer12h;
   return `Clock shows ${t}`;
 }
@@ -165,14 +167,19 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
   };
 
   // Placeholder hint for the input. 12h-arith answers include AM/PM so the
-  // hint sample also includes it.
+  // hint sample also includes it. Duration answers are accepted as
+  // "2h 15m", "2:15", or "135".
   const placeholder =
-    q.skill === 'arith'
+    q.skill === 'duration'
+      ? 'e.g. 2h 15m'
+      : q.skill === 'arith'
       ? q.format === '24h' ? 'e.g. 14:05' : 'e.g. 4:05 PM'
       : q.format === '24h' ? 'e.g. 14:30' : 'e.g. 3:45';
 
   const typeHint =
-    q.skill === 'arith'
+    q.skill === 'duration'
+      ? 'Type the duration (e.g. 2h 15m or 135)'
+      : q.skill === 'arith'
       ? q.format === '24h'
         ? 'Type the time (24-hour)'
         : 'Type the time with AM or PM'
@@ -231,9 +238,20 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
                 {formatArithEquation(q)}
               </div>
             </div>
+          ) : q.skill === 'duration' ? (
+            <div className="flex flex-col items-center text-foreground">
+              <div className="text-2xl md:text-4xl font-extrabold tracking-tight text-center px-2">
+                {formatDurationPrompt(q)}
+              </div>
+            </div>
           ) : (
             <div className="flex justify-center text-foreground">
-              <ClockDisplay hours={q.hours} minutes={q.minutes} size={240} />
+              <ClockDisplay
+                hours={q.hours}
+                minutes={q.minutes}
+                size={240}
+                numerals={settings.numerals}
+              />
             </div>
           )}
           <p className="mt-3 text-sm md:text-base text-muted-foreground">{typeHint}</p>
@@ -252,10 +270,14 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
             <Input
               ref={inputRef}
               type="text"
-              // 12h-arith answers include AM/PM letters — keep the input
-              // text-based rather than numeric so the on-screen keyboard
-              // shows letters by default.
-              inputMode={q.skill === 'arith' && q.format === '12h' ? 'text' : 'numeric'}
+              // 12h-arith answers include AM/PM letters and duration
+              // answers can include "h"/"m" — keep the input text-based
+              // rather than numeric so the on-screen keyboard shows letters.
+              inputMode={
+                q.skill === 'duration' || (q.skill === 'arith' && q.format === '12h')
+                  ? 'text'
+                  : 'numeric'
+              }
               value={typed}
               onChange={e => setTyped(e.target.value)}
               placeholder={placeholder}

@@ -1,17 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import {
   allowedMinutes,
+  CURRICULUM_TAGS,
   format12h,
   format12hAmPm,
   format24h,
   formatArithEquation,
+  formatDurationPrompt,
   generateTimeQuestions,
   isAnswerCorrect,
+  isDurationAnswerCorrect,
+  numeralForHour,
+  parseDurationInput,
   parseTimeInput,
   to12hHour,
+  toRomanHour,
   expectedAnswerString,
+  TIME_SKILL_OPTIONS,
 } from './logic';
 import type {
+  TimeDurationQuestion,
   TimePrecision,
   TimeReadQuestion,
   TimeArithQuestion,
@@ -22,6 +30,7 @@ const baseSettings = (over: Partial<TimeSettings>): TimeSettings => ({
   skills: ['read'],
   precisions: ['hour'],
   format: '12h',
+  numerals: 'arabic',
   arithDifficulty: 'easy',
   gameMode: 'questions',
   questionCount: 10,
@@ -598,5 +607,424 @@ describe('generateTimeQuestions — time-arith skill', () => {
     const kinds = new Set(qs.map(q => q.skill));
     expect(kinds.has('read')).toBe(true);
     expect(kinds.has('arith')).toBe(true);
+  });
+});
+
+describe('Roman numerals — toRomanHour / numeralForHour', () => {
+  it.each<[number, string]>([
+    [1, 'I'],
+    [2, 'II'],
+    [3, 'III'],
+    [4, 'IV'],
+    [5, 'V'],
+    [6, 'VI'],
+    [7, 'VII'],
+    [8, 'VIII'],
+    [9, 'IX'],
+    [10, 'X'],
+    [11, 'XI'],
+    [12, 'XII'],
+  ])('toRomanHour(%i) = %s', (h, expected) => {
+    expect(toRomanHour(h)).toBe(expected);
+  });
+
+  it('toRomanHour returns "" for out-of-range hours', () => {
+    expect(toRomanHour(0)).toBe('');
+    expect(toRomanHour(13)).toBe('');
+    expect(toRomanHour(-1)).toBe('');
+    expect(toRomanHour(1.5)).toBe('');
+  });
+
+  it('numeralForHour("arabic") returns the Arabic digit string', () => {
+    for (let h = 1; h <= 12; h++) {
+      expect(numeralForHour(h, 'arabic')).toBe(String(h));
+    }
+  });
+
+  it('numeralForHour("roman") returns the Roman numeral string', () => {
+    expect(numeralForHour(1, 'roman')).toBe('I');
+    expect(numeralForHour(4, 'roman')).toBe('IV');
+    expect(numeralForHour(12, 'roman')).toBe('XII');
+  });
+
+  it('numeralForHour("both") puts Roman at 12/3/6/9 and Arabic elsewhere', () => {
+    expect(numeralForHour(12, 'both')).toBe('XII');
+    expect(numeralForHour(3, 'both')).toBe('III');
+    expect(numeralForHour(6, 'both')).toBe('VI');
+    expect(numeralForHour(9, 'both')).toBe('IX');
+    // Non-cardinal positions stay Arabic.
+    expect(numeralForHour(1, 'both')).toBe('1');
+    expect(numeralForHour(2, 'both')).toBe('2');
+    expect(numeralForHour(4, 'both')).toBe('4');
+    expect(numeralForHour(5, 'both')).toBe('5');
+    expect(numeralForHour(7, 'both')).toBe('7');
+    expect(numeralForHour(8, 'both')).toBe('8');
+    expect(numeralForHour(10, 'both')).toBe('10');
+    expect(numeralForHour(11, 'both')).toBe('11');
+  });
+
+  it('every Roman numeral the clock face uses is ASCII (encoding-safe)', () => {
+    for (let h = 1; h <= 12; h++) {
+      const r = toRomanHour(h);
+      // Helvetica/WinAnsi covers basic ASCII letters; assert all chars are
+      // in the printable ASCII range.
+      expect(/^[A-Z]+$/.test(r)).toBe(true);
+    }
+  });
+});
+
+describe('parseDurationInput', () => {
+  it('parses "Xh Ym"', () => {
+    expect(parseDurationInput('2h 15m')).toBe(135);
+    expect(parseDurationInput('2 h 15 m')).toBe(135);
+    expect(parseDurationInput('2h15m')).toBe(135);
+  });
+
+  it('parses hours-only', () => {
+    expect(parseDurationInput('2h')).toBe(120);
+    expect(parseDurationInput('0h')).toBe(0);
+  });
+
+  it('parses minutes-only', () => {
+    expect(parseDurationInput('45m')).toBe(45);
+    expect(parseDurationInput('45 min')).toBe(45);
+    expect(parseDurationInput('45 mins')).toBe(45);
+    expect(parseDurationInput('45 minute')).toBe(45);
+    expect(parseDurationInput('45 minutes')).toBe(45);
+  });
+
+  it('parses "h:mm"', () => {
+    expect(parseDurationInput('2:15')).toBe(135);
+    expect(parseDurationInput('0:45')).toBe(45);
+  });
+
+  it('parses pure-minutes form', () => {
+    expect(parseDurationInput('135')).toBe(135);
+    expect(parseDurationInput('0')).toBe(0);
+    expect(parseDurationInput('1440')).toBe(1440);
+  });
+
+  it('is case-insensitive', () => {
+    expect(parseDurationInput('2H 15M')).toBe(135);
+    expect(parseDurationInput('135 MIN')).toBe(135);
+  });
+
+  it('tolerates surrounding whitespace', () => {
+    expect(parseDurationInput('  2h 15m  ')).toBe(135);
+    expect(parseDurationInput('\t135\n')).toBe(135);
+  });
+
+  it('rejects malformed input', () => {
+    expect(parseDurationInput('')).toBeNull();
+    expect(parseDurationInput('   ')).toBeNull();
+    expect(parseDurationInput('foo')).toBeNull();
+    expect(parseDurationInput('2:99')).toBeNull(); // bad mm
+    expect(parseDurationInput('h 15m')).toBeNull(); // no hour digit
+  });
+});
+
+describe('isDurationAnswerCorrect / isAnswerCorrect — duration', () => {
+  const q135: TimeDurationQuestion = {
+    skill: 'duration',
+    startHour: 3,
+    startMinute: 30,
+    endHour: 5,
+    endMinute: 45,
+    totalMinutes: 135,
+    crossesMidnight: false,
+    format: '12h',
+    answer: '2h 15m',
+  };
+
+  it('accepts every advertised form', () => {
+    expect(isDurationAnswerCorrect(q135, '2h 15m')).toBe(true);
+    expect(isDurationAnswerCorrect(q135, '2:15')).toBe(true);
+    expect(isDurationAnswerCorrect(q135, '135')).toBe(true);
+    expect(isDurationAnswerCorrect(q135, '135 min')).toBe(true);
+    expect(isDurationAnswerCorrect(q135, '135 minutes')).toBe(true);
+    expect(isDurationAnswerCorrect(q135, '2H15M')).toBe(true);
+  });
+
+  it('rejects wrong-total answers', () => {
+    expect(isDurationAnswerCorrect(q135, '2h 14m')).toBe(false);
+    expect(isDurationAnswerCorrect(q135, '136')).toBe(false);
+    expect(isDurationAnswerCorrect(q135, '')).toBe(false);
+  });
+
+  it('isAnswerCorrect dispatches to the duration validator', () => {
+    expect(isAnswerCorrect(q135, '2h 15m')).toBe(true);
+    expect(isAnswerCorrect(q135, 'nope')).toBe(false);
+  });
+});
+
+describe('formatDurationPrompt', () => {
+  it('renders 12h prompt with AM/PM', () => {
+    const q: TimeDurationQuestion = {
+      skill: 'duration',
+      startHour: 15,
+      startMinute: 30,
+      endHour: 17,
+      endMinute: 45,
+      totalMinutes: 135,
+      crossesMidnight: false,
+      format: '12h',
+      answer: '2h 15m',
+    };
+    expect(formatDurationPrompt(q)).toBe('How long from 3:30 PM to 5:45 PM?');
+  });
+
+  it('renders 24h prompt without AM/PM', () => {
+    const q: TimeDurationQuestion = {
+      skill: 'duration',
+      startHour: 15,
+      startMinute: 30,
+      endHour: 17,
+      endMinute: 45,
+      totalMinutes: 135,
+      crossesMidnight: false,
+      format: '24h',
+      answer: '2h 15m',
+    };
+    expect(formatDurationPrompt(q)).toBe('How long from 15:30 to 17:45?');
+  });
+});
+
+describe('generateTimeQuestions — duration skill', () => {
+  it('produces only duration questions when only duration skill is selected', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({ skills: ['duration'], precisions: ['5min'] }),
+      30
+    );
+    qs.forEach(q => expect(q.skill).toBe('duration'));
+  });
+
+  it('every duration question has consistent start/end + total fields', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({
+        skills: ['duration'],
+        precisions: ['5min'],
+        arithDifficulty: 'medium',
+      }),
+      30
+    );
+    qs.forEach(q => {
+      if (q.skill !== 'duration') return;
+      expect(q.totalMinutes).toBeGreaterThan(0);
+      // (endTotal - startTotal) mod 1440 === totalMinutes
+      const startTotal = q.startHour * 60 + q.startMinute;
+      const endTotal = q.endHour * 60 + q.endMinute;
+      const diff = q.crossesMidnight
+        ? (endTotal + 1440) - startTotal
+        : endTotal - startTotal;
+      expect(diff).toBe(q.totalMinutes);
+      // Answer round-trips.
+      expect(isAnswerCorrect(q, q.answer)).toBe(true);
+    });
+  });
+
+  it('easy duration stays in the same hour', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({
+        skills: ['duration'],
+        precisions: ['5min'],
+        arithDifficulty: 'easy',
+      }),
+      30
+    );
+    qs.forEach(q => {
+      if (q.skill === 'duration') {
+        expect(q.totalMinutes).toBeLessThan(60);
+        expect(q.totalMinutes).toBeGreaterThan(0);
+        expect(q.crossesMidnight).toBe(false);
+      }
+    });
+  });
+
+  it('medium duration crosses 1-2 hours', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({
+        skills: ['duration'],
+        precisions: ['5min'],
+        arithDifficulty: 'medium',
+      }),
+      30
+    );
+    qs.forEach(q => {
+      if (q.skill === 'duration') {
+        expect(q.totalMinutes).toBeGreaterThanOrEqual(60);
+        expect(q.totalMinutes).toBeLessThanOrEqual(150);
+        expect(q.crossesMidnight).toBe(false);
+      }
+    });
+  });
+
+  it('hard duration is at least 2h or wraps midnight', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({
+        skills: ['duration'],
+        precisions: ['5min'],
+        arithDifficulty: 'hard',
+      }),
+      60
+    );
+    qs.forEach(q => {
+      if (q.skill === 'duration') {
+        expect(q.totalMinutes).toBeGreaterThanOrEqual(120);
+      }
+    });
+  });
+
+  it('answer format is "Xh Ym"', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({
+        skills: ['duration'],
+        precisions: ['5min'],
+        arithDifficulty: 'medium',
+      }),
+      20
+    );
+    qs.forEach(q => {
+      if (q.skill === 'duration') {
+        expect(q.answer).toMatch(/^\d+h \d+m$/);
+      }
+    });
+  });
+
+  it('expectedAnswerString returns the duration answer', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({
+        skills: ['duration'],
+        precisions: ['5min'],
+        arithDifficulty: 'easy',
+      }),
+      5
+    );
+    qs.forEach(q => {
+      if (q.skill === 'duration') {
+        expect(expectedAnswerString(q)).toBe(q.answer);
+      }
+    });
+  });
+});
+
+describe('generateTimeQuestions — time-arith-pm skill', () => {
+  it('produces only arith questions, all with PM start times (24h mode)', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({
+        skills: ['time-arith-pm'],
+        precisions: ['5min'],
+        format: '24h',
+        arithDifficulty: 'easy',
+      }),
+      40
+    );
+    qs.forEach(q => {
+      expect(q.skill).toBe('arith');
+      if (q.skill === 'arith') {
+        expect(q.startHour).toBeGreaterThanOrEqual(12);
+        expect(q.startHour).toBeLessThanOrEqual(23);
+      }
+    });
+  });
+
+  it('produces only arith questions, all with PM start times (12h mode)', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({
+        skills: ['time-arith-pm'],
+        precisions: ['5min'],
+        format: '12h',
+        arithDifficulty: 'easy',
+      }),
+      40
+    );
+    qs.forEach(q => {
+      expect(q.skill).toBe('arith');
+      if (q.skill === 'arith') {
+        // 12 PM == storage 12; 1 PM..11 PM == storage 13..23. Together: 12..23.
+        expect(q.startHour).toBeGreaterThanOrEqual(12);
+        expect(q.startHour).toBeLessThanOrEqual(23);
+        // Equation should render with "PM" suffix.
+        expect(formatArithEquation(q)).toContain('PM');
+      }
+    });
+  });
+
+  it('medium PM-arith answers still round-trip', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({
+        skills: ['time-arith-pm'],
+        precisions: ['5min'],
+        format: '24h',
+        arithDifficulty: 'medium',
+      }),
+      30
+    );
+    qs.forEach(q => {
+      if (q.skill === 'arith') {
+        expect(isAnswerCorrect(q, q.answer)).toBe(true);
+      }
+    });
+  });
+
+  it('hard PM-arith answers still round-trip and cross midnight', () => {
+    const qs = generateTimeQuestions(
+      baseSettings({
+        skills: ['time-arith-pm'],
+        precisions: ['5min'],
+        format: '24h',
+        arithDifficulty: 'hard',
+      }),
+      30
+    );
+    qs.forEach(q => {
+      if (q.skill === 'arith') {
+        expect(isAnswerCorrect(q, q.answer)).toBe(true);
+        expect(q.crossesMidnight).toBe(true);
+      }
+    });
+  });
+});
+
+describe('TIME_SKILL_OPTIONS includes all five Y3-Y5 skills', () => {
+  it('lists read, read-roman, arith, time-arith-pm, duration', () => {
+    const set = new Set<string>(TIME_SKILL_OPTIONS);
+    expect(set.has('read')).toBe(true);
+    expect(set.has('read-roman')).toBe(true);
+    expect(set.has('arith')).toBe(true);
+    expect(set.has('time-arith-pm')).toBe(true);
+    expect(set.has('duration')).toBe(true);
+  });
+
+  it('does not include the "all" sentinel in the picker options', () => {
+    expect((TIME_SKILL_OPTIONS as readonly string[]).includes('all')).toBe(false);
+  });
+});
+
+describe('CURRICULUM_TAGS', () => {
+  it('covers every skill option exactly', () => {
+    const tagged = new Set(Object.keys(CURRICULUM_TAGS));
+    TIME_SKILL_OPTIONS.forEach(s => expect(tagged.has(s)).toBe(true));
+    expect(tagged.size).toBe(TIME_SKILL_OPTIONS.length);
+  });
+
+  it('every tag lists at least one Y3-Y5 year and a non-empty objective', () => {
+    Object.values(CURRICULUM_TAGS).forEach(t => {
+      expect(t.years.length).toBeGreaterThan(0);
+      t.years.forEach(y => expect([3, 4, 5]).toContain(y));
+      expect(t.objective.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('read-roman is a Y3 skill (UK NC Roman numerals up to XII)', () => {
+    expect(CURRICULUM_TAGS['read-roman'].years).toContain(3);
+  });
+
+  it('time-arith-pm is a Y5 skill (12/24h problem-solving)', () => {
+    expect(CURRICULUM_TAGS['time-arith-pm'].years).toContain(5);
+  });
+
+  it('duration covers Y4 and/or Y5', () => {
+    const yrs = new Set(CURRICULUM_TAGS.duration.years);
+    expect(yrs.has(4) || yrs.has(5)).toBe(true);
   });
 });

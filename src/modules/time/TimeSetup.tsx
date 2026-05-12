@@ -8,12 +8,15 @@ import type { UserProfile } from '@/lib/userStorage';
 import type {
   TimeArithDifficulty,
   TimeFormat,
+  TimeNumerals,
   TimePrecision,
   TimeSettings,
   TimeSkill,
 } from './logic';
 import {
   generateTimeQuestions,
+  TIME_NUMERALS_LABEL,
+  TIME_NUMERALS_OPTIONS,
   TIME_PRECISION_LABEL,
   TIME_PRECISION_OPTIONS,
   TIME_SKILL_LABEL,
@@ -56,7 +59,6 @@ const ARITH_DIFFICULTY_HINTS: Record<TimeArithDifficulty, string> = {
 };
 
 type SkillId = Exclude<TimeSkill, 'all'>;
-type SkillSelection = SkillId | 'all';
 
 const buttonClass = (active: boolean) =>
   cn(
@@ -109,44 +111,69 @@ function PrecisionChipPicker({ selected, onChange }: PrecisionChipPickerProps) {
   );
 }
 
-// Skill picker. Mirrors the arithmetic "Operation" card pattern: three chip
-// buttons {Read clock, Time arithmetic, All}. "All" is a shortcut that
-// selects both individual skills; clicking an individual chip narrows to
-// just that skill. Selection is always non-empty.
+// Skill picker — multi-select chips. Each chip toggles independently;
+// selection is always non-empty (the last chip refuses to deselect).
 interface SkillPickerProps {
   selected: SkillId[];
   onChange: (next: SkillId[]) => void;
 }
 
 function SkillPicker({ selected, onChange }: SkillPickerProps) {
-  const isAll = selected.length === TIME_SKILL_OPTIONS.length;
-  const handleClick = (id: SkillSelection) => {
-    if (id === 'all') {
-      onChange([...TIME_SKILL_OPTIONS]);
-      return;
+  const orderIndex = new Map<SkillId, number>(
+    TIME_SKILL_OPTIONS.map((s, i) => [s, i])
+  );
+  const isSelected = (id: SkillId) => selected.includes(id);
+  const toggle = (id: SkillId) => {
+    if (isSelected(id)) {
+      if (selected.length === 1) return; // refuse to empty
+      onChange(
+        selected
+          .filter(x => x !== id)
+          .sort((a, b) => (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0))
+      );
+    } else {
+      onChange(
+        [...selected, id].sort(
+          (a, b) => (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0)
+        )
+      );
     }
-    onChange([id]);
   };
-  const isActive = (id: SkillSelection): boolean => {
-    if (id === 'all') return isAll;
-    return !isAll && selected.includes(id);
-  };
-  const items: Array<{ id: SkillSelection; label: string }> = [
-    { id: 'read', label: TIME_SKILL_LABEL.read },
-    { id: 'arith', label: TIME_SKILL_LABEL.arith },
-    { id: 'all', label: 'All' },
-  ];
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-1 md:gap-2">
+      {TIME_SKILL_OPTIONS.map(id => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => toggle(id)}
+          aria-pressed={isSelected(id)}
+          className={buttonClass(isSelected(id))}
+        >
+          <span className="text-[12px] md:text-[15px]">{TIME_SKILL_LABEL[id]}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Numerals picker — single-select chips ("Arabic" / "Roman" / "Both").
+interface NumeralsPickerProps {
+  selected: TimeNumerals;
+  onChange: (next: TimeNumerals) => void;
+}
+
+function NumeralsPicker({ selected, onChange }: NumeralsPickerProps) {
   return (
     <div className="grid grid-cols-3 gap-1 md:gap-2">
-      {items.map(it => (
+      {TIME_NUMERALS_OPTIONS.map(id => (
         <button
-          key={it.id}
+          key={id}
           type="button"
-          onClick={() => handleClick(it.id)}
-          aria-pressed={isActive(it.id)}
-          className={buttonClass(isActive(it.id))}
+          onClick={() => onChange(id)}
+          aria-pressed={selected === id}
+          className={buttonClass(selected === id)}
         >
-          <span className="text-[13px] md:text-[15px]">{it.label}</span>
+          <span className="text-[13px] md:text-[15px]">{TIME_NUMERALS_LABEL[id]}</span>
         </button>
       ))}
     </div>
@@ -164,6 +191,7 @@ export function TimeSetup({
   const [skills, setSkills] = useState<SkillId[]>(['read']);
   const [precisions, setPrecisions] = useState<TimePrecision[]>(['hour']);
   const [format, setFormat] = useState<TimeFormat>('12h');
+  const [numerals, setNumerals] = useState<TimeNumerals>('arabic');
   const [arithDifficulty, setArithDifficulty] = useState<TimeArithDifficulty>('easy');
   const [gameMode, setGameMode] = useState<'questions' | 'time'>('questions');
   const [questionCount, setQuestionCount] = useState(10);
@@ -178,6 +206,7 @@ export function TimeSetup({
     setSkills(s.skills);
     setPrecisions(s.precisions);
     setFormat(s.format);
+    setNumerals(s.numerals);
     setArithDifficulty(s.arithDifficulty);
     setGameMode(s.gameMode);
     setQuestionCount(s.questionCount);
@@ -193,6 +222,7 @@ export function TimeSetup({
         skills,
         precisions,
         format,
+        numerals,
         arithDifficulty,
         gameMode,
         questionCount,
@@ -205,6 +235,7 @@ export function TimeSetup({
     skills,
     precisions,
     format,
+    numerals,
     arithDifficulty,
     gameMode,
     questionCount,
@@ -221,20 +252,29 @@ export function TimeSetup({
       skills,
       precisions,
       format,
+      numerals,
       arithDifficulty,
       gameMode,
       questionCount,
       timeLimit,
     });
 
-  // Visibility for the arith-only difficulty card.
-  const showArithDifficulty = skills.includes('arith');
+  // Visibility for the arith-only difficulty card. Both regular arith and
+  // PM-start arith use the same difficulty knob; duration also tunes off it.
+  const showArithDifficulty =
+    skills.includes('arith') ||
+    skills.includes('time-arith-pm') ||
+    skills.includes('duration');
+
+  // The Numerals card only makes sense when a read-clock skill is active.
+  const showNumerals = skills.includes('read') || skills.includes('read-roman');
 
   const handlePrintDownload = (pages: number, perPage: number, name: string) => {
     const settings: TimeSettings = {
       skills,
       precisions,
       format,
+      numerals,
       arithDifficulty,
       gameMode: 'questions',
       questionCount: perPage,
@@ -248,6 +288,7 @@ export function TimeSetup({
       subtitle,
       studentName: name || undefined,
       includeAnswerKey: true,
+      numerals,
     });
     doc.save('maths-time.pdf');
     const next = { pageCount: pages, questionsPerPage: perPage };
@@ -283,7 +324,19 @@ export function TimeSetup({
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Skill</h2>
-          <SkillPicker selected={skills} onChange={setSkills} />
+          <SkillPicker
+            selected={skills}
+            onChange={next => {
+              // When the kid newly opts into "Roman clock", default the
+              // numeral style to roman so the chip actually changes the
+              // face on the next question. They can still flip it back via
+              // the Numerals card.
+              const wasRoman = skills.includes('read-roman');
+              const nowRoman = next.includes('read-roman');
+              if (!wasRoman && nowRoman) setNumerals('roman');
+              setSkills(next);
+            }}
+          />
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
@@ -305,6 +358,15 @@ export function TimeSetup({
             ))}
           </div>
         </Card>
+
+        {showNumerals && (
+          <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
+            <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
+              Numerals
+            </h2>
+            <NumeralsPicker selected={numerals} onChange={setNumerals} />
+          </Card>
+        )}
 
         {showArithDifficulty && (
           <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">

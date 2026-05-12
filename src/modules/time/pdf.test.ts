@@ -44,6 +44,7 @@ import type {
   TimeQuestion,
   TimeReadQuestion,
   TimeArithQuestion,
+  TimeDurationQuestion,
   TimeSettings,
 } from './logic';
 
@@ -93,10 +94,25 @@ const arith = (over: Partial<TimeArithQuestion>): TimeArithQuestion => ({
   ...over,
 });
 
+// Helper to build a TimeDurationQuestion with sensible defaults.
+const duration = (over: Partial<TimeDurationQuestion>): TimeDurationQuestion => ({
+  skill: 'duration',
+  startHour: 3,
+  startMinute: 30,
+  endHour: 5,
+  endMinute: 45,
+  totalMinutes: 135,
+  crossesMidnight: false,
+  format: '12h',
+  answer: '2h 15m',
+  ...over,
+});
+
 const baseSettings = (over: Partial<TimeSettings>): TimeSettings => ({
   skills: ['read'],
   precisions: ['hour'],
   format: '12h',
+  numerals: 'arabic',
   arithDifficulty: 'easy',
   gameMode: 'questions',
   questionCount: 10,
@@ -400,5 +416,193 @@ describe('generateTimePdf — round-trip with generateTimeQuestions', () => {
         });
       }
     }
+  });
+});
+
+describe('generateTimePdf — Roman numerals on the clock face', () => {
+  const ROMAN_HOURS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+
+  it('renders all 12 Roman numerals when numerals="roman"', () => {
+    generateTimePdf({
+      pages: [[q12h(3, 45)]],
+      title: 'T',
+      subtitle: '',
+      numerals: 'roman',
+    });
+    ROMAN_HOURS.forEach(r => expect(capturedTextCalls).toContain(r));
+  });
+
+  it('does NOT render Arabic 1..12 when numerals="roman"', () => {
+    generateTimePdf({
+      pages: [[q12h(3, 45)]],
+      title: 'T',
+      subtitle: '',
+      numerals: 'roman',
+    });
+    // The question number is "1." (with the period); the bare strings
+    // "1".."12" should NOT appear as clock-face numerals.
+    for (let h = 1; h <= 12; h++) {
+      expect(capturedTextCalls).not.toContain(String(h));
+    }
+  });
+
+  it('numerals="both": Roman at 12/3/6/9, Arabic elsewhere', () => {
+    generateTimePdf({
+      pages: [[q12h(3, 45)]],
+      title: 'T',
+      subtitle: '',
+      numerals: 'both',
+    });
+    expect(capturedTextCalls).toContain('XII');
+    expect(capturedTextCalls).toContain('III');
+    expect(capturedTextCalls).toContain('VI');
+    expect(capturedTextCalls).toContain('IX');
+    // Non-cardinal positions are Arabic.
+    ['1', '2', '4', '5', '7', '8', '10', '11'].forEach(d =>
+      expect(capturedTextCalls).toContain(d)
+    );
+    // And the Roman versions of those positions are NOT rendered.
+    ['I', 'II', 'IV', 'V', 'VII', 'VIII', 'X', 'XI'].forEach(r =>
+      expect(capturedTextCalls).not.toContain(r)
+    );
+  });
+
+  it('numerals defaults to "arabic" when not provided', () => {
+    render([q12h(3, 45)]);
+    for (let h = 1; h <= 12; h++) {
+      expect(capturedTextCalls).toContain(String(h));
+    }
+    // No Roman numerals should appear.
+    ROMAN_HOURS.forEach(r => expect(capturedTextCalls).not.toContain(r));
+  });
+
+  it('Roman numerals are pure ASCII (encoding-safe)', () => {
+    generateTimePdf({
+      pages: [[q12h(3, 45)]],
+      title: 'T',
+      subtitle: '',
+      numerals: 'roman',
+    });
+    capturedTextCalls.forEach(t => {
+      // No characters outside basic ASCII (32..126) should appear.
+      for (const ch of t) {
+        const code = ch.charCodeAt(0);
+        expect(code, `non-ASCII char in "${t}"`).toBeGreaterThanOrEqual(32);
+        expect(code, `non-ASCII char in "${t}"`).toBeLessThanOrEqual(126);
+      }
+    });
+  });
+});
+
+describe('generateTimePdf — duration question rendering', () => {
+  it('renders the duration prompt text', () => {
+    render([duration({})]);
+    expect(capturedTextCalls).toContain('How long from 3:30 AM to 5:45 AM?');
+  });
+
+  it('does NOT draw a clock figure for a duration cell', () => {
+    render([duration({})]);
+    // No face circles, no center pin.
+    expect(capturedCircles.length).toBe(0);
+  });
+
+  it('answer key shows the duration result', () => {
+    generateTimePdf({
+      pages: [[duration({})]],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    expect(capturedTextCalls).toContain('1) 2h 15m');
+  });
+
+  it('duration answer never appears on the question page', () => {
+    render([duration({})]);
+    expect(capturedTextCalls).not.toContain('2h 15m');
+  });
+
+  it('mixed-skill page: read-clock + arith + duration coexist', () => {
+    render([q12h(3, 45), arith({}), duration({})]);
+    // Read clock draws ≥2 circles (face + pin); duration & arith add zero.
+    expect(capturedCircles.length).toBeGreaterThanOrEqual(2);
+    expect(capturedTextCalls).toContain('3:45 AM + 20 minutes =');
+    expect(capturedTextCalls).toContain('How long from 3:30 AM to 5:45 AM?');
+  });
+
+  it('duration text is encoding-safe (ASCII only)', () => {
+    render([duration({})]);
+    capturedTextCalls.forEach(t => {
+      for (const ch of t) {
+        const code = ch.charCodeAt(0);
+        expect(code).toBeGreaterThanOrEqual(32);
+        expect(code).toBeLessThanOrEqual(126);
+      }
+    });
+  });
+
+  it('end-to-end: generated duration questions round-trip through the answer key', () => {
+    const settings: TimeSettings = baseSettings({
+      skills: ['duration'],
+      precisions: ['5min'],
+      format: '24h',
+      arithDifficulty: 'medium',
+      questionCount: 8,
+    });
+    const qs = generateTimeQuestions(settings, 8);
+    generateTimePdf({
+      pages: [qs],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    qs.forEach((q, i) => {
+      expect(capturedTextCalls).toContain(`${i + 1}) ${expectedAnswerString(q)}`);
+    });
+  });
+});
+
+describe('generateTimePdf — time-arith-pm', () => {
+  it('PM-arith start times render with "PM" in 12h equation', () => {
+    const settings: TimeSettings = baseSettings({
+      skills: ['time-arith-pm'],
+      precisions: ['5min'],
+      format: '12h',
+      arithDifficulty: 'easy',
+      questionCount: 5,
+    });
+    const qs = generateTimeQuestions(settings, 5);
+    generateTimePdf({
+      pages: [qs],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    // Every rendered equation contains "PM" because the start time is in
+    // the PM half of the day.
+    const equations = capturedTextCalls.filter(
+      t => /\d+:\d{2}\s+(AM|PM)\s+[+\-]\s+\d+\s+minutes?\s*=/.test(t)
+    );
+    expect(equations.length).toBeGreaterThanOrEqual(qs.length);
+    equations.forEach(eq => expect(eq).toContain('PM'));
+  });
+
+  it('PM-arith answer key entries round-trip', () => {
+    const settings: TimeSettings = baseSettings({
+      skills: ['time-arith-pm'],
+      precisions: ['5min'],
+      format: '24h',
+      arithDifficulty: 'easy',
+      questionCount: 5,
+    });
+    const qs = generateTimeQuestions(settings, 5);
+    generateTimePdf({
+      pages: [qs],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    qs.forEach((q, i) => {
+      expect(capturedTextCalls).toContain(`${i + 1}) ${expectedAnswerString(q)}`);
+    });
   });
 });
