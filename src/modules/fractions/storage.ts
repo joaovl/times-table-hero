@@ -22,6 +22,11 @@ const VALID_SKILLS: FractionSkill[] = [
   'eq',
   'cmp',
   'mixed',
+  'mul-by-whole',
+  'mixed-mul-whole',
+  'mul-frac',
+  'to-decimal',
+  'from-decimal',
 ];
 
 function normaliseSkills(value: unknown, fallback: FractionSkill[]): FractionSkill[] {

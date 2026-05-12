@@ -23,6 +23,13 @@ import {
   isEqQuestion,
   isCmpQuestion,
   isMixedQuestion,
+  isMulByWholeQuestion,
+  isMixedMulWholeQuestion,
+  isMulFracQuestion,
+  isToDecimalQuestion,
+  isFromDecimalQuestion,
+  mulAnswerAccepted,
+  decimalAnswerAccepted,
 } from './logic';
 import { FractionDisplay } from './FractionDisplay';
 
@@ -35,6 +42,8 @@ export type FractionUserAnswer =
   | { kind: 'eq'; value: number; missing: 'num' | 'den' }
   | { kind: 'mixed-improper'; value: Frac }
   | { kind: 'mixed-mixed'; value: MixedNumber }
+  | { kind: 'mul-answer'; value: { whole: number; num: number; den: number } }
+  | { kind: 'decimal'; value: number }
   | { kind: 'none' };
 
 export interface FractionIncorrectEntry {
@@ -195,13 +204,21 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [incorrect, setIncorrect] = useState<FractionIncorrectEntry[]>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
-  // Op-style inputs (also used by `id`).
+  // Op-style inputs (also used by `id`, `mul-by-whole`, `mul-frac`, `from-decimal`).
   const [numInput, setNumInput] = useState('');
   const [denInput, setDenInput] = useState('');
+  // Optional whole-part input for mul-by-whole / from-decimal (defaults to 0).
+  const [wholeInput, setWholeInput] = useState('');
   // `eq` skill uses a single integer input for the missing field.
   const [eqInput, setEqInput] = useState('');
   // `mixed` skill uses a free-form text input.
   const [mixedInput, setMixedInput] = useState('');
+  // `mixed-mul-whole` uses three inputs: whole, num, den.
+  const [mmwWholeInput, setMmwWholeInput] = useState('');
+  const [mmwNumInput, setMmwNumInput] = useState('');
+  const [mmwDenInput, setMmwDenInput] = useState('');
+  // `to-decimal` uses a single decimal input.
+  const [decimalInput, setDecimalInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
   const [streak, setStreak] = useState(0);
@@ -209,6 +226,9 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
   const numRef = useRef<HTMLInputElement>(null);
   const eqRef = useRef<HTMLInputElement>(null);
   const mixedRef = useRef<HTMLInputElement>(null);
+  const mmwRef = useRef<HTMLInputElement>(null);
+  const decimalRef = useRef<HTMLInputElement>(null);
+  const wholeRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const count = settings.gameMode === 'questions' ? settings.questionCount : 200;
@@ -218,13 +238,20 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
   useEffect(() => {
     setNumInput('');
     setDenInput('');
+    setWholeInput('');
     setEqInput('');
     setMixedInput('');
+    setMmwWholeInput('');
+    setMmwNumInput('');
+    setMmwDenInput('');
+    setDecimalInput('');
     setTimeout(() => {
       const q = questions[currentIndex];
       if (!q) return;
       if (isEqQuestion(q)) eqRef.current?.focus();
       else if (isMixedQuestion(q)) mixedRef.current?.focus();
+      else if (isMixedMulWholeQuestion(q)) mmwRef.current?.focus();
+      else if (isToDecimalQuestion(q)) decimalRef.current?.focus();
       else numRef.current?.focus();
     }, 50);
   }, [currentIndex, questions]);
@@ -313,6 +340,96 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
       advance(isCorrect);
     },
     [currentIndex, questions, settings, advance]
+  );
+
+  // Submit for mul-by-whole and from-decimal — both use the optional-whole
+  // + n/d form. mul-by-whole accepts any equivalent (improper or mixed);
+  // from-decimal accepts any equivalent fraction (whole irrelevant since
+  // we only generate decimals < 1).
+  // mul-frac uses just n/d with whole defaulted to 0.
+  const submitMulOrFrom = useCallback(
+    (whole: number, frac: Frac | null) => {
+      if (questions.length === 0) return;
+      const q = questions[currentIndex];
+      let isCorrect = false;
+      let captured: FractionUserAnswer = { kind: 'none' };
+      if (frac !== null && frac.den !== 0) {
+        if (isMulByWholeQuestion(q)) {
+          const mixedIn: MixedNumber = { whole, num: frac.num, den: frac.den };
+          isCorrect = mulAnswerAccepted(q.answer, { kind: 'mixed', value: mixedIn });
+          captured = { kind: 'mul-answer', value: { whole, num: frac.num, den: frac.den } };
+        } else if (isMulFracQuestion(q)) {
+          // Whole input ignored for mul-frac; treat as improper input.
+          isCorrect = whole === 0 && fracEquals(frac, q.answer);
+          captured = { kind: 'frac', value: frac };
+        } else if (isFromDecimalQuestion(q)) {
+          // Accept any equivalent fraction. Optional whole > 0 means the kid
+          // typed something like "1 0/4" — treat whole + frac as one value.
+          const userImp: Frac =
+            whole > 0
+              ? { num: whole * frac.den + frac.num, den: frac.den }
+              : frac;
+          const canonical: Frac = { num: q.num, den: q.den };
+          isCorrect = fracEquals(userImp, canonical);
+          captured =
+            whole > 0
+              ? { kind: 'mul-answer', value: { whole, num: frac.num, den: frac.den } }
+              : { kind: 'frac', value: frac };
+        }
+      }
+      if (!isCorrect) {
+        setIncorrect(prev => [...prev, { question: q, userAnswer: captured }]);
+      }
+      advance(isCorrect);
+    },
+    [currentIndex, questions, advance]
+  );
+
+  const submitMixedMulWhole = useCallback(
+    (whole: number, num: number, den: number) => {
+      if (questions.length === 0) return;
+      const q = questions[currentIndex];
+      if (!isMixedMulWholeQuestion(q)) return;
+      let isCorrect = false;
+      if (den !== 0) {
+        const mixedIn: MixedNumber = { whole, num, den };
+        isCorrect = mulAnswerAccepted(q.answer, { kind: 'mixed', value: mixedIn });
+      }
+      if (!isCorrect) {
+        setIncorrect(prev => [
+          ...prev,
+          {
+            question: q,
+            userAnswer:
+              den === 0
+                ? { kind: 'none' }
+                : { kind: 'mul-answer', value: { whole, num, den } },
+          },
+        ]);
+      }
+      advance(isCorrect);
+    },
+    [currentIndex, questions, advance]
+  );
+
+  const submitDecimal = useCallback(
+    (value: number | null) => {
+      if (questions.length === 0) return;
+      const q = questions[currentIndex];
+      if (!isToDecimalQuestion(q)) return;
+      const isCorrect = value !== null && decimalAnswerAccepted(q.answer, value);
+      if (!isCorrect) {
+        setIncorrect(prev => [
+          ...prev,
+          {
+            question: q,
+            userAnswer: value !== null ? { kind: 'decimal', value } : { kind: 'none' },
+          },
+        ]);
+      }
+      advance(isCorrect);
+    },
+    [currentIndex, questions, advance]
   );
 
   const submitEq = useCallback(
@@ -435,6 +552,62 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
   const handleMixedSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     submitMixed();
+  };
+
+  // Combined handler for mul-by-whole / mul-frac / from-decimal — all use
+  // optional-whole + n/d form. wholeInput defaults to 0 if blank.
+  const handleMulFromSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const numP = parseInt(numInput, 10);
+    const denP = parseInt(denInput, 10);
+    const wP = wholeInput.trim() === '' ? 0 : parseInt(wholeInput, 10);
+    if (isNaN(numP) || isNaN(denP) || denP === 0 || isNaN(wP)) {
+      submitMulOrFrom(0, null);
+      return;
+    }
+    submitMulOrFrom(wP, { num: numP, den: denP });
+  };
+
+  const handleMmwSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const wP = parseInt(mmwWholeInput, 10);
+    const nP = parseInt(mmwNumInput, 10);
+    const dP = parseInt(mmwDenInput, 10);
+    if (isNaN(wP) || isNaN(nP) || isNaN(dP)) {
+      submitMixedMulWhole(0, 0, 0);
+      return;
+    }
+    submitMixedMulWhole(wP, nP, dP);
+  };
+
+  const handleDecimalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = parseFloat(decimalInput);
+    if (isNaN(v)) {
+      submitDecimal(null);
+      return;
+    }
+    submitDecimal(v);
+  };
+
+  // Build the correct-answer display string for the new skills.
+  // Returns null if the current question isn't one of the new skills.
+  const correctNewSkillAnswer = (q: FractionQuestion): string | null => {
+    if (isMulByWholeQuestion(q) || isMixedMulWholeQuestion(q)) {
+      const a = q.answer;
+      if (a.whole !== undefined) {
+        if (a.num === 0) return `${a.whole}`;
+        return `${a.whole} ${a.num}/${a.den}`;
+      }
+      return `${a.num}/${a.den}`;
+    }
+    if (isMulFracQuestion(q)) return `${q.answer.num}/${q.answer.den}`;
+    if (isToDecimalQuestion(q)) {
+      // Strip trailing zero(s) for clean display.
+      return q.answer.toFixed(2).replace(/\.?0+$/, '');
+    }
+    if (isFromDecimalQuestion(q)) return `${q.num}/${q.den}`;
+    return null;
   };
 
   // Derived rendering helpers ---------------------------------------------
@@ -649,6 +822,105 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
               )}
             </>
           )}
+
+          {isMulByWholeQuestion(q) && (
+            <>
+              <div className="flex items-center justify-center gap-3 text-foreground">
+                <FractionDisplay frac={q.frac} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold">×</span>
+                <span className="text-3xl md:text-4xl font-extrabold">{q.whole}</span>
+                <span className="text-4xl md:text-5xl font-extrabold">=</span>
+              </div>
+              {feedback === 'incorrect' && (
+                <div className="mt-3 text-destructive text-2xl md:text-3xl font-bold">
+                  = {correctNewSkillAnswer(q)}
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
+          )}
+
+          {isMixedMulWholeQuestion(q) && (
+            <>
+              <div className="flex items-center justify-center gap-3 text-foreground">
+                <MixedDisplay m={q.mixed} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold">×</span>
+                <span className="text-3xl md:text-4xl font-extrabold">{q.whole}</span>
+                <span className="text-4xl md:text-5xl font-extrabold">=</span>
+              </div>
+              {feedback === 'incorrect' && (
+                <div className="mt-3 text-destructive text-2xl md:text-3xl font-bold">
+                  = {correctNewSkillAnswer(q)}
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
+          )}
+
+          {isMulFracQuestion(q) && (
+            <>
+              <div className="flex items-center justify-center gap-3 text-foreground">
+                <FractionDisplay frac={q.a} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold">×</span>
+                <FractionDisplay frac={q.b} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold">=</span>
+              </div>
+              {feedback === 'incorrect' && (
+                <div className="mt-3 flex items-center justify-center gap-2 text-destructive">
+                  <span className="text-2xl md:text-3xl font-bold">=</span>
+                  <FractionDisplay frac={q.answer} size="sm" />
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
+          )}
+
+          {isToDecimalQuestion(q) && (
+            <>
+              <div className="flex flex-col items-center gap-2 text-foreground">
+                <div className="text-base md:text-lg font-semibold text-muted-foreground">
+                  Write this fraction as a decimal:
+                </div>
+                <FractionDisplay frac={{ num: q.num, den: q.den }} size="md" />
+              </div>
+              {feedback === 'incorrect' && (
+                <div className="mt-3 text-destructive text-2xl md:text-3xl font-bold">
+                  = {correctNewSkillAnswer(q)}
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
+          )}
+
+          {isFromDecimalQuestion(q) && (
+            <>
+              <div className="flex flex-col items-center gap-2 text-foreground">
+                <div className="text-base md:text-lg font-semibold text-muted-foreground">
+                  Write this decimal as a fraction:
+                </div>
+                <span className="text-4xl md:text-5xl font-extrabold">
+                  {q.decimal.toFixed(2).replace(/\.?0+$/, '')}
+                </span>
+              </div>
+              {feedback === 'incorrect' && (
+                <div className="mt-3 flex items-center justify-center gap-2 text-destructive">
+                  <span className="text-2xl md:text-3xl font-bold">=</span>
+                  <FractionDisplay frac={{ num: q.num, den: q.den }} size="sm" />
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
+          )}
         </Card>
 
         {feedback === 'none' && (
@@ -747,6 +1019,125 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                   type="submit"
                   className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                   disabled={mixedInput.trim() === ''}
+                >
+                  Check
+                </Button>
+              </form>
+            )}
+
+            {/* mul-by-whole, mul-frac, from-decimal: optional whole + n/d. */}
+            {(isMulByWholeQuestion(q) || isMulFracQuestion(q) || isFromDecimalQuestion(q)) && (
+              <form onSubmit={handleMulFromSubmit} className="space-y-2 md:space-y-[13px]">
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  <Input
+                    ref={wholeRef}
+                    type="number"
+                    inputMode="numeric"
+                    value={wholeInput}
+                    onChange={e => setWholeInput(e.target.value)}
+                    placeholder="whole"
+                    aria-label="Whole part (optional)"
+                    className="h-12 md:h-[64px] w-20 md:w-24 text-center text-2xl md:text-3xl font-bold"
+                  />
+                  <Input
+                    ref={numRef}
+                    type="number"
+                    inputMode="numeric"
+                    value={numInput}
+                    onChange={e => setNumInput(e.target.value)}
+                    placeholder="num"
+                    aria-label="Numerator"
+                    className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
+                    autoFocus
+                  />
+                  <span className="text-3xl md:text-4xl font-extrabold text-foreground">/</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={denInput}
+                    onChange={e => setDenInput(e.target.value)}
+                    placeholder="den"
+                    aria-label="Denominator"
+                    className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                  disabled={numInput === '' || denInput === ''}
+                >
+                  Check
+                </Button>
+              </form>
+            )}
+
+            {/* mixed-mul-whole: three fields — whole, num, den. */}
+            {isMixedMulWholeQuestion(q) && (
+              <form onSubmit={handleMmwSubmit} className="space-y-2 md:space-y-[13px]">
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  <Input
+                    ref={mmwRef}
+                    type="number"
+                    inputMode="numeric"
+                    value={mmwWholeInput}
+                    onChange={e => setMmwWholeInput(e.target.value)}
+                    placeholder="whole"
+                    aria-label="Whole part"
+                    className="h-12 md:h-[64px] w-20 md:w-24 text-center text-2xl md:text-3xl font-bold"
+                    autoFocus
+                  />
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={mmwNumInput}
+                    onChange={e => setMmwNumInput(e.target.value)}
+                    placeholder="num"
+                    aria-label="Numerator"
+                    className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
+                  />
+                  <span className="text-3xl md:text-4xl font-extrabold text-foreground">/</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={mmwDenInput}
+                    onChange={e => setMmwDenInput(e.target.value)}
+                    placeholder="den"
+                    aria-label="Denominator"
+                    className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                  disabled={
+                    mmwWholeInput === '' || mmwNumInput === '' || mmwDenInput === ''
+                  }
+                >
+                  Check
+                </Button>
+              </form>
+            )}
+
+            {/* to-decimal: single decimal input. */}
+            {isToDecimalQuestion(q) && (
+              <form onSubmit={handleDecimalSubmit} className="space-y-2 md:space-y-[13px]">
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  <Input
+                    ref={decimalRef}
+                    type="text"
+                    inputMode="decimal"
+                    value={decimalInput}
+                    onChange={e => setDecimalInput(e.target.value)}
+                    placeholder="e.g. 0.25"
+                    aria-label="Decimal answer"
+                    className="h-12 md:h-[64px] w-40 md:w-48 text-center text-2xl md:text-3xl font-bold"
+                    autoFocus
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                  disabled={decimalInput.trim() === ''}
                 >
                   Check
                 </Button>

@@ -14,6 +14,11 @@ import {
   isEqQuestion,
   isCmpQuestion,
   isMixedQuestion,
+  isMulByWholeQuestion,
+  isMixedMulWholeQuestion,
+  isMulFracQuestion,
+  isToDecimalQuestion,
+  isFromDecimalQuestion,
 } from './logic';
 import { FractionDisplay } from './FractionDisplay';
 
@@ -42,6 +47,13 @@ function formatUserAnswer(a: FractionUserAnswer): string | null {
       return a.value.num === 0
         ? `${a.value.whole}`
         : `${a.value.whole} ${a.value.num}/${a.value.den}`;
+    case 'mul-answer':
+      return a.value.whole === 0
+        ? `${a.value.num}/${a.value.den}`
+        : `${a.value.whole} ${a.value.num}/${a.value.den}`;
+    case 'decimal':
+      // Trim trailing zeros for compact display.
+      return String(a.value);
   }
 }
 
@@ -105,6 +117,109 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
           <FractionDisplay frac={q.a} size="sm" />
           <span className="font-bold text-base">{q.answer}</span>
           <FractionDisplay frac={q.b} size="sm" />
+        </div>
+        {youSaid && (
+          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+        )}
+      </div>
+    );
+  }
+
+  if (isMulByWholeQuestion(q)) {
+    const a = q.answer;
+    const canonical =
+      a.whole !== undefined
+        ? a.num === 0
+          ? `${a.whole}`
+          : `${a.whole} ${a.num}/${a.den}`
+        : `${a.num}/${a.den}`;
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-4 py-2">
+        <div className="flex items-center gap-2 text-foreground">
+          <FractionDisplay frac={q.frac} size="sm" />
+          <span className="font-bold text-base">×</span>
+          <span className="font-bold text-base">{q.whole}</span>
+          <span className="font-bold text-base">=</span>
+          <span className="font-bold text-sm">{canonical}</span>
+        </div>
+        {youSaid && (
+          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+        )}
+      </div>
+    );
+  }
+
+  if (isMixedMulWholeQuestion(q)) {
+    const a = q.answer;
+    const canonical =
+      a.whole !== undefined
+        ? a.num === 0
+          ? `${a.whole}`
+          : `${a.whole} ${a.num}/${a.den}`
+        : `${a.num}/${a.den}`;
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-4 py-2">
+        <div className="flex items-center gap-2 text-foreground text-sm font-semibold">
+          <span>
+            {q.mixed.whole}
+            {q.mixed.num !== 0 ? <> </> : null}
+          </span>
+          {q.mixed.num !== 0 && (
+            <FractionDisplay frac={{ num: q.mixed.num, den: q.mixed.den }} size="sm" />
+          )}
+          <span className="font-bold text-base">×</span>
+          <span className="font-bold text-base">{q.whole}</span>
+          <span className="font-bold text-base">=</span>
+          <span className="font-bold">{canonical}</span>
+        </div>
+        {youSaid && (
+          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+        )}
+      </div>
+    );
+  }
+
+  if (isMulFracQuestion(q)) {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-4 py-2">
+        <div className="flex items-center gap-2 text-foreground">
+          <FractionDisplay frac={q.a} size="sm" />
+          <span className="font-bold text-base">×</span>
+          <FractionDisplay frac={q.b} size="sm" />
+          <span className="font-bold text-base">=</span>
+          <FractionDisplay frac={q.answer} size="sm" />
+        </div>
+        {youSaid && (
+          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+        )}
+      </div>
+    );
+  }
+
+  if (isToDecimalQuestion(q)) {
+    const decStr = q.answer.toFixed(2).replace(/\.?0+$/, '');
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-4 py-2">
+        <div className="flex items-center gap-2 text-foreground">
+          <FractionDisplay frac={{ num: q.num, den: q.den }} size="sm" />
+          <span className="font-bold text-base">=</span>
+          <span className="font-bold text-base">{decStr}</span>
+        </div>
+        {youSaid && (
+          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+        )}
+      </div>
+    );
+  }
+
+  if (isFromDecimalQuestion(q)) {
+    const decStr = q.decimal.toFixed(2).replace(/\.?0+$/, '');
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-4 py-2">
+        <div className="flex items-center gap-2 text-foreground">
+          <span className="font-bold text-base">{decStr}</span>
+          <span className="font-bold text-base">=</span>
+          <FractionDisplay frac={{ num: q.num, den: q.den }} size="sm" />
         </div>
         {youSaid && (
           <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>

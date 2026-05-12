@@ -13,6 +13,15 @@ import {
   isEqQuestion,
   isCmpQuestion,
   isMixedQuestion,
+  isMulByWholeQuestion,
+  isMixedMulWholeQuestion,
+  isMulFracQuestion,
+  isToDecimalQuestion,
+  isFromDecimalQuestion,
+  answerToImproper,
+  mulAnswerAccepted,
+  decimalAnswerAccepted,
+  CURRICULUM_TAGS,
   ALL_SKILLS,
   type FractionSettings,
   type FractionSkill,
@@ -399,5 +408,242 @@ describe('generateFractionQuestions — mixed skill', () => {
       // No degenerate whole=0 cases.
       expect(q.mixed.whole).toBeGreaterThanOrEqual(1);
     });
+  });
+});
+
+// ----- v3 skills: mul-by-whole / mixed-mul-whole / mul-frac /
+// to-decimal / from-decimal --------------------------------------------
+
+describe('ALL_SKILLS + CURRICULUM_TAGS coverage', () => {
+  it('ALL_SKILLS contains all 13 skills', () => {
+    expect(ALL_SKILLS).toHaveLength(13);
+    expect(ALL_SKILLS).toContain('mul-by-whole');
+    expect(ALL_SKILLS).toContain('mixed-mul-whole');
+    expect(ALL_SKILLS).toContain('mul-frac');
+    expect(ALL_SKILLS).toContain('to-decimal');
+    expect(ALL_SKILLS).toContain('from-decimal');
+  });
+
+  it('CURRICULUM_TAGS has an entry for every skill', () => {
+    ALL_SKILLS.forEach(s => {
+      expect(CURRICULUM_TAGS[s], `missing curriculum tag for ${s}`).toBeDefined();
+      expect(CURRICULUM_TAGS[s].strand).toBeTruthy();
+      expect(CURRICULUM_TAGS[s].year).toBeTruthy();
+    });
+  });
+
+  it('v3 mul/decimal skills are tagged Y5 / Y4-Y5', () => {
+    expect(CURRICULUM_TAGS['mul-by-whole'].year).toBe('Y5');
+    expect(CURRICULUM_TAGS['mixed-mul-whole'].year).toBe('Y5');
+    expect(CURRICULUM_TAGS['mul-frac'].year).toBe('Y5');
+    expect(['Y4/Y5', 'Y4', 'Y5']).toContain(CURRICULUM_TAGS['to-decimal'].year);
+    expect(['Y4/Y5', 'Y4', 'Y5']).toContain(CURRICULUM_TAGS['from-decimal'].year);
+  });
+});
+
+describe('answerToImproper', () => {
+  it('converts mixed answer (whole + num/den) into improper', () => {
+    expect(answerToImproper({ whole: 1, num: 1, den: 2 })).toEqual({ num: 3, den: 2 });
+    expect(answerToImproper({ whole: 2, num: 1, den: 3 })).toEqual({ num: 7, den: 3 });
+  });
+  it('treats missing whole as 0', () => {
+    expect(answerToImproper({ num: 1, den: 4 })).toEqual({ num: 1, den: 4 });
+  });
+  it('handles pure whole (num=0, den=1)', () => {
+    expect(answerToImproper({ whole: 3, num: 0, den: 1 })).toEqual({ num: 3, den: 1 });
+  });
+});
+
+describe('mulAnswerAccepted', () => {
+  // Canonical for 1/4 × 6 = 6/4 = 1 1/2.
+  const canonical = { whole: 1, num: 1, den: 2 };
+
+  it.each<[string, { kind: 'improper'; value: { num: number; den: number } } | { kind: 'mixed'; value: { whole: number; num: number; den: number } }, boolean]>([
+    ['canonical mixed (1 1/2)', { kind: 'mixed', value: { whole: 1, num: 1, den: 2 } }, true],
+    ['improper 6/4 (unsimplified)', { kind: 'improper', value: { num: 6, den: 4 } }, true],
+    ['improper 3/2 (simplified)', { kind: 'improper', value: { num: 3, den: 2 } }, true],
+    ['mixed 1 2/4 (unsimplified)', { kind: 'mixed', value: { whole: 1, num: 2, den: 4 } }, true],
+    ['wrong: 2 1/2', { kind: 'mixed', value: { whole: 2, num: 1, den: 2 } }, false],
+    ['wrong: 1/2', { kind: 'improper', value: { num: 1, den: 2 } }, false],
+  ])('1/4 × 6 — accepts %s', (_label, user, expected) => {
+    expect(mulAnswerAccepted(canonical, user)).toBe(expected);
+  });
+
+  it('canonical with whole-only (no fractional remainder)', () => {
+    const c = { whole: 3, num: 0, den: 1 }; // e.g. 1 1/2 × 2 = 3
+    expect(mulAnswerAccepted(c, { kind: 'mixed', value: { whole: 3, num: 0, den: 1 } })).toBe(true);
+    expect(mulAnswerAccepted(c, { kind: 'improper', value: { num: 6, den: 2 } })).toBe(true);
+    expect(mulAnswerAccepted(c, { kind: 'improper', value: { num: 3, den: 1 } })).toBe(true);
+  });
+
+  it('rejects zero-denominator user input', () => {
+    expect(
+      mulAnswerAccepted(canonical, { kind: 'improper', value: { num: 1, den: 0 } })
+    ).toBe(false);
+  });
+});
+
+describe('decimalAnswerAccepted', () => {
+  it('accepts exact match', () => {
+    expect(decimalAnswerAccepted(0.25, 0.25)).toBe(true);
+    expect(decimalAnswerAccepted(0.5, 0.5)).toBe(true);
+  });
+
+  it('accepts within ±0.001 tolerance', () => {
+    expect(decimalAnswerAccepted(0.25, 0.2495)).toBe(true);
+    expect(decimalAnswerAccepted(0.25, 0.2505)).toBe(true);
+  });
+
+  it('rejects outside tolerance', () => {
+    expect(decimalAnswerAccepted(0.25, 0.26)).toBe(false);
+    expect(decimalAnswerAccepted(0.25, 0.2)).toBe(false);
+  });
+
+  it('rejects NaN / Infinity', () => {
+    expect(decimalAnswerAccepted(0.25, NaN)).toBe(false);
+    expect(decimalAnswerAccepted(0.25, Infinity)).toBe(false);
+  });
+});
+
+describe('generateFractionQuestions — mul-by-whole', () => {
+  it('all questions are mul-by-whole shaped with whole in [2, 10]', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['mul-by-whole'], denominators: [2, 3, 4, 5, 6, 8] }),
+      80
+    );
+    qs.forEach(q => {
+      expect(isMulByWholeQuestion(q)).toBe(true);
+      if (!isMulByWholeQuestion(q)) return;
+      expect(q.whole).toBeGreaterThanOrEqual(2);
+      expect(q.whole).toBeLessThanOrEqual(10);
+      expect(q.frac.num).toBeGreaterThanOrEqual(1);
+      expect(q.frac.num).toBeLessThan(q.frac.den);
+    });
+  });
+
+  it('answer matches n × w / d in equivalent form', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['mul-by-whole'], denominators: [3, 4, 5, 6] }),
+      60
+    );
+    qs.forEach(q => {
+      if (!isMulByWholeQuestion(q)) return;
+      const rawNum = q.frac.num * q.whole;
+      const rawDen = q.frac.den;
+      const ansImp = answerToImproper(q.answer);
+      expect(ansImp.num * rawDen).toBe(rawNum * ansImp.den);
+    });
+  });
+});
+
+describe('generateFractionQuestions — mixed-mul-whole', () => {
+  it('all questions are mixed-mul-whole shaped', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['mixed-mul-whole'], denominators: [2, 3, 4, 5] }),
+      60
+    );
+    qs.forEach(q => {
+      expect(isMixedMulWholeQuestion(q)).toBe(true);
+      if (!isMixedMulWholeQuestion(q)) return;
+      expect(q.mixed.whole).toBeGreaterThanOrEqual(1);
+      expect(q.mixed.num).toBeGreaterThanOrEqual(1);
+      expect(q.mixed.num).toBeLessThan(q.mixed.den);
+      expect(q.whole).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  it('answer equals (whole*den + num) * w / den', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['mixed-mul-whole'], denominators: [3, 4, 5] }),
+      40
+    );
+    qs.forEach(q => {
+      if (!isMixedMulWholeQuestion(q)) return;
+      const rawNum = (q.mixed.whole * q.mixed.den + q.mixed.num) * q.whole;
+      const rawDen = q.mixed.den;
+      const ansImp = answerToImproper(q.answer);
+      expect(ansImp.num * rawDen).toBe(rawNum * ansImp.den);
+    });
+  });
+});
+
+describe('generateFractionQuestions — mul-frac', () => {
+  it('answer = (n1*n2)/(d1*d2) in simplest, proper form', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['mul-frac'], denominators: [2, 3, 4, 5, 6] }),
+      80
+    );
+    qs.forEach(q => {
+      expect(isMulFracQuestion(q)).toBe(true);
+      if (!isMulFracQuestion(q)) return;
+      const rawNum = q.a.num * q.b.num;
+      const rawDen = q.a.den * q.b.den;
+      expect(q.answer.num * rawDen).toBe(rawNum * q.answer.den);
+      expect(fracIsSimplified(q.answer)).toBe(true);
+      // kid-friendly: result stays proper
+      expect(q.answer.num).toBeGreaterThan(0);
+      expect(q.answer.num).toBeLessThan(q.answer.den);
+    });
+  });
+});
+
+describe('generateFractionQuestions — to-decimal', () => {
+  it('always yields a common-family fraction with correct decimal', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['to-decimal'], denominators: [2, 4, 5, 10] }),
+      40
+    );
+    const allowedDens = [2, 4, 5, 10];
+    qs.forEach(q => {
+      expect(isToDecimalQuestion(q)).toBe(true);
+      if (!isToDecimalQuestion(q)) return;
+      expect(allowedDens).toContain(q.den);
+      expect(q.num / q.den).toBeCloseTo(q.answer, 6);
+    });
+  });
+
+  it('falls back to common-family pool when denom set has no overlap', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['to-decimal'], denominators: [3, 7, 11] }),
+      30
+    );
+    const allowedDens = [2, 4, 5, 10];
+    qs.forEach(q => {
+      if (!isToDecimalQuestion(q)) return;
+      expect(allowedDens).toContain(q.den);
+    });
+  });
+});
+
+describe('generateFractionQuestions — from-decimal', () => {
+  it('decimal matches simplified num/den', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['from-decimal'], denominators: [2, 4, 5, 10] }),
+      40
+    );
+    qs.forEach(q => {
+      expect(isFromDecimalQuestion(q)).toBe(true);
+      if (!isFromDecimalQuestion(q)) return;
+      expect(q.num / q.den).toBeCloseTo(q.decimal, 6);
+      // Canonical is simplified
+      expect(fracIsSimplified({ num: q.num, den: q.den })).toBe(true);
+    });
+  });
+});
+
+describe('generateFractionQuestions — multi-skill mix v3', () => {
+  it('mixing all 13 skills emits every skill at least once', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({
+        skills: ALL_SKILLS,
+        denominators: [2, 3, 4, 5, 6, 8, 10],
+        simplify: true,
+      }),
+      1300
+    );
+    const observed = new Set(qs.map(q => q.skill));
+    ALL_SKILLS.forEach(s =>
+      expect(observed.has(s), `${s} never emitted in 1300 samples`).toBe(true)
+    );
   });
 });

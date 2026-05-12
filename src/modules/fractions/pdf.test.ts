@@ -546,3 +546,209 @@ describe('generateFractionsPdf — mixed-skill answer key encoding safety', () =
     });
   });
 });
+
+// ----- v3 skills (mul-by-whole / mixed-mul-whole / mul-frac /
+// to-decimal / from-decimal) ------------------------------------------
+
+describe('generateFractionsPdf — mul-by-whole skill', () => {
+  it('renders the fraction operands, multiplier, and × glyph', () => {
+    render([
+      {
+        skill: 'mul-by-whole',
+        frac: { num: 1, den: 4 },
+        whole: 6,
+        answer: { whole: 1, num: 1, den: 2 },
+      },
+    ]);
+    expect(capturedTextCalls).toContain('1');
+    expect(capturedTextCalls).toContain('4');
+    expect(capturedTextCalls).toContain('6');
+    expect(capturedTextCalls.some(t => t.includes('×'))).toBe(true);
+    expect(capturedTextCalls.some(t => t.includes('='))).toBe(true);
+  });
+
+  it('answer key prefers mixed form when whole is set', () => {
+    render(
+      [
+        {
+          skill: 'mul-by-whole',
+          frac: { num: 1, den: 4 },
+          whole: 6,
+          answer: { whole: 1, num: 1, den: 2 },
+        },
+        {
+          skill: 'mul-by-whole',
+          frac: { num: 1, den: 4 },
+          whole: 2,
+          answer: { num: 1, den: 2 }, // proper, no whole part
+        },
+      ],
+      { includeAnswerKey: true }
+    );
+    expect(capturedTextCalls).toContain('1) 1 1/2');
+    expect(capturedTextCalls).toContain('2) 1/2');
+  });
+
+  it('answer key shows whole-only when num=0', () => {
+    render(
+      [
+        {
+          skill: 'mul-by-whole',
+          frac: { num: 1, den: 2 },
+          whole: 4,
+          answer: { whole: 2, num: 0, den: 1 },
+        },
+      ],
+      { includeAnswerKey: true }
+    );
+    expect(capturedTextCalls).toContain('1) 2');
+  });
+});
+
+describe('generateFractionsPdf — mixed-mul-whole skill', () => {
+  it('renders whole, fraction, multiplier, and ×', () => {
+    render([
+      {
+        skill: 'mixed-mul-whole',
+        mixed: { whole: 2, num: 1, den: 3 },
+        whole: 4,
+        answer: { whole: 9, num: 1, den: 3 },
+      },
+    ]);
+    expect(capturedTextCalls).toContain('2'); // whole part of mixed
+    expect(capturedTextCalls).toContain('1'); // num
+    expect(capturedTextCalls).toContain('3'); // den
+    expect(capturedTextCalls).toContain('4'); // multiplier
+    expect(capturedTextCalls.some(t => t.includes('×'))).toBe(true);
+  });
+
+  it('answer key formats mixed-mul-whole answer as mixed', () => {
+    render(
+      [
+        {
+          skill: 'mixed-mul-whole',
+          mixed: { whole: 2, num: 1, den: 3 },
+          whole: 4,
+          answer: { whole: 9, num: 1, den: 3 },
+        },
+      ],
+      { includeAnswerKey: true }
+    );
+    expect(capturedTextCalls).toContain('1) 9 1/3');
+  });
+});
+
+describe('generateFractionsPdf — mul-frac skill', () => {
+  it('renders both operands and × glyph', () => {
+    render([
+      {
+        skill: 'mul-frac',
+        a: { num: 1, den: 4 },
+        b: { num: 1, den: 2 },
+        answer: { num: 1, den: 8 },
+      },
+    ]);
+    expect(capturedTextCalls).toContain('1');
+    expect(capturedTextCalls).toContain('4');
+    expect(capturedTextCalls).toContain('2');
+    expect(capturedTextCalls.some(t => t.includes('×'))).toBe(true);
+  });
+
+  it('answer key formats as n/d', () => {
+    render(
+      [
+        {
+          skill: 'mul-frac',
+          a: { num: 1, den: 4 },
+          b: { num: 1, den: 2 },
+          answer: { num: 1, den: 8 },
+        },
+      ],
+      { includeAnswerKey: true }
+    );
+    expect(capturedTextCalls).toContain('1) 1/8');
+  });
+});
+
+describe('generateFractionsPdf — to-decimal skill', () => {
+  it('renders the fraction operand and an equals sign on the question side', () => {
+    render([{ skill: 'to-decimal', num: 1, den: 4, answer: 0.25 }]);
+    expect(capturedTextCalls).toContain('1');
+    expect(capturedTextCalls).toContain('4');
+    expect(capturedTextCalls.some(t => t.includes('='))).toBe(true);
+    // Decimal must NOT appear on the question side.
+    expect(capturedTextCalls.some(t => t === '0.25')).toBe(false);
+  });
+
+  it('answer key shows the decimal value', () => {
+    render(
+      [
+        { skill: 'to-decimal', num: 1, den: 4, answer: 0.25 },
+        { skill: 'to-decimal', num: 1, den: 2, answer: 0.5 },
+        { skill: 'to-decimal', num: 3, den: 10, answer: 0.3 },
+      ],
+      { includeAnswerKey: true }
+    );
+    expect(capturedTextCalls).toContain('1) 0.25');
+    expect(capturedTextCalls).toContain('2) 0.5');
+    expect(capturedTextCalls).toContain('3) 0.3');
+  });
+});
+
+describe('generateFractionsPdf — from-decimal skill', () => {
+  it('renders the decimal value on the question page', () => {
+    render([{ skill: 'from-decimal', decimal: 0.25, num: 1, den: 4 }]);
+    expect(capturedTextCalls).toContain('0.25');
+  });
+
+  it('answer key formats as n/d (simplified canonical)', () => {
+    render(
+      [
+        { skill: 'from-decimal', decimal: 0.25, num: 1, den: 4 },
+        { skill: 'from-decimal', decimal: 0.5, num: 1, den: 2 },
+      ],
+      { includeAnswerKey: true }
+    );
+    expect(capturedTextCalls).toContain('1) 1/4');
+    expect(capturedTextCalls).toContain('2) 1/2');
+  });
+});
+
+describe('generateFractionsPdf — v3 encoding safety', () => {
+  it('all v3 question + answer-key text stays within renderable WinAnsi', () => {
+    capturedTextCalls.length = 0;
+    generateFractionsPdf({
+      pages: [
+        [
+          {
+            skill: 'mul-by-whole',
+            frac: { num: 1, den: 4 },
+            whole: 6,
+            answer: { whole: 1, num: 1, den: 2 },
+          },
+          {
+            skill: 'mixed-mul-whole',
+            mixed: { whole: 2, num: 1, den: 3 },
+            whole: 4,
+            answer: { whole: 9, num: 1, den: 3 },
+          },
+          {
+            skill: 'mul-frac',
+            a: { num: 1, den: 4 },
+            b: { num: 1, den: 2 },
+            answer: { num: 1, den: 8 },
+          },
+          { skill: 'to-decimal', num: 3, den: 10, answer: 0.3 },
+          { skill: 'from-decimal', decimal: 0.75, num: 3, den: 4 },
+        ],
+      ],
+      title: 'T',
+      subtitle: '',
+      includeAnswerKey: true,
+    });
+    capturedTextCalls.forEach(t => {
+      expect(/[∀-⋿]/u.test(t), `unrenderable char in "${t}"`).toBe(false);
+      expect(t.includes('−'), `math-minus in "${t}"`).toBe(false);
+    });
+  });
+});

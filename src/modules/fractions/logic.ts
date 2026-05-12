@@ -8,11 +8,21 @@
 //   - eq      : equivalent fractions (1/2 = ?/6)
 //   - cmp     : compare fractions (<, =, >)
 //   - mixed   : mixed ↔ improper conversion
+// v3 adds Y5-coverage multiplication and fraction↔decimal:
+//   - mul-by-whole     : 1/4 × 6 = 6/4 = 1 1/2     (Y5)
+//   - mixed-mul-whole  : 2 1/3 × 4 = 9 1/3         (Y5)
+//   - mul-frac         : 1/4 × 1/2 = 1/8           (Y5 extension / Y6 foundation)
+//   - to-decimal       : 1/4 as a decimal = 0.25   (Y5; common families only)
+//   - from-decimal     : 0.25 as a fraction = 1/4  (any equivalent accepted)
 //
-// Still deferred to a future version:
-//   - mul     : multiply fractions
-//   - div     : divide fractions
-//   - decimal : fraction ↔ decimal conversion
+// CURRICULUM OVERLAP: the dedicated `decimals` module (see
+// src/modules/decimals/logic.ts) also covers fraction↔decimal conversion.
+// We keep `to-decimal` and `from-decimal` here as well because the framing
+// is different — this module is fraction-first (kid is "in fractions
+// mode"), while the decimals module is decimal-first. The curriculum-map
+// agent should treat these as the same NC objective ("recognise and use
+// thousandths and relate them to tenths, hundredths and decimal
+// equivalents", Y5 Fractions) and not double-count coverage.
 
 export type FractionSkill =
   | 'add-same'
@@ -22,7 +32,12 @@ export type FractionSkill =
   | 'id'
   | 'eq'
   | 'cmp'
-  | 'mixed';
+  | 'mixed'
+  | 'mul-by-whole'
+  | 'mixed-mul-whole'
+  | 'mul-frac'
+  | 'to-decimal'
+  | 'from-decimal';
 
 export interface Frac {
   num: number;
@@ -93,12 +108,68 @@ export interface FractionMixedQuestion {
   mixed: MixedNumber; // the mixed form (always available)
 }
 
+// --- v3 question shapes -------------------------------------------------
+
+// `mul-by-whole` — proper fraction × whole number, e.g. 1/4 × 6.
+// answer.whole is optional: if present, the canonical answer is a mixed
+// number (whole + num/den); if absent, the canonical answer is the
+// improper num/den directly. Acceptance accepts BOTH improper and mixed
+// forms as long as they reduce to the same value as the canonical answer.
+export interface FractionMulByWholeQuestion {
+  skill: 'mul-by-whole';
+  frac: Frac; // the proper fraction operand
+  whole: number; // 2..10 typically
+  answer: { whole?: number; num: number; den: number };
+}
+
+// `mixed-mul-whole` — mixed number × whole number, e.g. 2 1/3 × 4.
+// Answer canonicalised as mixed form when possible (whole present).
+export interface FractionMixedMulWholeQuestion {
+  skill: 'mixed-mul-whole';
+  mixed: MixedNumber;
+  whole: number;
+  answer: { whole?: number; num: number; den: number };
+}
+
+// `mul-frac` — fraction × fraction, e.g. 1/4 × 1/2 = 1/8.
+// Answer simplified; any equivalent form accepted.
+export interface FractionMulFracQuestion {
+  skill: 'mul-frac';
+  a: Frac;
+  b: Frac;
+  answer: Frac; // simplified canonical form
+}
+
+// `to-decimal` — write the given fraction as a decimal, e.g. 1/4 → 0.25.
+// Restricted to common families (halves, quarters, fifths, tenths) so the
+// decimal answer is a clean terminating value.
+export interface FractionToDecimalQuestion {
+  skill: 'to-decimal';
+  num: number;
+  den: number;
+  answer: number;
+}
+
+// `from-decimal` — write the given decimal as a fraction, e.g. 0.25 → 1/4.
+// Any equivalent fraction is accepted.
+export interface FractionFromDecimalQuestion {
+  skill: 'from-decimal';
+  decimal: number;
+  num: number; // canonical (simplified) numerator
+  den: number; // canonical (simplified) denominator
+}
+
 export type FractionQuestion =
   | FractionOpQuestion
   | FractionIdQuestion
   | FractionEqQuestion
   | FractionCmpQuestion
-  | FractionMixedQuestion;
+  | FractionMixedQuestion
+  | FractionMulByWholeQuestion
+  | FractionMixedMulWholeQuestion
+  | FractionMulFracQuestion
+  | FractionToDecimalQuestion
+  | FractionFromDecimalQuestion;
 
 export interface FractionSettings {
   skills: FractionSkill[]; // chip multi-select, default ['add-same']
@@ -118,6 +189,11 @@ export const ALL_SKILLS: FractionSkill[] = [
   'eq',
   'cmp',
   'mixed',
+  'mul-by-whole',
+  'mixed-mul-whole',
+  'mul-frac',
+  'to-decimal',
+  'from-decimal',
 ];
 
 export const DENOMINATOR_OPTIONS: number[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -131,6 +207,11 @@ export const SKILL_LABELS: Record<FractionSkill, string> = {
   eq: 'Equivalent fractions',
   cmp: 'Compare fractions',
   mixed: 'Mixed ↔ improper',
+  'mul-by-whole': 'Multiply by whole',
+  'mixed-mul-whole': 'Mixed × whole',
+  'mul-frac': 'Fraction × fraction',
+  'to-decimal': 'Fraction → decimal',
+  'from-decimal': 'Decimal → fraction',
 };
 
 export const SKILL_SHORT: Record<FractionSkill, string> = {
@@ -142,6 +223,31 @@ export const SKILL_SHORT: Record<FractionSkill, string> = {
   eq: 'equivalent',
   cmp: 'compare',
   mixed: 'mixed-improper',
+  'mul-by-whole': 'mul-whole',
+  'mixed-mul-whole': 'mixed-mul-whole',
+  'mul-frac': 'mul-frac',
+  'to-decimal': 'to-decimal',
+  'from-decimal': 'from-decimal',
+};
+
+// Curriculum mapping. Used by the curriculum-coverage agent to know which
+// NC year/strand each skill targets. See the v3 header note above re:
+// overlap with the `decimals` module — to-decimal / from-decimal are
+// shared coverage, not double-counted.
+export const CURRICULUM_TAGS: Record<FractionSkill, { year: 'Y3' | 'Y4' | 'Y5' | 'Y3/Y4' | 'Y4/Y5'; strand: string }> = {
+  'add-same': { year: 'Y3', strand: 'Fractions' },
+  'sub-same': { year: 'Y3', strand: 'Fractions' },
+  'add-diff': { year: 'Y5', strand: 'Fractions' },
+  'sub-diff': { year: 'Y5', strand: 'Fractions' },
+  id: { year: 'Y3', strand: 'Fractions' },
+  eq: { year: 'Y3/Y4', strand: 'Fractions' },
+  cmp: { year: 'Y4', strand: 'Fractions' },
+  mixed: { year: 'Y5', strand: 'Fractions' },
+  'mul-by-whole': { year: 'Y5', strand: 'Fractions' },
+  'mixed-mul-whole': { year: 'Y5', strand: 'Fractions' },
+  'mul-frac': { year: 'Y5', strand: 'Fractions' },
+  'to-decimal': { year: 'Y4/Y5', strand: 'Fractions (including decimals)' },
+  'from-decimal': { year: 'Y4/Y5', strand: 'Fractions (including decimals)' },
 };
 
 export function gcd(a: number, b: number): number {
@@ -356,7 +462,115 @@ function trySample(
     return { skill: 'mixed', direction, improper, mixed };
   }
 
+  if (skill === 'mul-by-whole') {
+    // Proper fraction × whole (2..10). e.g. 1/4 × 6 = 6/4 = 1 1/2.
+    const d = pickFrom(denominators);
+    if (d < 2) return null;
+    const n = randInt(1, d - 1);
+    const w = randInt(2, 10);
+    const rawNum = n * w;
+    // Canonical answer: simplified improper, then converted to mixed form
+    // when num >= den so the displayed canonical reads naturally.
+    const simp = simplifyFrac({ num: rawNum, den: d });
+    const answer: { whole?: number; num: number; den: number } =
+      simp.num >= simp.den
+        ? (() => {
+            const mx = toMixed(simp);
+            return mx.num === 0
+              ? { whole: mx.whole, num: 0, den: 1 }
+              : { whole: mx.whole, num: mx.num, den: mx.den };
+          })()
+        : { num: simp.num, den: simp.den };
+    return { skill: 'mul-by-whole', frac: { num: n, den: d }, whole: w, answer };
+  }
+
+  if (skill === 'mixed-mul-whole') {
+    // Mixed × whole (2..6). e.g. 2 1/3 × 4 = 28/3 = 9 1/3.
+    const d = pickFrom(denominators);
+    if (d < 2) return null;
+    const whole = randInt(1, 4);
+    const partNum = randInt(1, d - 1);
+    const mixed: MixedNumber = { whole, num: partNum, den: d };
+    const w = randInt(2, 6);
+    const impForm = toImproper(mixed);
+    const rawNum = impForm.num * w;
+    const simp = simplifyFrac({ num: rawNum, den: d });
+    const answer: { whole?: number; num: number; den: number } =
+      simp.num >= simp.den
+        ? (() => {
+            const mx = toMixed(simp);
+            return mx.num === 0
+              ? { whole: mx.whole, num: 0, den: 1 }
+              : { whole: mx.whole, num: mx.num, den: mx.den };
+          })()
+        : { num: simp.num, den: simp.den };
+    return { skill: 'mixed-mul-whole', mixed, whole: w, answer };
+  }
+
+  if (skill === 'mul-frac') {
+    // Two proper fractions multiplied. Keep both denominators small so the
+    // answer's denominator (d1*d2 before simplification) doesn't explode.
+    const smallDens = denominators.filter(d => d >= 2 && d <= 8);
+    const pool = smallDens.length > 0 ? smallDens : [2, 3, 4];
+    const d1 = pickFrom(pool);
+    const d2 = pickFrom(pool);
+    if (d1 < 2 || d2 < 2) return null;
+    const n1 = randInt(1, d1 - 1);
+    const n2 = randInt(1, d2 - 1);
+    const raw: Frac = { num: n1 * n2, den: d1 * d2 };
+    const ans = simplifyFrac(raw);
+    if (ans.num <= 0 || ans.num >= ans.den) return null; // keep proper for kid
+    return {
+      skill: 'mul-frac',
+      a: { num: n1, den: d1 },
+      b: { num: n2, den: d2 },
+      answer: ans,
+    };
+  }
+
+  if (skill === 'to-decimal') {
+    // Common-decimals families only: halves, quarters, fifths, tenths.
+    // Pick one of those, then a numerator that's strictly proper-or-equal
+    // to one. The decimal answer is exact (terminates) for all of these.
+    const pool = pickCommonDecimalFamily(denominators);
+    if (!pool) return null;
+    const { num, den } = pool;
+    const answer = num / den;
+    return { skill: 'to-decimal', num, den, answer };
+  }
+
+  if (skill === 'from-decimal') {
+    // Re-use the same common-decimals families. The canonical fraction is
+    // stored simplified; acceptance allows any equivalent.
+    const pool = pickCommonDecimalFamily(denominators);
+    if (!pool) return null;
+    const { num, den } = pool;
+    const simp = simplifyFrac({ num, den });
+    const decimal = num / den;
+    return { skill: 'from-decimal', decimal, num: simp.num, den: simp.den };
+  }
+
   return null;
+}
+
+// Common terminating-decimal fraction families used by to-decimal /
+// from-decimal. Returns a fraction num/den where den ∈ {2, 4, 5, 10} and
+// num is a proper-or-1 numerator. Honors the user's selected denominators
+// when a usable family overlaps; otherwise falls back to {2, 4, 5, 10}.
+function pickCommonDecimalFamily(
+  selected: number[]
+): { num: number; den: number } | null {
+  const allowed: number[] = [2, 4, 5, 10];
+  const overlap = selected.filter(d => allowed.includes(d));
+  const pool = overlap.length > 0 ? overlap : allowed;
+  const den = pickFrom(pool);
+  // For den=2: 1/2. For den=4: 1/4 or 3/4. For den=5: 1/5..4/5. For den=10: 1/10..9/10.
+  let num: number;
+  if (den === 2) num = 1;
+  else if (den === 4) num = pickFrom([1, 3]);
+  else if (den === 5) num = randInt(1, 4);
+  else num = randInt(1, 9); // den === 10
+  return { num, den };
 }
 
 // Pick the best rectangle layout (rows × cols) for the given cell count so
@@ -436,6 +650,39 @@ function sampleOne(
     const improper = toImproper(mixed);
     return { skill: 'mixed', direction: 'to-mixed', improper, mixed };
   }
+  if (skill === 'mul-by-whole') {
+    // Fallback: 1/4 × 2 = 2/4 (proper). Keep as improper canonical to
+    // exercise the "improper is acceptable" path.
+    return {
+      skill: 'mul-by-whole',
+      frac: { num: 1, den: 4 },
+      whole: 2,
+      answer: { num: 1, den: 2 },
+    };
+  }
+  if (skill === 'mixed-mul-whole') {
+    // Fallback: 1 1/2 × 2 = 3 (whole).
+    return {
+      skill: 'mixed-mul-whole',
+      mixed: { whole: 1, num: 1, den: 2 },
+      whole: 2,
+      answer: { whole: 3, num: 0, den: 1 },
+    };
+  }
+  if (skill === 'mul-frac') {
+    return {
+      skill: 'mul-frac',
+      a: { num: 1, den: 2 },
+      b: { num: 1, den: 2 },
+      answer: { num: 1, den: 4 },
+    };
+  }
+  if (skill === 'to-decimal') {
+    return { skill: 'to-decimal', num: 1, den: 2, answer: 0.5 };
+  }
+  if (skill === 'from-decimal') {
+    return { skill: 'from-decimal', decimal: 0.5, num: 1, den: 2 };
+  }
   // same-denom fallback
   const d = denominators[0] >= 2 ? denominators[0] : 2;
   const a = 1;
@@ -508,4 +755,69 @@ export function isCmpQuestion(q: FractionQuestion): q is FractionCmpQuestion {
 
 export function isMixedQuestion(q: FractionQuestion): q is FractionMixedQuestion {
   return q.skill === 'mixed';
+}
+
+export function isMulByWholeQuestion(
+  q: FractionQuestion
+): q is FractionMulByWholeQuestion {
+  return q.skill === 'mul-by-whole';
+}
+
+export function isMixedMulWholeQuestion(
+  q: FractionQuestion
+): q is FractionMixedMulWholeQuestion {
+  return q.skill === 'mixed-mul-whole';
+}
+
+export function isMulFracQuestion(q: FractionQuestion): q is FractionMulFracQuestion {
+  return q.skill === 'mul-frac';
+}
+
+export function isToDecimalQuestion(
+  q: FractionQuestion
+): q is FractionToDecimalQuestion {
+  return q.skill === 'to-decimal';
+}
+
+export function isFromDecimalQuestion(
+  q: FractionQuestion
+): q is FractionFromDecimalQuestion {
+  return q.skill === 'from-decimal';
+}
+
+// Convert an answer payload (whole? + num/den) into a single improper
+// fraction. Used by acceptance checks for mul-by-whole / mixed-mul-whole.
+export function answerToImproper(a: { whole?: number; num: number; den: number }): Frac {
+  const w = a.whole ?? 0;
+  // When num=0 and den=1, the answer is a pure whole number → w/1.
+  if (a.den === 0) return { num: a.num + w, den: 0 };
+  return { num: w * a.den + a.num, den: a.den };
+}
+
+// Acceptance for `mul-by-whole` / `mixed-mul-whole`: any equivalent
+// improper or mixed form is accepted (e.g. 6/4, 3/2, 1 2/4, 1 1/2 all OK
+// for 1/4 × 6). Caller passes the user's input as either an improper
+// Frac or a MixedNumber.
+export function mulAnswerAccepted(
+  canonical: { whole?: number; num: number; den: number },
+  user: { kind: 'improper'; value: Frac } | { kind: 'mixed'; value: MixedNumber }
+): boolean {
+  const target = answerToImproper(canonical);
+  if (target.den === 0) return false;
+  const userImp: Frac =
+    user.kind === 'improper'
+      ? user.value
+      : { num: user.value.whole * user.value.den + user.value.num, den: user.value.den };
+  if (userImp.den === 0) return false;
+  return fracEquals(userImp, target);
+}
+
+// Decimal acceptance tolerance. Three decimal places gives us safe room
+// for the families we generate (halves, quarters, fifths, tenths) without
+// ever bumping into FP noise.
+export const DECIMAL_TOLERANCE = 1e-3;
+
+export function decimalAnswerAccepted(canonical: number, user: number): boolean {
+  if (!isFinite(user)) return false;
+  return Math.abs(canonical - user) <= DECIMAL_TOLERANCE;
 }
