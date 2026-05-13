@@ -28,6 +28,8 @@ import {
   isMulFracQuestion,
   isToDecimalQuestion,
   isFromDecimalQuestion,
+  isMixedAddSubQuestion,
+  isDivFracWholeQuestion,
   mulAnswerAccepted,
   decimalAnswerAccepted,
 } from './logic';
@@ -250,7 +252,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
       if (!q) return;
       if (isEqQuestion(q)) eqRef.current?.focus();
       else if (isMixedQuestion(q)) mixedRef.current?.focus();
-      else if (isMixedMulWholeQuestion(q)) mmwRef.current?.focus();
+      else if (isMixedMulWholeQuestion(q) || isMixedAddSubQuestion(q))
+        mmwRef.current?.focus();
       else if (isToDecimalQuestion(q)) decimalRef.current?.focus();
       else numRef.current?.focus();
     }, 50);
@@ -404,6 +407,57 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
               den === 0
                 ? { kind: 'none' }
                 : { kind: 'mul-answer', value: { whole, num, den } },
+          },
+        ]);
+      }
+      advance(isCorrect);
+    },
+    [currentIndex, questions, advance]
+  );
+
+  // add-mixed / sub-mixed: identical answer payload shape to mixed-mul-whole
+  // (whole + num/den), so `mulAnswerAccepted` accepts any equivalent form.
+  const submitMixedAddSub = useCallback(
+    (whole: number, num: number, den: number) => {
+      if (questions.length === 0) return;
+      const q = questions[currentIndex];
+      if (!isMixedAddSubQuestion(q)) return;
+      let isCorrect = false;
+      if (den !== 0) {
+        const mixedIn: MixedNumber = { whole, num, den };
+        isCorrect = mulAnswerAccepted(q.answer, { kind: 'mixed', value: mixedIn });
+      }
+      if (!isCorrect) {
+        setIncorrect(prev => [
+          ...prev,
+          {
+            question: q,
+            userAnswer:
+              den === 0
+                ? { kind: 'none' }
+                : { kind: 'mul-answer', value: { whole, num, den } },
+          },
+        ]);
+      }
+      advance(isCorrect);
+    },
+    [currentIndex, questions, advance]
+  );
+
+  // div-frac-whole: any equivalent fraction is accepted.
+  const submitDivFracWhole = useCallback(
+    (value: Frac | null) => {
+      if (questions.length === 0) return;
+      const q = questions[currentIndex];
+      if (!isDivFracWholeQuestion(q)) return;
+      const isCorrect =
+        value !== null && value.den !== 0 && fracEquals(value, q.answer);
+      if (!isCorrect) {
+        setIncorrect(prev => [
+          ...prev,
+          {
+            question: q,
+            userAnswer: value ? { kind: 'frac', value } : { kind: 'none' },
           },
         ]);
       }
@@ -580,6 +634,31 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
     submitMixedMulWhole(wP, nP, dP);
   };
 
+  // add-mixed / sub-mixed share the 3-field whole/num/den input layout.
+  const handleMixedAddSubSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const wP = parseInt(mmwWholeInput, 10);
+    const nP = parseInt(mmwNumInput, 10);
+    const dP = parseInt(mmwDenInput, 10);
+    if (isNaN(wP) || isNaN(nP) || isNaN(dP)) {
+      submitMixedAddSub(0, 0, 0);
+      return;
+    }
+    submitMixedAddSub(wP, nP, dP);
+  };
+
+  // div-frac-whole uses just the n/d input (reuse numInput/denInput).
+  const handleDivFracWholeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const numP = parseInt(numInput, 10);
+    const denP = parseInt(denInput, 10);
+    if (isNaN(numP) || isNaN(denP) || denP === 0) {
+      submitDivFracWhole(null);
+      return;
+    }
+    submitDivFracWhole({ num: numP, den: denP });
+  };
+
   const handleDecimalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const v = parseFloat(decimalInput);
@@ -607,6 +686,15 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
       return q.answer.toFixed(2).replace(/\.?0+$/, '');
     }
     if (isFromDecimalQuestion(q)) return `${q.num}/${q.den}`;
+    if (isMixedAddSubQuestion(q)) {
+      const a = q.answer;
+      if (a.whole !== undefined) {
+        if (a.num === 0) return `${a.whole}`;
+        return `${a.whole} ${a.num}/${a.den}`;
+      }
+      return `${a.num}/${a.den}`;
+    }
+    if (isDivFracWholeQuestion(q)) return `${q.answer.num}/${q.answer.den}`;
     return null;
   };
 
@@ -921,6 +1009,47 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
               )}
             </>
           )}
+
+          {isMixedAddSubQuestion(q) && (
+            <>
+              <div className="flex items-center justify-center gap-3 text-foreground flex-wrap">
+                <MixedDisplay m={q.a} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold">
+                  {q.skill === 'add-mixed' ? '+' : '−'}
+                </span>
+                <MixedDisplay m={q.b} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold">=</span>
+              </div>
+              {feedback === 'incorrect' && (
+                <div className="mt-3 text-destructive text-2xl md:text-3xl font-bold">
+                  = {correctNewSkillAnswer(q)}
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
+          )}
+
+          {isDivFracWholeQuestion(q) && (
+            <>
+              <div className="flex items-center justify-center gap-3 text-foreground">
+                <FractionDisplay frac={q.frac} size="md" />
+                <span className="text-4xl md:text-5xl font-extrabold">÷</span>
+                <span className="text-3xl md:text-4xl font-extrabold">{q.whole}</span>
+                <span className="text-4xl md:text-5xl font-extrabold">=</span>
+              </div>
+              {feedback === 'incorrect' && (
+                <div className="mt-3 flex items-center justify-center gap-2 text-destructive">
+                  <span className="text-2xl md:text-3xl font-bold">=</span>
+                  <FractionDisplay frac={q.answer} size="sm" />
+                </div>
+              )}
+              {feedback === 'correct' && (
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+              )}
+            </>
+          )}
         </Card>
 
         {feedback === 'none' && (
@@ -1112,6 +1241,89 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                   disabled={
                     mmwWholeInput === '' || mmwNumInput === '' || mmwDenInput === ''
                   }
+                >
+                  Check
+                </Button>
+              </form>
+            )}
+
+            {/* add-mixed / sub-mixed: three fields — whole, num, den. */}
+            {isMixedAddSubQuestion(q) && (
+              <form onSubmit={handleMixedAddSubSubmit} className="space-y-2 md:space-y-[13px]">
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  <Input
+                    ref={mmwRef}
+                    type="number"
+                    inputMode="numeric"
+                    value={mmwWholeInput}
+                    onChange={e => setMmwWholeInput(e.target.value)}
+                    placeholder="whole"
+                    aria-label="Whole part"
+                    className="h-12 md:h-[64px] w-20 md:w-24 text-center text-2xl md:text-3xl font-bold"
+                    autoFocus
+                  />
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={mmwNumInput}
+                    onChange={e => setMmwNumInput(e.target.value)}
+                    placeholder="num"
+                    aria-label="Numerator"
+                    className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
+                  />
+                  <span className="text-3xl md:text-4xl font-extrabold text-foreground">/</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={mmwDenInput}
+                    onChange={e => setMmwDenInput(e.target.value)}
+                    placeholder="den"
+                    aria-label="Denominator"
+                    className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                  disabled={
+                    mmwWholeInput === '' || mmwNumInput === '' || mmwDenInput === ''
+                  }
+                >
+                  Check
+                </Button>
+              </form>
+            )}
+
+            {/* div-frac-whole: two fields — num / den. */}
+            {isDivFracWholeQuestion(q) && (
+              <form onSubmit={handleDivFracWholeSubmit} className="space-y-2 md:space-y-[13px]">
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  <Input
+                    ref={numRef}
+                    type="number"
+                    inputMode="numeric"
+                    value={numInput}
+                    onChange={e => setNumInput(e.target.value)}
+                    placeholder="num"
+                    aria-label="Numerator"
+                    className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
+                    autoFocus
+                  />
+                  <span className="text-3xl md:text-4xl font-extrabold text-foreground">/</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={denInput}
+                    onChange={e => setDenInput(e.target.value)}
+                    placeholder="den"
+                    aria-label="Denominator"
+                    className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                  disabled={numInput === '' || denInput === ''}
                 >
                   Check
                 </Button>

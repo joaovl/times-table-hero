@@ -22,7 +22,11 @@ export type ShapeFigureMode =
   | 'angle-with-degrees'
   | 'solid'
   | 'symmetry-shape'
-  | 'coord-grid';
+  | 'coord-grid'
+  | 'coord-grid-quadrants'
+  | 'angle-at-point'
+  | 'angle-on-line'
+  | 'angle-vertical';
 
 type Mode = ShapeFigureMode;
 
@@ -441,6 +445,70 @@ export function ShapeFigure({ shape, question, size = 200, className }: Props) {
     );
   }
 
+  if (
+    shape === 'coord-grid-quadrants' ||
+    question.skill === 'coord-four-quadrants'
+  ) {
+    const gridMax = question.gridMax ?? 5;
+    return (
+      <svg
+        viewBox={`0 0 ${VB} ${VB}`}
+        width={size}
+        height={size}
+        className={className}
+        role="img"
+        aria-label={`Four-quadrant coordinate grid -${gridMax}..${gridMax}`}
+      >
+        <CoordGridFourQuadrants question={question} gridMax={gridMax} />
+      </svg>
+    );
+  }
+
+  if (shape === 'angle-at-point' || question.skill === 'angle-at-point') {
+    return (
+      <svg
+        viewBox={`0 0 ${VB} ${VB}`}
+        width={size}
+        height={size}
+        className={className}
+        role="img"
+        aria-label={`Angles at a point (visible angle ${question.angle ?? 0}°)`}
+      >
+        <AngleAtPointFigure visible={question.angle ?? 90} />
+      </svg>
+    );
+  }
+
+  if (shape === 'angle-on-line' || question.skill === 'angle-on-line') {
+    return (
+      <svg
+        viewBox={`0 0 ${VB} ${VB}`}
+        width={size}
+        height={size}
+        className={className}
+        role="img"
+        aria-label={`Angles on a line (visible angle ${question.angle ?? 0}°)`}
+      >
+        <AngleOnLineFigure visible={question.angle ?? 90} />
+      </svg>
+    );
+  }
+
+  if (shape === 'angle-vertical' || question.skill === 'angle-vertical') {
+    return (
+      <svg
+        viewBox={`0 0 ${VB} ${VB}`}
+        width={size}
+        height={size}
+        className={className}
+        role="img"
+        aria-label={`Vertically opposite angles (visible angle ${question.angle ?? 0}°)`}
+      >
+        <AngleVerticalFigure visible={question.angle ?? 90} />
+      </svg>
+    );
+  }
+
   if (shape === 'circle') {
     return (
       <svg
@@ -768,4 +836,337 @@ function CoordGrid({ question, gridMax }: CoordGridProps) {
       )}
     </g>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Four-quadrant coordinate grid for the Y6 coord-four-quadrants skill. The
+// origin is centred in the viewBox; axes run from -gridMax to +gridMax. The
+// marker dot sits at the question's point.
+// ---------------------------------------------------------------------------
+
+interface CoordGridFourQuadrantsProps {
+  question: ShapeQuestion;
+  gridMax: number;
+}
+
+function CoordGridFourQuadrants({ question, gridMax }: CoordGridFourQuadrantsProps) {
+  // Use most of the viewBox, centred. Keep symmetric margins so the axes
+  // sit in the middle and the labels for negative ticks fit on the page.
+  const margin = 8;
+  const usable = VB - 2 * margin;
+  const step = usable / (2 * gridMax);
+  // Origin pixel coordinates (centre of the canvas).
+  const ox = margin + gridMax * step;
+  const oy = margin + gridMax * step;
+  const toPx = (x: number, y: number) => ({
+    px: ox + x * step,
+    py: oy - y * step,
+  });
+
+  const ticks: number[] = [];
+  // Limit tick density for legibility at large grids.
+  const tickStep = gridMax <= 5 ? 1 : gridMax <= 10 ? 2 : 5;
+  for (let i = -gridMax; i <= gridMax; i += tickStep) {
+    if (i !== 0) ticks.push(i);
+  }
+
+  const marker = question.point ?? null;
+
+  // Compute the on-screen rectangle that the grid covers (used to draw
+  // grid-line endpoints).
+  const left = margin;
+  const right = margin + 2 * gridMax * step;
+  const top = margin;
+  const bottom = margin + 2 * gridMax * step;
+
+  return (
+    <g>
+      {/* Grid lines. */}
+      <g stroke="currentColor" strokeWidth={0.2} opacity={0.4}>
+        {Array.from({ length: 2 * gridMax + 1 }, (_, i) => {
+          const x = -gridMax + i;
+          const p = toPx(x, 0);
+          return <line key={`v${i}`} x1={p.px} y1={top} x2={p.px} y2={bottom} />;
+        })}
+        {Array.from({ length: 2 * gridMax + 1 }, (_, i) => {
+          const y = -gridMax + i;
+          const p = toPx(0, y);
+          return <line key={`h${i}`} x1={left} y1={p.py} x2={right} y2={p.py} />;
+        })}
+      </g>
+      {/* Axes through the origin. */}
+      <g stroke="currentColor" strokeWidth={0.8}>
+        <line x1={left} y1={oy} x2={right} y2={oy} />
+        <line x1={ox} y1={top} x2={ox} y2={bottom} />
+      </g>
+      {/* Tick labels. */}
+      <g fill="currentColor" fontSize="3.5" fontFamily="sans-serif">
+        {ticks.map(t => {
+          const p = toPx(t, 0);
+          return (
+            <text key={`tx${t}`} x={p.px} y={oy + 4} textAnchor="middle">
+              {t}
+            </text>
+          );
+        })}
+        {ticks.map(t => {
+          const p = toPx(0, t);
+          return (
+            <text key={`ty${t}`} x={ox - 2} y={p.py + 1.2} textAnchor="end">
+              {t}
+            </text>
+          );
+        })}
+      </g>
+      {/* Marker dot at the question's point. */}
+      {marker && (
+        <circle
+          cx={toPx(marker.x, marker.y).px}
+          cy={toPx(marker.x, marker.y).py}
+          r={1.8}
+          fill="currentColor"
+        />
+      )}
+    </g>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// "Angles at a point" figure: two rays from a common centre divide the plane
+// into two regions whose angles sum to 360°. The visible angle is labelled
+// numerically; the other is labelled "?".
+// ---------------------------------------------------------------------------
+
+interface AngleFigureProps {
+  visible: number; // visible angle in degrees
+}
+
+function AngleAtPointFigure({ visible }: AngleFigureProps) {
+  // Two rays from the centre. Ray A is horizontal (pointing right). Ray B
+  // is rotated counter-clockwise by `visible` degrees. The visible wedge
+  // is the small/explicit angle (≤ 360); the rest of the plane (360 - visible)
+  // is the "?" wedge — but we only label inside the cards of each wedge.
+  const cx = CX;
+  const cy = CY;
+  const armLen = 32;
+  const rad = (visible * Math.PI) / 180;
+  // Ray A: along the positive x axis.
+  const ax = cx + armLen;
+  const ay = cy;
+  // Ray B: rotated CCW by visible. SVG y grows downward, so we negate sin.
+  const bx = cx + armLen * Math.cos(rad);
+  const by = cy - armLen * Math.sin(rad);
+
+  // Visible-angle label position: midway round the visible arc.
+  const visibleMid = rad / 2;
+  const labelR = 14;
+  const vlx = cx + labelR * Math.cos(visibleMid);
+  const vly = cy - labelR * Math.sin(visibleMid);
+  // "?" label position: midway round the remaining (360 - visible) arc.
+  const otherMid = rad + (2 * Math.PI - rad) / 2;
+  const qlx = cx + labelR * Math.cos(otherMid);
+  const qly = cy - labelR * Math.sin(otherMid);
+
+  // Small arcs at the centre to mark each wedge.
+  const arcR = 8;
+  const visibleArc = describeArc(cx, cy, arcR, 0, rad);
+  const otherArc = describeArc(cx, cy, arcR, rad, 2 * Math.PI);
+
+  return (
+    <g fill="none" stroke="currentColor">
+      <line x1={cx} y1={cy} x2={ax} y2={ay} strokeWidth={1.5} />
+      <line x1={cx} y1={cy} x2={bx} y2={by} strokeWidth={1.5} />
+      <path d={visibleArc} strokeWidth={1} />
+      <path d={otherArc} strokeWidth={1} strokeDasharray="2,2" />
+      <circle cx={cx} cy={cy} r={1.2} fill="currentColor" />
+      <text
+        x={vlx}
+        y={vly}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="6"
+        fontWeight="bold"
+        fill="currentColor"
+        stroke="none"
+        fontFamily="sans-serif"
+      >
+        {visible}°
+      </text>
+      <text
+        x={qlx}
+        y={qly}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="6"
+        fontWeight="bold"
+        fill="currentColor"
+        stroke="none"
+        fontFamily="sans-serif"
+      >
+        ?°
+      </text>
+    </g>
+  );
+}
+
+// "Angles on a line" figure: a horizontal line and one ray going up from
+// the midpoint. Two angles between the ray and the line; the labelled one
+// shows degrees, the other shows "?".
+function AngleOnLineFigure({ visible }: AngleFigureProps) {
+  const cx = CX;
+  const cy = CY + 10; // shift the line down a bit so labels fit above
+  const lineHalf = 36;
+  const lx0 = cx - lineHalf;
+  const lx1 = cx + lineHalf;
+  const armLen = 32;
+  const rad = (visible * Math.PI) / 180;
+  // The ray goes up-and-right from the midpoint at `visible` degrees from
+  // the positive x axis (so a visible=90 ray points straight up).
+  const rx = cx + armLen * Math.cos(rad);
+  const ry = cy - armLen * Math.sin(rad);
+
+  // Label for the visible angle (between positive x axis and the ray).
+  const visibleMid = rad / 2;
+  const labelR = 14;
+  const vlx = cx + labelR * Math.cos(visibleMid);
+  const vly = cy - labelR * Math.sin(visibleMid);
+  // Label for the missing angle (between the ray and the negative x axis).
+  const otherMid = (rad + Math.PI) / 2;
+  const qlx = cx + labelR * Math.cos(otherMid);
+  const qly = cy - labelR * Math.sin(otherMid);
+
+  // Arc indicators for the two wedges.
+  const arcR = 8;
+  const visibleArc = describeArc(cx, cy, arcR, 0, rad);
+  const otherArc = describeArc(cx, cy, arcR, rad, Math.PI);
+
+  return (
+    <g fill="none" stroke="currentColor">
+      <line x1={lx0} y1={cy} x2={lx1} y2={cy} strokeWidth={1.5} />
+      <line x1={cx} y1={cy} x2={rx} y2={ry} strokeWidth={1.5} />
+      <path d={visibleArc} strokeWidth={1} />
+      <path d={otherArc} strokeWidth={1} strokeDasharray="2,2" />
+      <circle cx={cx} cy={cy} r={1.2} fill="currentColor" />
+      <text
+        x={vlx}
+        y={vly}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="6"
+        fontWeight="bold"
+        fill="currentColor"
+        stroke="none"
+        fontFamily="sans-serif"
+      >
+        {visible}°
+      </text>
+      <text
+        x={qlx}
+        y={qly}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="6"
+        fontWeight="bold"
+        fill="currentColor"
+        stroke="none"
+        fontFamily="sans-serif"
+      >
+        ?°
+      </text>
+    </g>
+  );
+}
+
+// "Vertically opposite angles" figure: two straight lines crossing at the
+// centre. One of the four wedges is labelled with `visible`; the wedge
+// directly opposite is labelled "?".
+function AngleVerticalFigure({ visible }: AngleFigureProps) {
+  const cx = CX;
+  const cy = CY;
+  const armLen = 34;
+  // Line A: horizontal (rays in 0° and 180° directions).
+  // Line B: rotated CCW from line A by `visible` degrees.
+  const rad = (visible * Math.PI) / 180;
+  const ax0 = cx - armLen;
+  const ay0 = cy;
+  const ax1 = cx + armLen;
+  const ay1 = cy;
+  const bx0 = cx - armLen * Math.cos(rad);
+  const by0 = cy + armLen * Math.sin(rad);
+  const bx1 = cx + armLen * Math.cos(rad);
+  const by1 = cy - armLen * Math.sin(rad);
+
+  // Visible wedge is between the +x ray and line B's "upper" ray.
+  const visibleMid = rad / 2;
+  const labelR = 13;
+  const vlx = cx + labelR * Math.cos(visibleMid);
+  const vly = cy - labelR * Math.sin(visibleMid);
+  // Vertically opposite wedge is the wedge between the -x ray and the
+  // opposite ray of line B; its midpoint is at angle (180 + visible/2).
+  const otherMid = Math.PI + visibleMid;
+  const qlx = cx + labelR * Math.cos(otherMid);
+  const qly = cy - labelR * Math.sin(otherMid);
+
+  // Arcs to indicate the labelled wedges.
+  const arcR = 8;
+  const visibleArc = describeArc(cx, cy, arcR, 0, rad);
+  const otherArc = describeArc(cx, cy, arcR, Math.PI, Math.PI + rad);
+
+  return (
+    <g fill="none" stroke="currentColor">
+      <line x1={ax0} y1={ay0} x2={ax1} y2={ay1} strokeWidth={1.5} />
+      <line x1={bx0} y1={by0} x2={bx1} y2={by1} strokeWidth={1.5} />
+      <path d={visibleArc} strokeWidth={1} />
+      <path d={otherArc} strokeWidth={1} strokeDasharray="2,2" />
+      <circle cx={cx} cy={cy} r={1.2} fill="currentColor" />
+      <text
+        x={vlx}
+        y={vly}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="6"
+        fontWeight="bold"
+        fill="currentColor"
+        stroke="none"
+        fontFamily="sans-serif"
+      >
+        {visible}°
+      </text>
+      <text
+        x={qlx}
+        y={qly}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="6"
+        fontWeight="bold"
+        fill="currentColor"
+        stroke="none"
+        fontFamily="sans-serif"
+      >
+        ?°
+      </text>
+    </g>
+  );
+}
+
+// Build an SVG arc-path "d" string from (cx, cy) with radius r between two
+// math angles (in radians, measured counter-clockwise from the +x axis).
+// Assumes start < end. Handles arcs > 180° by setting the large-arc flag.
+function describeArc(
+  cx: number,
+  cy: number,
+  r: number,
+  startRad: number,
+  endRad: number
+): string {
+  const sx = cx + r * Math.cos(startRad);
+  const sy = cy - r * Math.sin(startRad);
+  const ex = cx + r * Math.cos(endRad);
+  const ey = cy - r * Math.sin(endRad);
+  const sweepDeg = ((endRad - startRad) * 180) / Math.PI;
+  const largeArc = Math.abs(sweepDeg) > 180 ? 1 : 0;
+  // sweep flag 0 = counter-clockwise in SVG's flipped-y space
+  // (matches the orientation we already use for the angle/angle-with-degrees
+  // figures).
+  return `M ${sx} ${sy} A ${r} ${r} 0 ${largeArc} 0 ${ex} ${ey}`;
 }

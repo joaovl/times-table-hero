@@ -209,6 +209,14 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
     figureMode = 'symmetry-shape';
   } else if (q.skill === 'coord-read' || q.skill === 'coord-plot' || q.skill === 'translation') {
     figureMode = 'coord-grid';
+  } else if (q.skill === 'coord-four-quadrants') {
+    figureMode = 'coord-grid-quadrants';
+  } else if (q.skill === 'angle-at-point') {
+    figureMode = 'angle-at-point';
+  } else if (q.skill === 'angle-on-line') {
+    figureMode = 'angle-on-line';
+  } else if (q.skill === 'angle-vertical') {
+    figureMode = 'angle-vertical';
   } else {
     figureMode = q.shape ?? 'circle';
   }
@@ -323,7 +331,11 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
                 ref={inputRef}
                 type="text"
                 inputMode={
-                  q.skill === 'coord-read' || q.skill === 'translation' ? 'text' : 'decimal'
+                  q.skill === 'coord-read' ||
+                  q.skill === 'translation' ||
+                  q.skill === 'coord-four-quadrants'
+                    ? 'text'
+                    : 'decimal'
                 }
                 value={typed}
                 onChange={e => setTyped(e.target.value)}
@@ -361,6 +373,12 @@ function inputPlaceholder(q: ShapeQuestion): string {
     case 'coord-read':
     case 'translation':
       return 'e.g. 3,4';
+    case 'coord-four-quadrants':
+      return 'e.g. -2,3';
+    case 'angle-at-point':
+    case 'angle-on-line':
+    case 'angle-vertical':
+      return 'degrees, e.g. 45';
     default:
       return `answer in ${q.units}`;
   }
