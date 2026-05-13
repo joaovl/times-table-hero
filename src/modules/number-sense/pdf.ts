@@ -6,6 +6,8 @@ import {
   isSequenceQuestion,
   isRomanQuestion,
   isOrderQuestion,
+  isNegativeIntervalQuestion,
+  isBidmasQuestion,
   answerText,
 } from './logic';
 
@@ -46,7 +48,8 @@ function pdfPromptText(q: NumberSenseQuestion): string {
       q.nearest === 10 ? '10' :
       q.nearest === 100 ? '100' :
       q.nearest === 1000 ? '1,000' :
-      q.nearest === 10000 ? '10,000' : '100,000';
+      q.nearest === 10000 ? '10,000' :
+      q.nearest === 100000 ? '100,000' : '1,000,000';
     return `Round ${fmtThousands(q.number)} to the nearest ${label}.`;
   }
   if (isSequenceQuestion(q)) {
@@ -59,6 +62,12 @@ function pdfPromptText(q: NumberSenseQuestion): string {
       ? `${q.prompt} = ___`
       : `${q.prompt} in Roman = ___`;
   }
+  if (isNegativeIntervalQuestion(q)) {
+    return `From ${q.from} to ${q.to}, how many? ___`;
+  }
+  if (isBidmasQuestion(q)) {
+    return `${q.expression} = ___`;
+  }
   // order-numbers
   return `Order smallest to largest: ${q.numbers.map(fmtThousands).join(', ')}`;
 }
@@ -68,7 +77,12 @@ function pdfPromptText(q: NumberSenseQuestion): string {
 // (four numbers + label). Used to switch to a 2-col layout when any such
 // question appears on a page.
 function isLongPromptQuestion(q: NumberSenseQuestion): boolean {
-  return isSequenceQuestion(q) || isOrderQuestion(q);
+  return (
+    isSequenceQuestion(q) ||
+    isOrderQuestion(q) ||
+    isNegativeIntervalQuestion(q) ||
+    isBidmasQuestion(q)
+  );
 }
 
 // Wrap one logical line of text to fit a column width, breaking at spaces.

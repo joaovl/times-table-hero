@@ -14,6 +14,8 @@ import {
   isSequenceQuestion,
   isRomanQuestion,
   isOrderQuestion,
+  isNegativeIntervalQuestion,
+  isBidmasQuestion,
 } from './logic';
 
 export interface NumberSenseIncorrectEntry {
@@ -202,7 +204,12 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
   let placeholder = 'Type the answer';
   let inputType: 'number' | 'text' = 'number';
   let inputMode: 'numeric' | 'text' = 'numeric';
-  if (isPlaceValueQuestion(q) || isRoundQuestion(q)) {
+  if (
+    isPlaceValueQuestion(q) ||
+    isRoundQuestion(q) ||
+    isNegativeIntervalQuestion(q) ||
+    isBidmasQuestion(q)
+  ) {
     placeholder = 'Type a number';
     inputType = 'number';
     inputMode = 'numeric';
@@ -293,10 +300,34 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
                       ? '1,000'
                       : q.nearest === 10000
                         ? '10,000'
-                        : '100,000'}
+                        : q.nearest === 100000
+                          ? '100,000'
+                          : '1,000,000'}
               </p>
               <div className="font-mono text-5xl md:text-6xl font-extrabold text-foreground">
                 {fmt(q.number)}
+              </div>
+            </>
+          )}
+
+          {isNegativeIntervalQuestion(q) && (
+            <>
+              <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
+                From {q.from} to {q.to}, how many?
+              </p>
+              <div className="font-mono text-4xl md:text-5xl font-extrabold text-foreground">
+                {q.from} → {q.to}
+              </div>
+            </>
+          )}
+
+          {isBidmasQuestion(q) && (
+            <>
+              <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
+                Work out the answer (remember the order of operations)
+              </p>
+              <div className="font-mono text-3xl md:text-5xl font-extrabold text-foreground">
+                {q.expression} = ?
               </div>
             </>
           )}

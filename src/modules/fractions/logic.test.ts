@@ -18,6 +18,8 @@ import {
   isMulFracQuestion,
   isToDecimalQuestion,
   isFromDecimalQuestion,
+  isMixedAddSubQuestion,
+  isDivFracWholeQuestion,
   answerToImproper,
   mulAnswerAccepted,
   decimalAnswerAccepted,
@@ -415,13 +417,16 @@ describe('generateFractionQuestions — mixed skill', () => {
 // to-decimal / from-decimal --------------------------------------------
 
 describe('ALL_SKILLS + CURRICULUM_TAGS coverage', () => {
-  it('ALL_SKILLS contains all 13 skills', () => {
-    expect(ALL_SKILLS).toHaveLength(13);
+  it('ALL_SKILLS contains every defined skill', () => {
+    expect(ALL_SKILLS.length).toBeGreaterThanOrEqual(16);
     expect(ALL_SKILLS).toContain('mul-by-whole');
     expect(ALL_SKILLS).toContain('mixed-mul-whole');
     expect(ALL_SKILLS).toContain('mul-frac');
     expect(ALL_SKILLS).toContain('to-decimal');
     expect(ALL_SKILLS).toContain('from-decimal');
+    expect(ALL_SKILLS).toContain('add-mixed');
+    expect(ALL_SKILLS).toContain('sub-mixed');
+    expect(ALL_SKILLS).toContain('div-frac-whole');
   });
 
   it('CURRICULUM_TAGS has an entry for every skill', () => {
@@ -632,18 +637,116 @@ describe('generateFractionQuestions — from-decimal', () => {
 });
 
 describe('generateFractionQuestions — multi-skill mix v3', () => {
-  it('mixing all 13 skills emits every skill at least once', () => {
+  it('mixing all skills emits every skill at least once', () => {
     const qs = generateFractionQuestions(
       baseSettings({
         skills: ALL_SKILLS,
         denominators: [2, 3, 4, 5, 6, 8, 10],
         simplify: true,
       }),
-      1300
+      1600
     );
     const observed = new Set(qs.map(q => q.skill));
     ALL_SKILLS.forEach(s =>
-      expect(observed.has(s), `${s} never emitted in 1300 samples`).toBe(true)
+      expect(observed.has(s), `${s} never emitted in 1600 samples`).toBe(true)
     );
+  });
+});
+
+describe('Y6 — add-mixed / sub-mixed', () => {
+  it('add-mixed: answer equals improper(a) + improper(b)', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['add-mixed'], denominators: [2, 3, 4, 5, 6] }),
+      40
+    );
+    qs.forEach(q => {
+      if (!isMixedAddSubQuestion(q)) throw new Error('wrong shape');
+      expect(q.skill).toBe('add-mixed');
+      const aImp = toImproper(q.a);
+      const bImp = toImproper(q.b);
+      const expectedNum = aImp.num * bImp.den + bImp.num * aImp.den;
+      const expectedDen = aImp.den * bImp.den;
+      const ansImp = answerToImproper(q.answer);
+      // Cross-multiply equality check.
+      expect(ansImp.num * expectedDen).toBe(expectedNum * ansImp.den);
+    });
+  });
+
+  it('sub-mixed: a >= b and answer = improper(a) - improper(b), non-negative', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['sub-mixed'], denominators: [2, 3, 4, 5, 6] }),
+      40
+    );
+    qs.forEach(q => {
+      if (!isMixedAddSubQuestion(q)) throw new Error('wrong shape');
+      expect(q.skill).toBe('sub-mixed');
+      const aImp = toImproper(q.a);
+      const bImp = toImproper(q.b);
+      // a >= b via cross-multiplication.
+      expect(aImp.num * bImp.den).toBeGreaterThanOrEqual(bImp.num * aImp.den);
+      const expectedNum = aImp.num * bImp.den - bImp.num * aImp.den;
+      const expectedDen = aImp.den * bImp.den;
+      const ansImp = answerToImproper(q.answer);
+      expect(ansImp.num * expectedDen).toBe(expectedNum * ansImp.den);
+      expect(ansImp.num).toBeGreaterThan(0);
+    });
+  });
+
+  it('canonical answer is accepted as the user input via mulAnswerAccepted', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['add-mixed', 'sub-mixed'], denominators: [2, 3, 4] }),
+      30
+    );
+    qs.forEach(q => {
+      if (!isMixedAddSubQuestion(q)) throw new Error('wrong shape');
+      const a = q.answer;
+      const mixedInput = {
+        kind: 'mixed' as const,
+        value: { whole: a.whole ?? 0, num: a.num, den: a.den || 1 },
+      };
+      expect(mulAnswerAccepted(a, mixedInput)).toBe(true);
+    });
+  });
+
+  it('CURRICULUM_TAGS for add-mixed and sub-mixed are Y6', () => {
+    expect(CURRICULUM_TAGS['add-mixed'].year).toBe('Y6');
+    expect(CURRICULUM_TAGS['sub-mixed'].year).toBe('Y6');
+  });
+});
+
+describe('Y6 — div-frac-whole', () => {
+  it('answer is the simplified result of n/d ÷ w = n/(d*w)', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['div-frac-whole'], denominators: [2, 3, 4, 5, 6] }),
+      50
+    );
+    qs.forEach(q => {
+      if (!isDivFracWholeQuestion(q)) throw new Error('wrong shape');
+      expect(q.skill).toBe('div-frac-whole');
+      // Cross-mul: q.frac.num/(q.frac.den * q.whole) === q.answer
+      const expectedNum = q.frac.num;
+      const expectedDen = q.frac.den * q.whole;
+      expect(q.answer.num * expectedDen).toBe(expectedNum * q.answer.den);
+      // Result is a proper fraction (per generator).
+      expect(q.answer.num).toBeLessThan(q.answer.den);
+      // Result is simplified.
+      expect(fracIsSimplified(q.answer)).toBe(true);
+    });
+  });
+
+  it('whole multiplier is 2..6', () => {
+    const qs = generateFractionQuestions(
+      baseSettings({ skills: ['div-frac-whole'], denominators: [2, 3, 4, 5, 6] }),
+      30
+    );
+    qs.forEach(q => {
+      if (!isDivFracWholeQuestion(q)) throw new Error('wrong shape');
+      expect(q.whole).toBeGreaterThanOrEqual(2);
+      expect(q.whole).toBeLessThanOrEqual(6);
+    });
+  });
+
+  it('CURRICULUM_TAGS for div-frac-whole is Y6', () => {
+    expect(CURRICULUM_TAGS['div-frac-whole'].year).toBe('Y6');
   });
 });

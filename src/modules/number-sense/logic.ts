@@ -1,21 +1,27 @@
-// Number Sense module: 12 skills covering UK National Curriculum Years 3–5.
+// Number Sense module: skills covering UK National Curriculum Years 3–6.
 // Place value, rounding, multiples sequences, negative number counting,
-// Roman numerals, and ordering. All generators use Math.random() with no
-// external dependencies.
+// Roman numerals, ordering, plus Y6 additions: place value to 10,000,000,
+// rounding to 1,000,000, negative-interval (count-across-zero) and BIDMAS
+// order-of-operations. All generators use Math.random() with no external
+// dependencies.
 
 export type NumberSenseSkill =
   | 'place-value-3d'
   | 'place-value-4d'
   | 'place-value-7d'
+  | 'place-value-10m'
   | 'round-10'
   | 'round-100'
   | 'round-1000'
   | 'round-10k'
+  | 'round-1m'
   | 'count-multiples'
   | 'negative-count'
+  | 'negative-interval'
   | 'roman-100'
   | 'roman-1000'
-  | 'order-numbers';
+  | 'order-numbers'
+  | 'bidmas';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -24,16 +30,37 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 // digitIndex is 0-based from the LEFT (most significant first); answer is
 // always the digit times its positional weight.
 export interface NumberSensePlaceValueQuestion {
-  skill: 'place-value-3d' | 'place-value-4d' | 'place-value-7d';
+  skill: 'place-value-3d' | 'place-value-4d' | 'place-value-7d' | 'place-value-10m';
   number: number;
   digitIndex: number;
   answer: number;
 }
 
 export interface NumberSenseRoundQuestion {
-  skill: 'round-10' | 'round-100' | 'round-1000' | 'round-10k';
+  skill: 'round-10' | 'round-100' | 'round-1000' | 'round-10k' | 'round-1m';
   number: number;
-  nearest: number; // 10, 100, 1000, 10000, 100000
+  nearest: number; // 10, 100, 1000, 10000, 100000, 1000000
+  answer: number;
+}
+
+// negative-interval: "From -5 to 12, how many?" → 17 (the distance between
+// the two endpoints, always positive).
+export interface NumberSenseNegativeIntervalQuestion {
+  skill: 'negative-interval';
+  from: number;
+  to: number;
+  answer: number; // always = to - from, taken as |to - from|
+}
+
+// bidmas: a small order-of-operations expression. The expression is stored
+// as a printable string (PDF-safe glyphs only) plus the canonical numeric
+// answer; for safety we also pin the structured operand tuple so the test
+// can recompute the expected value without parsing.
+export interface NumberSenseBidmasQuestion {
+  skill: 'bidmas';
+  /** Pretty-printed expression e.g. "2 + 3 × 4". WinAnsi-safe characters
+   *  only ('+', '-', '×', '÷', '(', ')', digits, spaces). */
+  expression: string;
   answer: number;
 }
 
@@ -69,7 +96,9 @@ export type NumberSenseQuestion =
   | NumberSenseRoundQuestion
   | NumberSenseSequenceQuestion
   | NumberSenseRomanQuestion
-  | NumberSenseOrderQuestion;
+  | NumberSenseOrderQuestion
+  | NumberSenseNegativeIntervalQuestion
+  | NumberSenseBidmasQuestion;
 
 export interface NumberSenseSettings {
   skills: NumberSenseSkill[];
@@ -83,37 +112,45 @@ export const ALL_SKILLS: NumberSenseSkill[] = [
   'place-value-3d',
   'place-value-4d',
   'place-value-7d',
+  'place-value-10m',
   'round-10',
   'round-100',
   'round-1000',
   'round-10k',
+  'round-1m',
   'count-multiples',
   'negative-count',
+  'negative-interval',
   'roman-100',
   'roman-1000',
   'order-numbers',
+  'bidmas',
 ];
 
 export const SKILL_LABELS: Record<NumberSenseSkill, string> = {
   'place-value-3d': 'Place value (3-digit)',
   'place-value-4d': 'Place value (4-digit)',
   'place-value-7d': 'Place value (to 1M)',
+  'place-value-10m': 'Place value (to 10M)',
   'round-10': 'Round to 10',
   'round-100': 'Round to 100',
   'round-1000': 'Round to 1,000',
   'round-10k': 'Round to 10k/100k',
+  'round-1m': 'Round to 1,000,000',
   'count-multiples': 'Count in multiples',
   'negative-count': 'Negative counting',
+  'negative-interval': 'Negative interval',
   'roman-100': 'Roman to 100',
   'roman-1000': 'Roman to 1000',
   'order-numbers': 'Order numbers',
+  'bidmas': 'Order of operations',
 };
 
 // Curriculum tag map — exported so an orchestrator can build a curriculum
 // reference doc without having to re-implement the mapping.
 export const CURRICULUM_TAGS: Record<
   NumberSenseSkill,
-  { year: 3 | 4 | 5; objective: string }[]
+  { year: 3 | 4 | 5 | 6; objective: string }[]
 > = {
   'place-value-3d': [
     { year: 3, objective: 'Recognise the place value of each digit in a 3-digit number' },
@@ -126,6 +163,13 @@ export const CURRICULUM_TAGS: Record<
       year: 5,
       objective:
         'Read, write, order and compare numbers to at least 1,000,000 and determine the value of each digit',
+    },
+  ],
+  'place-value-10m': [
+    {
+      year: 6,
+      objective:
+        'Read, write, order and compare numbers up to 10,000,000 and determine the value of each digit',
     },
   ],
   'round-10': [
@@ -143,6 +187,12 @@ export const CURRICULUM_TAGS: Record<
       objective: 'Round any number up to 1,000,000 to the nearest 10,000 and 100,000',
     },
   ],
+  'round-1m': [
+    {
+      year: 6,
+      objective: 'Round any whole number to a required degree of accuracy (nearest 1,000,000)',
+    },
+  ],
   'count-multiples': [
     { year: 3, objective: 'Count from 0 in multiples of 4, 8, 50 and 100' },
     { year: 4, objective: 'Count in multiples of 6, 7, 9, 25 and 1000' },
@@ -153,6 +203,12 @@ export const CURRICULUM_TAGS: Record<
       year: 4,
       objective:
         'Count backwards through zero to include negative numbers',
+    },
+  ],
+  'negative-interval': [
+    {
+      year: 6,
+      objective: 'Use negative numbers in context and calculate intervals across zero',
     },
   ],
   'roman-100': [
@@ -171,6 +227,12 @@ export const CURRICULUM_TAGS: Record<
     { year: 3, objective: 'Compare and order numbers up to 1,000' },
     { year: 4, objective: 'Order and compare numbers beyond 1,000' },
     { year: 5, objective: 'Order and compare numbers to at least 1,000,000' },
+  ],
+  'bidmas': [
+    {
+      year: 6,
+      objective: 'Use knowledge of the order of operations (BIDMAS/BODMAS) to carry out calculations involving the four operations',
+    },
   ],
 };
 
@@ -245,11 +307,14 @@ export function fromRoman(s: string): number {
 
 // ---------- Place value ----------
 
-function buildPlaceValue(skill: 'place-value-3d' | 'place-value-4d' | 'place-value-7d'): NumberSensePlaceValueQuestion {
+function buildPlaceValue(
+  skill: 'place-value-3d' | 'place-value-4d' | 'place-value-7d' | 'place-value-10m'
+): NumberSensePlaceValueQuestion {
   let digits: number;
   if (skill === 'place-value-3d') digits = 3;
   else if (skill === 'place-value-4d') digits = 4;
-  else digits = randInt(5, 7); // up to 1,000,000 (7 digits)
+  else if (skill === 'place-value-7d') digits = randInt(5, 7); // up to 1,000,000 (7 digits)
+  else digits = randInt(7, 8); // place-value-10m: up to 10,000,000 (8 digits)
 
   const min = 10 ** (digits - 1);
   const max = 10 ** digits - 1;
@@ -276,6 +341,7 @@ function nearestFor(skill: NumberSenseRoundQuestion['skill']): number {
   if (skill === 'round-10') return 10;
   if (skill === 'round-100') return 100;
   if (skill === 'round-1000') return 1000;
+  if (skill === 'round-1m') return 1000000;
   // round-10k: alternate between 10,000 and 100,000.
   return Math.random() < 0.5 ? 10000 : 100000;
 }
@@ -305,10 +371,15 @@ function rangeFor(nearest: number, difficulty: Difficulty): { min: number; max: 
     if (difficulty === 'medium') return { min: 10001, max: 999999 };
     return { min: 10001, max: 9999999 };
   }
-  // 100000
-  if (difficulty === 'easy') return { min: 100001, max: 999999 };
-  if (difficulty === 'medium') return { min: 100001, max: 9999999 };
-  return { min: 100001, max: 99999999 };
+  if (nearest === 100000) {
+    if (difficulty === 'easy') return { min: 100001, max: 999999 };
+    if (difficulty === 'medium') return { min: 100001, max: 9999999 };
+    return { min: 100001, max: 99999999 };
+  }
+  // 1,000,000 — Y6 "round to the nearest million" target.
+  if (difficulty === 'easy') return { min: 1000001, max: 9999999 };
+  if (difficulty === 'medium') return { min: 1000001, max: 99999999 };
+  return { min: 1000001, max: 999999999 };
 }
 
 function roundToNearest(n: number, nearest: number): number {
@@ -431,6 +502,111 @@ function buildOrder(difficulty: Difficulty): NumberSenseOrderQuestion {
   return { skill: 'order-numbers', numbers, answer };
 }
 
+// ---------- Negative interval (Y6) ----------
+
+function buildNegativeInterval(difficulty: Difficulty): NumberSenseNegativeIntervalQuestion {
+  // From a negative endpoint to a positive (or vice versa). The interval is
+  // |to - from|. Difficulty scales the magnitude of each endpoint.
+  const mag = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 30 : 100;
+  // Force one side negative and one side positive so the interval truly
+  // crosses zero (the NC objective wording is "intervals across zero").
+  const from = -randInt(1, mag);
+  const to = randInt(1, mag);
+  const answer = to - from; // always positive given from<0<to
+  return { skill: 'negative-interval', from, to, answer };
+}
+
+// ---------- BIDMAS / order of operations (Y6) ----------
+
+// Build a small expression that exercises operator precedence. We render
+// it as a string using WinAnsi-safe glyphs ('+', '-', '×', '÷') and pin
+// the canonical numeric value computed in JS arithmetic so the answer is
+// always exact.
+function buildBidmas(difficulty: Difficulty): NumberSenseBidmasQuestion {
+  // Helper: pick a small operand.
+  const small = () => randInt(2, 9);
+
+  // Forms (each guarantees an integer answer to keep the kid focused on
+  // the precedence rule, not on decimal arithmetic):
+  //   easy:    a + b × c   |   a × b - c   |   (a + b) × c
+  //   medium:  adds parentheses cases     |   a × b + c × d
+  //   hard:    a × b + c × d - e          |   a + b × (c + d)
+  // Each branch produces an expression string and the numeric answer.
+
+  type Form = { expression: string; answer: number };
+  const forms: Array<() => Form> = [];
+
+  // Always include the canonical Y6 example shape a + b × c.
+  forms.push(() => {
+    const a = small();
+    const b = small();
+    const c = small();
+    return { expression: `${a} + ${b} × ${c}`, answer: a + b * c };
+  });
+
+  // a × b - c (multiplication binds tighter than subtraction).
+  forms.push(() => {
+    const a = small();
+    const b = small();
+    const c = small();
+    const ab = a * b;
+    // Ensure positive result so the kid doesn't have to handle negatives.
+    if (ab > c) return { expression: `${a} × ${b} - ${c}`, answer: ab - c };
+    return { expression: `${b} × ${a} - ${c}`, answer: b * a - c };
+  });
+
+  if (difficulty !== 'easy') {
+    // (a + b) × c — parentheses override.
+    forms.push(() => {
+      const a = small();
+      const b = small();
+      const c = small();
+      return { expression: `(${a} + ${b}) × ${c}`, answer: (a + b) * c };
+    });
+    // a × b + c × d
+    forms.push(() => {
+      const a = small();
+      const b = small();
+      const c = small();
+      const d = small();
+      return { expression: `${a} × ${b} + ${c} × ${d}`, answer: a * b + c * d };
+    });
+    // a ÷ b + c — guarantee b divides a.
+    forms.push(() => {
+      const b = randInt(2, 5);
+      const q = randInt(2, 9);
+      const a = b * q;
+      const c = small();
+      return { expression: `${a} ÷ ${b} + ${c}`, answer: q + c };
+    });
+  }
+
+  if (difficulty === 'hard') {
+    // a + b × (c + d)
+    forms.push(() => {
+      const a = small();
+      const b = small();
+      const c = small();
+      const d = small();
+      return { expression: `${a} + ${b} × (${c} + ${d})`, answer: a + b * (c + d) };
+    });
+    // a × b + c × d - e (kept non-negative)
+    forms.push(() => {
+      const a = small();
+      const b = small();
+      const c = small();
+      const d = small();
+      const e = randInt(1, 9);
+      const v = a * b + c * d;
+      const ee = Math.min(e, v); // never go negative
+      return { expression: `${a} × ${b} + ${c} × ${d} - ${ee}`, answer: v - ee };
+    });
+  }
+
+  const make = pickFrom(forms);
+  return { skill: 'bidmas', ...make() };
+}
+
 // ---------- Top-level generator ----------
 
 function sampleOne(skill: NumberSenseSkill, difficulty: Difficulty): NumberSenseQuestion {
@@ -438,21 +614,27 @@ function sampleOne(skill: NumberSenseSkill, difficulty: Difficulty): NumberSense
     case 'place-value-3d':
     case 'place-value-4d':
     case 'place-value-7d':
+    case 'place-value-10m':
       return buildPlaceValue(skill);
     case 'round-10':
     case 'round-100':
     case 'round-1000':
     case 'round-10k':
+    case 'round-1m':
       return buildRound(skill, difficulty);
     case 'count-multiples':
       return buildMultiples(difficulty);
     case 'negative-count':
       return buildNegativeCount(difficulty);
+    case 'negative-interval':
+      return buildNegativeInterval(difficulty);
     case 'roman-100':
     case 'roman-1000':
       return buildRoman(skill, difficulty);
     case 'order-numbers':
       return buildOrder(difficulty);
+    case 'bidmas':
+      return buildBidmas(difficulty);
   }
 }
 
@@ -483,7 +665,8 @@ export function questionPromptText(q: NumberSenseQuestion): string {
       q.nearest === 10 ? '10' :
       q.nearest === 100 ? '100' :
       q.nearest === 1000 ? '1,000' :
-      q.nearest === 10000 ? '10,000' : '100,000';
+      q.nearest === 10000 ? '10,000' :
+      q.nearest === 100000 ? '100,000' : '1,000,000';
     return `Round ${q.number.toLocaleString('en-GB')} to the nearest ${label}.`;
   }
   if (isSequenceQuestion(q)) {
@@ -492,6 +675,12 @@ export function questionPromptText(q: NumberSenseQuestion): string {
   }
   if (isRomanQuestion(q)) {
     return q.direction === 'r2n' ? `Convert ${q.prompt} to a number.` : `Convert ${q.prompt} to Roman numerals.`;
+  }
+  if (isNegativeIntervalQuestion(q)) {
+    return `From ${q.from} to ${q.to}, how many?`;
+  }
+  if (isBidmasQuestion(q)) {
+    return `${q.expression} = ?`;
   }
   // order-numbers
   return `Order smallest to largest: ${q.numbers.join(', ')}`;
@@ -503,6 +692,8 @@ export function answerText(q: NumberSenseQuestion): string {
   if (isRoundQuestion(q)) return String(q.answer);
   if (isSequenceQuestion(q)) return q.answers.join(', ');
   if (isRomanQuestion(q)) return q.answer;
+  if (isNegativeIntervalQuestion(q)) return String(q.answer);
+  if (isBidmasQuestion(q)) return String(q.answer);
   return q.answer.join(', ');
 }
 
@@ -531,7 +722,12 @@ export function parseSequenceAnswer(input: string): number[] | null {
 export function checkNumberSenseAnswer(q: NumberSenseQuestion, input: string): boolean {
   const trimmed = input.trim();
   if (!trimmed) return false;
-  if (isPlaceValueQuestion(q) || isRoundQuestion(q)) {
+  if (
+    isPlaceValueQuestion(q) ||
+    isRoundQuestion(q) ||
+    isNegativeIntervalQuestion(q) ||
+    isBidmasQuestion(q)
+  ) {
     if (!/^-?\d+$/.test(trimmed)) return false;
     const n = parseInt(trimmed, 10);
     return !isNaN(n) && n === q.answer;
@@ -563,7 +759,8 @@ export function isPlaceValueQuestion(q: NumberSenseQuestion): q is NumberSensePl
   return (
     q.skill === 'place-value-3d' ||
     q.skill === 'place-value-4d' ||
-    q.skill === 'place-value-7d'
+    q.skill === 'place-value-7d' ||
+    q.skill === 'place-value-10m'
   );
 }
 
@@ -572,7 +769,8 @@ export function isRoundQuestion(q: NumberSenseQuestion): q is NumberSenseRoundQu
     q.skill === 'round-10' ||
     q.skill === 'round-100' ||
     q.skill === 'round-1000' ||
-    q.skill === 'round-10k'
+    q.skill === 'round-10k' ||
+    q.skill === 'round-1m'
   );
 }
 
@@ -586,4 +784,14 @@ export function isRomanQuestion(q: NumberSenseQuestion): q is NumberSenseRomanQu
 
 export function isOrderQuestion(q: NumberSenseQuestion): q is NumberSenseOrderQuestion {
   return q.skill === 'order-numbers';
+}
+
+export function isNegativeIntervalQuestion(
+  q: NumberSenseQuestion
+): q is NumberSenseNegativeIntervalQuestion {
+  return q.skill === 'negative-interval';
+}
+
+export function isBidmasQuestion(q: NumberSenseQuestion): q is NumberSenseBidmasQuestion {
+  return q.skill === 'bidmas';
 }

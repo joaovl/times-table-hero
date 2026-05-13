@@ -27,7 +27,12 @@ export type ShapeSkill =
   | 'lines-of-symmetry'
   | 'coord-read'
   | 'coord-plot'
-  | 'translation';
+  | 'translation'
+  // v4 — Y6 additions.
+  | 'coord-four-quadrants'
+  | 'angle-at-point'
+  | 'angle-on-line'
+  | 'angle-vertical';
 
 export type ShapeKind =
   | 'triangle'
@@ -118,6 +123,10 @@ export const SHAPE_SKILL_OPTIONS: ReadonlyArray<ShapeSkill> = [
   'coord-read',
   'coord-plot',
   'translation',
+  'coord-four-quadrants',
+  'angle-at-point',
+  'angle-on-line',
+  'angle-vertical',
 ];
 
 export const SHAPE_SKILL_LABEL: Record<ShapeSkill, string> = {
@@ -139,6 +148,10 @@ export const SHAPE_SKILL_LABEL: Record<ShapeSkill, string> = {
   'coord-read': 'Read coordinates',
   'coord-plot': 'Plot coordinates',
   'translation': 'Translate point',
+  'coord-four-quadrants': 'Coords (4 quadrants)',
+  'angle-at-point': 'Angles at a point',
+  'angle-on-line': 'Angles on a line',
+  'angle-vertical': 'Vertically opposite',
 };
 
 /**
@@ -166,6 +179,14 @@ export const CURRICULUM_TAGS: Record<ShapeSkill, string[]> = {
   'coord-read': ['Y4', 'Y5'],
   'coord-plot': ['Y4', 'Y5'],
   'translation': ['Y5'],
+  // v4 — Y6 additions.
+  // "Describe positions on the full coordinate grid (all four quadrants)"
+  'coord-four-quadrants': ['Y6'],
+  // "Recognise angles where they meet at a point, on a straight line, or are
+  // vertically opposite, and find missing angles" (Y6 Geometry).
+  'angle-at-point': ['Y6'],
+  'angle-on-line': ['Y6'],
+  'angle-vertical': ['Y6'],
 };
 
 export const SHAPE_KIND_OPTIONS: ReadonlyArray<ShapeKind> = [
@@ -512,6 +533,62 @@ function buildQuestion(
       answer: ex * 1000 + ey,
     };
   }
+  if (skill === 'coord-four-quadrants') {
+    // Y6 four-quadrant coordinate read. Both x and y can be negative.
+    const gridMax = coordGridMaxForDifficulty(difficulty);
+    // Avoid (0,0). Allow negative coordinates.
+    let x: number;
+    let y: number;
+    do {
+      x = randInt(-gridMax, gridMax);
+      y = randInt(-gridMax, gridMax);
+    } while (x === 0 && y === 0);
+    // Pack answer as base-of-2*gridMax+1; not used for acceptance
+    // (parseCoord handles the string). Store a placeholder positive integer.
+    return {
+      skill,
+      point: { x, y },
+      gridMax,
+      units,
+      answer: Math.abs(x) * 1000 + Math.abs(y),
+    };
+  }
+  if (skill === 'angle-at-point' || skill === 'angle-on-line' || skill === 'angle-vertical') {
+    // Y6 angle-rule skills. Pick a known visible angle in a kid-friendly
+    // range; the missing angle is derived from the rule.
+    //   angle-at-point  : sum of all angles at a point = 360°. We show one
+    //                     visible angle and ask for the rest (360 - visible).
+    //   angle-on-line   : sum on a straight line = 180°. Same shape with
+    //                     180° complement.
+    //   angle-vertical  : vertically opposite angles are equal. The "missing"
+    //                     angle equals the visible angle.
+    const total = skill === 'angle-at-point' ? 360 : skill === 'angle-on-line' ? 180 : 0;
+    // Choose a visible angle that's not too close to the boundaries.
+    let visible: number;
+    if (skill === 'angle-vertical') {
+      // Any reasonable angle from 15..165.
+      const step = difficulty === 'easy' ? 15 : difficulty === 'medium' ? 5 : 1;
+      visible = step * randInt(Math.ceil(15 / step), Math.floor(165 / step));
+    } else if (skill === 'angle-on-line') {
+      const step = difficulty === 'easy' ? 15 : difficulty === 'medium' ? 5 : 1;
+      const min = Math.ceil(20 / step);
+      const max = Math.floor(160 / step);
+      visible = step * randInt(min, max);
+    } else {
+      // angle-at-point: leave headroom so the missing angle isn't tiny.
+      const step = difficulty === 'easy' ? 30 : difficulty === 'medium' ? 10 : 5;
+      const min = Math.ceil(30 / step);
+      const max = Math.floor(330 / step);
+      visible = step * randInt(min, max);
+    }
+    const missing = skill === 'angle-vertical' ? visible : total - visible;
+    return {
+      skill,
+      angle: visible,
+      units,
+      answer: missing,
+    };
+  }
   // angle-name. Pick a category, then sample a representative angle.
   // Right is exactly 90°; acute is in 15..85; obtuse is in 95..170.
   // The angle drives the SVG render so the question and the answer
@@ -625,6 +702,14 @@ export function promptFor(q: ShapeQuestion): string {
       const parts = [hx, hy].filter(Boolean).join(', ');
       return `Translate (${sx}, ${sy}) ${parts}. New coords?`;
     }
+    case 'coord-four-quadrants':
+      return 'Coordinates? (x,y)';
+    case 'angle-at-point':
+      return 'Missing angle? (sum = 360°)';
+    case 'angle-on-line':
+      return 'Missing angle? (sum = 180°)';
+    case 'angle-vertical':
+      return 'Vertically opposite angle?';
   }
 }
 
@@ -655,7 +740,7 @@ export function answerString(q: ShapeQuestion): string {
     // ° (U+00B0) is in WinAnsi so this is safe in jsPDF Helvetica.
     return `${q.angle ?? 0}°`;
   }
-  if (q.skill === 'coord-read' || q.skill === 'coord-plot') {
+  if (q.skill === 'coord-read' || q.skill === 'coord-plot' || q.skill === 'coord-four-quadrants') {
     const x = q.point?.x ?? 0;
     const y = q.point?.y ?? 0;
     return `(${x}, ${y})`;
@@ -664,6 +749,9 @@ export function answerString(q: ShapeQuestion): string {
     const x = (q.point?.x ?? 0) + (q.delta?.dx ?? 0);
     const y = (q.point?.y ?? 0) + (q.delta?.dy ?? 0);
     return `(${x}, ${y})`;
+  }
+  if (q.skill === 'angle-at-point' || q.skill === 'angle-on-line' || q.skill === 'angle-vertical') {
+    return `${q.answer}°`;
   }
   if (q.skill === 'area-tri' || q.skill === 'area-circle' || q.skill === 'area-rect') {
     return `${formatNumber(q.answer)} ${unitsSquared(q.units)}`;
@@ -754,7 +842,12 @@ export function isAnswerCorrect(q: ShapeQuestion, typed: string): boolean {
     // ±2° tolerance per spec — kids near-misses still get credit.
     return Math.abs(n - (q.angle ?? -9999)) <= 2;
   }
-  if (q.skill === 'coord-read' || q.skill === 'coord-plot' || q.skill === 'translation') {
+  if (
+    q.skill === 'coord-read' ||
+    q.skill === 'coord-plot' ||
+    q.skill === 'translation' ||
+    q.skill === 'coord-four-quadrants'
+  ) {
     const got = parseCoord(typed);
     if (!got) return false;
     let want: { x: number; y: number };
@@ -767,6 +860,12 @@ export function isAnswerCorrect(q: ShapeQuestion, typed: string): boolean {
       want = { x: q.point?.x ?? 0, y: q.point?.y ?? 0 };
     }
     return got.x === want.x && got.y === want.y;
+  }
+  if (q.skill === 'angle-at-point' || q.skill === 'angle-on-line' || q.skill === 'angle-vertical') {
+    const stripped = trimmed.replace(/°$/, '').trim();
+    const n = Number(stripped);
+    if (!Number.isFinite(n)) return false;
+    return n === q.answer;
   }
   // Numeric skills — accept the number with or without a unit suffix.
   const numericPart = stripUnitSuffix(typed, q.units);

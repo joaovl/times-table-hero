@@ -2,7 +2,7 @@
 
 Key Stage 2 of the UK National Curriculum runs across Years 3, 4, 5, and 6 (ages roughly 7 to 11). For mathematics it is organised into a set of programmes of study, one per year group, each grouped into strands like Number and place value, Addition and subtraction, Multiplication and division, Fractions (including decimals), Measurement, Geometry, and Statistics.
 
-Times Table Hero focuses on Years 3, 4, and 5 today. Year 6 content (algebra, ratio and proportion, harder geometry such as area of circles and circumference) is present in a few skills but not yet covered comprehensively — see the "Coverage gaps" section at the bottom.
+Times Table Hero covers Years 3 through 6. Year 6 coverage was added in May 2026 across the existing modules plus three new modules — Ratio & Proportion, Algebra, and Statistics — see the Year 6 section below and the "Coverage gaps" section at the bottom.
 
 This page lists, year by year, which National Curriculum objectives the app practises and which module + skill exercises each one. Mappings come directly from the `CURRICULUM_TAGS` constant exported by each module's `logic.ts`, so this page stays in step with the code.
 
@@ -126,6 +126,36 @@ If a skill maps to more than one year (for example, "compare and order numbers" 
 | Solve comparison, sum and difference problems using information presented in line graphs | Charts | line-trend, multi-step-bar | |
 | Interpret pie charts and use these to solve problems | Charts | pie-fraction | |
 
+## Year 6
+
+| NC objective | Module | Skill | Notes |
+|---|---|---|---|
+| Read, write, order and compare numbers up to 10,000,000 | Number Sense | place-value-10m | |
+| Round any whole number to a required degree of accuracy (nearest 1,000,000) | Number Sense | round-1m | |
+| Use negative numbers in context, calculate intervals across zero | Number Sense | negative-interval | |
+| Use knowledge of the order of operations (BIDMAS / BODMAS) | Number Sense | bidmas | Mixed +, -, ×, ÷, parentheses |
+| Multiply multi-digit numbers up to 4 digits by a 2-digit whole number | Arithmetic | multiply | Set chip pickers to 4 × 2 |
+| Divide numbers up to 4 digits by a 2-digit whole number (with remainders) | Arithmetic | divide | Enable "Allow remainders" |
+| Add and subtract fractions with different denominators and mixed numbers | Fractions | add-mixed, sub-mixed, add-diff, sub-diff | |
+| Divide proper fractions by whole numbers | Fractions | div-frac-whole | e.g. 3/4 ÷ 2 = 3/8 |
+| Multiply pairs of simple fractions | Fractions | mul-frac | Carried over from Y5 |
+| Calculate decimal-fraction-percentage equivalents | Fractions / Decimals | to-decimal, from-decimal | |
+| Solve problems using percentages of an amount | Ratio & Proportion | percent-of | e.g. 15% of 80 |
+| Solve problems using scale factors | Ratio & Proportion | scale-factor | |
+| Solve problems involving unequal sharing in a ratio | Ratio & Proportion | ratio-share | e.g. share £40 in 3:5 |
+| Simplify ratios using common factors | Ratio & Proportion | ratio-simplify | |
+| Solve equivalent-ratio problems | Ratio & Proportion | ratio-equivalent | |
+| Use simple formulae | Algebra | formula-eval | e.g. p = 2(l + w) |
+| Express missing-number problems algebraically | Algebra | missing-number | e.g. 3a + 4 = 10 |
+| Generate and describe linear number sequences | Algebra | sequence-next, sequence-rule | |
+| Substitute values into expressions | Algebra | expression-evaluate | e.g. 3x − 2 at x = 5 |
+| Describe positions on the full coordinate grid (all four quadrants) | Shapes | coord-four-quadrants | |
+| Angles at a point sum to 360° (find the missing angle) | Shapes | angle-at-point | |
+| Angles on a straight line sum to 180° (find the missing angle) | Shapes | angle-on-line | |
+| Vertically opposite angles are equal | Shapes | angle-vertical | |
+| Calculate and interpret the mean as an average | Statistics | mean-calc, mean-find-missing | |
+| Find the median, mode, and range of a small data set | Statistics | median, mode, range | Y6 / Y7 transition |
+
 ## Coverage gaps
 
 This is the honest list of National Curriculum objectives the app does not yet practise. Pull requests welcome.
@@ -149,16 +179,13 @@ This is the honest list of National Curriculum objectives the app does not yet p
 - **Reading scales involving decimals (rulers, jugs, weighing scales).** Visual scales are not yet rendered.
 - **Convert between units of capacity using decimal notation.** `volume-L-mL` uses integer conversions; decimal conversion is a near-miss.
 
-### Year 6 — substantially not covered
+### Year 6 — remaining gaps
 
-The app currently has only partial Y6 content. The following Y6 strands are not yet implemented:
+The Y6 expansion (May 2026) covers the four strands in the Year 6 table above. The remaining gaps are minor:
 
-- **Algebra:** simple formulae, linear sequences, missing-number problems with two unknowns.
-- **Ratio and proportion:** unequal sharing, percentage as a part-whole calculation, scale factors.
-- **Geometry — area of triangles and parallelograms.** Triangle area is partially in the Shapes module at Y5/Y6 difficulty.
-- **Geometry — area of circles and circumference.** Implemented in the Shapes module but not yet exposed as a full Y6 difficulty curve.
-- **Statistics — calculate and interpret the mean as an average.** No mean / median / mode skill yet.
-- **Number — long division with remainders expressed as fractions or decimals.** Arithmetic division offers integer remainders only.
+- **Long division with remainders expressed as fractions or decimals.** Arithmetic division currently offers integer remainders only; expressing 17 ÷ 4 as `4 1/4` or `4.25` is a future addition.
+- **Two-step ratio word problems in scaled-up contexts.** The dedicated `ratio-share` skill solves the bare ratio question; embedding it in a "Sara has £40 and shares it with Tom in ratio 3:5" word-problem still routes through Word Problems and is not yet wired to a Y6 difficulty curve.
+- **Algebra with two unknowns.** The `missing-number` skill handles one unknown (e.g. `3a + 4 = 10`); simultaneous equations are out of scope for Y6.
 
 ## How to contribute
 

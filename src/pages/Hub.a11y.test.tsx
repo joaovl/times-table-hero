@@ -53,11 +53,11 @@ describe('Hub accessibility', () => {
     expect(group).toBeInTheDocument();
   });
 
-  it('renders four radios (All / Y3 / Y4 / Y5), each with aria-checked', () => {
+  it('renders five radios (All / Y3 / Y4 / Y5 / Y6), each with aria-checked', () => {
     renderHub();
     const group = screen.getByRole('radiogroup', { name: /school year/i });
     const radios = within(group).getAllByRole('radio');
-    expect(radios).toHaveLength(4);
+    expect(radios).toHaveLength(5);
     for (const r of radios) {
       // aria-checked is required on every radio.
       expect(r).toHaveAttribute('aria-checked');

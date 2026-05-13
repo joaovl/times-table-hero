@@ -449,6 +449,161 @@ function drawCoordGrid(
 }
 
 /**
+ * Draw a four-quadrant coordinate grid (negative axes). `marker` is an
+ * optional point drawn as a filled dot — used for coord-four-quadrants.
+ * The origin (0,0) sits at the centre of the drawn box.
+ */
+function drawFourQuadrantGrid(
+  doc: jsPDF,
+  cx: number,
+  cy: number,
+  size: number,
+  gridMax: number,
+  marker: { x: number; y: number } | null
+) {
+  const usable = size * 0.86;
+  const span = 2 * gridMax;
+  const step = usable / span;
+  const x0 = cx - usable / 2;
+  const y0 = cy + usable / 2; // bottom edge
+  const ox = cx; // origin x (centre)
+  const oy = cy; // origin y (centre)
+
+  // Gridlines.
+  doc.setDrawColor(150);
+  doc.setLineWidth(0.15);
+  for (let i = 0; i <= span; i++) {
+    doc.line(x0 + i * step, y0, x0 + i * step, y0 - usable);
+    doc.line(x0, y0 - i * step, x0 + usable, y0 - i * step);
+  }
+  // Axes through the centre.
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.4);
+  doc.line(x0, oy, x0 + usable, oy); // x-axis
+  doc.line(ox, y0, ox, y0 - usable); // y-axis
+
+  // Tick labels at -gridMax, ..., -1, 1, ..., gridMax (skip 0).
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6);
+  const tickStep = gridMax <= 5 ? 1 : 2;
+  for (let t = -gridMax; t <= gridMax; t += tickStep) {
+    if (t === 0) continue;
+    // x-axis labels
+    doc.text(String(t), ox + t * step, oy + 2.2, { align: 'center' });
+    // y-axis labels
+    doc.text(String(t), ox - 1, oy - t * step + 0.6, { align: 'right' });
+  }
+
+  if (marker) {
+    doc.setFillColor(0, 0, 0);
+    doc.circle(ox + marker.x * step, oy - marker.y * step, 0.7, 'F');
+  }
+}
+
+/**
+ * Draw a "two rays at a point" diagram with the known angle labelled
+ * and a question mark for the missing angle. Used for angle-at-point
+ * (total 360°), angle-on-line (total 180°), and angle-vertical (the two
+ * intersecting lines variant).
+ */
+function drawAngleRuleFigure(
+  doc: jsPDF,
+  q: ShapeQuestion,
+  cx: number,
+  cy: number,
+  armLen: number
+) {
+  const visible = q.angle ?? 90;
+  const vRad = (visible * Math.PI) / 180;
+  doc.setLineWidth(0.6);
+  doc.setDrawColor(0);
+
+  if (q.skill === 'angle-vertical') {
+    // Two intersecting straight lines through a centre. One pair of opposite
+    // angles is labelled with the visible angle; the other pair (vertically
+    // opposite) is labelled with "?".
+    const vx = cx;
+    const vy = cy;
+    // Line 1: horizontal (along x axis).
+    doc.line(vx - armLen, vy, vx + armLen, vy);
+    // Line 2: rotated by `visible` degrees from horizontal.
+    const dx = armLen * Math.cos(vRad);
+    const dy = armLen * Math.sin(vRad);
+    doc.line(vx - dx, vy + dy, vx + dx, vy - dy);
+    // Centre dot.
+    doc.setFillColor(0, 0, 0);
+    doc.circle(vx, vy, 0.5, 'F');
+    // Label the visible angle (between +x ray and rotated +d ray).
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    const labelR = armLen * 0.4;
+    const lx = vx + labelR * Math.cos(vRad / 2);
+    const ly = vy - labelR * Math.sin(vRad / 2);
+    doc.text(`${visible}°`, lx, ly, { align: 'center', baseline: 'middle' });
+    // Label the vertically opposite angle (between -x ray and -d ray) with ?.
+    const opx = vx + labelR * Math.cos(Math.PI + vRad / 2);
+    const opy = vy - labelR * Math.sin(Math.PI + vRad / 2);
+    doc.text('?°', opx, opy, { align: 'center', baseline: 'middle' });
+    return;
+  }
+
+  if (q.skill === 'angle-on-line') {
+    // One straight line plus a third ray rising from a point on the line.
+    // The visible angle is between the ray and one arm; the missing angle
+    // is between the ray and the other arm (sum = 180°).
+    const vx = cx;
+    const vy = cy + armLen * 0.2;
+    // Horizontal line (the "straight line").
+    doc.line(vx - armLen, vy, vx + armLen, vy);
+    // Third ray going up-right at `visible` degrees from the +x ray.
+    const rx = vx + armLen * Math.cos(vRad);
+    const ry = vy - armLen * Math.sin(vRad);
+    doc.line(vx, vy, rx, ry);
+    doc.setFillColor(0, 0, 0);
+    doc.circle(vx, vy, 0.5, 'F');
+    // Visible angle label (between +x and the third ray).
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    const labelR = armLen * 0.32;
+    const lx = vx + labelR * Math.cos(vRad / 2);
+    const ly = vy - labelR * Math.sin(vRad / 2);
+    doc.text(`${visible}°`, lx, ly, { align: 'center', baseline: 'middle' });
+    // Missing angle label (between -x and the third ray).
+    const offRad = Math.PI - (Math.PI - vRad) / 2;
+    const ox = vx + labelR * Math.cos(offRad);
+    const oy = vy - labelR * Math.sin(offRad);
+    doc.text('?°', ox, oy, { align: 'center', baseline: 'middle' });
+    return;
+  }
+
+  // angle-at-point: a single ray plus the rest of the circle's worth of
+  // angle marked with "?". We render two rays so the labelled visible
+  // sector is bounded.
+  const vx = cx;
+  const vy = cy;
+  // First ray along +x.
+  doc.line(vx, vy, vx + armLen, vy);
+  // Second ray at the visible angle.
+  const dx = armLen * Math.cos(vRad);
+  const dy = armLen * Math.sin(vRad);
+  doc.line(vx, vy, vx + dx, vy - dy);
+  doc.setFillColor(0, 0, 0);
+  doc.circle(vx, vy, 0.5, 'F');
+  // Visible angle label inside the smaller sector.
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  const labelR = armLen * 0.4;
+  const lx = vx + labelR * Math.cos(vRad / 2);
+  const ly = vy - labelR * Math.sin(vRad / 2);
+  doc.text(`${visible}°`, lx, ly, { align: 'center', baseline: 'middle' });
+  // Missing label outside (on the other side of the second ray).
+  const offRad = vRad + (2 * Math.PI - vRad) / 2;
+  const ox = vx + labelR * Math.cos(offRad);
+  const oy = vy - labelR * Math.sin(offRad);
+  doc.text('?°', ox, oy, { align: 'center', baseline: 'middle' });
+}
+
+/**
  * Draw a "?°" labelled angle figure. The arc is shown so the kid can
  * read off the value with a (mental) protractor. The label only renders
  * for angle-measure, not angle-name-reflex.
@@ -582,6 +737,17 @@ function drawCell(
   } else if (q.skill === 'coord-plot' || q.skill === 'translation') {
     // Empty grid — kid plots / writes coords on the printed grid.
     drawCoordGrid(doc, cx, cy, Math.min(figBoxW, figBoxH), q.gridMax ?? 5, null);
+  } else if (q.skill === 'coord-four-quadrants') {
+    // Y6: full four-quadrant grid with negative axes; marker is the point
+    // whose coordinates the kid reads off.
+    drawFourQuadrantGrid(doc, cx, cy, Math.min(figBoxW, figBoxH), q.gridMax ?? 5, q.point ?? null);
+  } else if (
+    q.skill === 'angle-at-point' ||
+    q.skill === 'angle-on-line' ||
+    q.skill === 'angle-vertical'
+  ) {
+    const armLen = Math.min(radius * 1.4, figBoxW / 2 - 2);
+    drawAngleRuleFigure(doc, q, cx, cy, armLen);
   } else if (q.shape) {
     drawNamedShape(doc, q.shape, cx, cy, radius);
   }

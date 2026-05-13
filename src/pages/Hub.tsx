@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Palette, Clock, BarChart3, Hash, PoundSterling, Percent, Sigma, Ruler, BookOpen, Download } from 'lucide-react';
+import { Menu, Palette, Clock, BarChart3, Hash, PoundSterling, Percent, Sigma, Ruler, BookOpen, Download, Scale, Variable, LineChart } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
@@ -10,7 +10,7 @@ import { PRESET_THEMES, DEFAULT_THEME, getTheme, saveTheme, resetTheme } from '@
 import { t } from '@/lib/i18n';
 import { useInstallPrompt } from '@/lib/pwa-install';
 
-type YearFilter = 'all' | 3 | 4 | 5;
+type YearFilter = 'all' | 3 | 4 | 5 | 6;
 
 const YEAR_KEY = 'hub-year-filter';
 
@@ -22,23 +22,26 @@ type ModuleCard = {
   title: string;
   subtitle: string;
   glyph?: string;        // text glyph (preferred when available, monochrome by default)
-  iconName?: 'clock' | 'bar-chart-3' | 'hash' | 'pound' | 'percent' | 'sigma' | 'ruler' | 'book-open';
-  years: Array<3 | 4 | 5>;
+  iconName?: 'clock' | 'bar-chart-3' | 'hash' | 'pound' | 'percent' | 'sigma' | 'ruler' | 'book-open' | 'scale' | 'variable' | 'line-chart';
+  years: Array<3 | 4 | 5 | 6>;
 };
 
 const MODULES: ModuleCard[] = [
   { slug: 'times-tables', title: 'Times Tables', subtitle: '×  ÷  x²  √ · Tables 1–12', glyph: '×', years: [3, 4, 5] },
-  { slug: 'arithmetic', title: 'Arithmetic', subtitle: '+  −  ×  ÷ · 1–5 digits', glyph: '+', years: [3, 4, 5] },
+  { slug: 'arithmetic', title: 'Arithmetic', subtitle: '+  −  ×  ÷ · 1–5 digits', glyph: '+', years: [3, 4, 5, 6] },
   { slug: 'time', title: 'Time', subtitle: 'Read analog clocks · Roman · durations', iconName: 'clock', years: [3, 4, 5] },
-  { slug: 'fractions', title: 'Fractions', subtitle: '+ − × · same and different denominators', glyph: '¾', years: [3, 4, 5] },
-  { slug: 'shapes', title: 'Shapes', subtitle: '2D · 3D · angles · area · coords', glyph: '⬡', years: [3, 4, 5] },
+  { slug: 'fractions', title: 'Fractions', subtitle: '+ − × · same and different denominators', glyph: '¾', years: [3, 4, 5, 6] },
+  { slug: 'shapes', title: 'Shapes', subtitle: '2D · 3D · angles · area · coords', glyph: '⬡', years: [3, 4, 5, 6] },
   { slug: 'charts', title: 'Charts', subtitle: 'Bar · pie · line · timetable', iconName: 'bar-chart-3', years: [3, 4, 5] },
-  { slug: 'number-sense', title: 'Number Sense', subtitle: 'Place value · rounding · Roman · Y3–Y5', iconName: 'hash', years: [3, 4, 5] },
+  { slug: 'number-sense', title: 'Number Sense', subtitle: 'Place value · rounding · Roman · Y3–Y6', iconName: 'hash', years: [3, 4, 5, 6] },
   { slug: 'money', title: 'Money', subtitle: 'Add · change · totals · compare prices', iconName: 'pound', years: [3, 4, 5] },
   { slug: 'decimals', title: 'Decimals', subtitle: 'Decimals · percentages · rounding · Y4–Y5', iconName: 'percent', years: [4, 5] },
   { slug: 'number-theory', title: 'Number Theory', subtitle: 'Factors · multiples · primes · squares', iconName: 'sigma', years: [5] },
   { slug: 'conversions', title: 'Conversions', subtitle: 'Units · perimeter · area · volume', iconName: 'ruler', years: [4, 5] },
   { slug: 'word-problems', title: 'Word Problems', subtitle: 'One- and two-step problems · Y3–Y5', iconName: 'book-open', years: [3, 4, 5] },
+  { slug: 'ratio-proportion', title: 'Ratio & Proportion', subtitle: 'Percent · scale · ratio share · Y6', iconName: 'scale', years: [6] },
+  { slug: 'algebra', title: 'Algebra', subtitle: 'Formulae · missing numbers · sequences · Y6', iconName: 'variable', years: [6] },
+  { slug: 'statistics', title: 'Statistics', subtitle: 'Mean · median · mode · range · Y6', iconName: 'line-chart', years: [6] },
 ];
 
 function ModuleIcon({ iconName }: { iconName: NonNullable<ModuleCard['iconName']> }) {
@@ -52,13 +55,16 @@ function ModuleIcon({ iconName }: { iconName: NonNullable<ModuleCard['iconName']
     case 'sigma': return <Sigma className={cls} strokeWidth={2.5} aria-hidden="true" />;
     case 'ruler': return <Ruler className={cls} strokeWidth={2.5} aria-hidden="true" />;
     case 'book-open': return <BookOpen className={cls} strokeWidth={2.5} aria-hidden="true" />;
+    case 'scale': return <Scale className={cls} strokeWidth={2.5} aria-hidden="true" />;
+    case 'variable': return <Variable className={cls} strokeWidth={2.5} aria-hidden="true" />;
+    case 'line-chart': return <LineChart className={cls} strokeWidth={2.5} aria-hidden="true" />;
   }
 }
 
 function loadYear(): YearFilter {
   try {
     const v = localStorage.getItem(YEAR_KEY);
-    if (v === '3' || v === '4' || v === '5') return Number(v) as 3 | 4 | 5;
+    if (v === '3' || v === '4' || v === '5' || v === '6') return Number(v) as 3 | 4 | 5 | 6;
   } catch {
     // localStorage may be unavailable (private mode); fall through.
   }
@@ -123,7 +129,7 @@ const Hub = () => {
   // and last respectively. Activating the new radio updates the filter so
   // focus tracks the checked option (per the standard "single-tab" radio
   // pattern). Used by the Year picker below.
-  const yearOrder: YearFilter[] = ['all', 3, 4, 5];
+  const yearOrder: YearFilter[] = ['all', 3, 4, 5, 6];
   const handleYearKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, current: YearFilter) => {
     const idx = yearOrder.indexOf(current);
     if (idx < 0) return;
@@ -257,7 +263,7 @@ const Hub = () => {
           aria-label="School year"
           className="mb-4 md:mb-6 flex items-center justify-center gap-2"
         >
-          {(['all', 3, 4, 5] as YearFilter[]).map(y => {
+          {(['all', 3, 4, 5, 6] as YearFilter[]).map(y => {
             const label = y === 'all' ? 'All' : `Y${y}`;
             const active = yearFilter === y;
             return (

@@ -13,6 +13,9 @@ import DecimalsIndex from './modules/decimals/DecimalsIndex';
 import NumberTheoryIndex from './modules/number-theory/NumberTheoryIndex';
 import ConversionsIndex from './modules/conversions/ConversionsIndex';
 import WordProblemsIndex from './modules/word-problems/WordProblemsIndex';
+import RatioProportionIndex from './modules/ratio-proportion/RatioProportionIndex';
+import AlgebraIndex from './modules/algebra/AlgebraIndex';
+import StatisticsIndex from './modules/statistics/StatisticsIndex';
 import NotFound from './pages/NotFound';
 import { getTheme, applyTheme } from '@/lib/themeStorage';
 
@@ -50,6 +53,12 @@ const App = () => {
         <Route path="/conversions/print" element={<ConversionsIndex printOpen />} />
         <Route path="/word-problems" element={<WordProblemsIndex />} />
         <Route path="/word-problems/print" element={<WordProblemsIndex printOpen />} />
+        <Route path="/ratio-proportion" element={<RatioProportionIndex />} />
+        <Route path="/ratio-proportion/print" element={<RatioProportionIndex printOpen />} />
+        <Route path="/algebra" element={<AlgebraIndex />} />
+        <Route path="/algebra/print" element={<AlgebraIndex printOpen />} />
+        <Route path="/statistics" element={<StatisticsIndex />} />
+        <Route path="/statistics/print" element={<StatisticsIndex printOpen />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

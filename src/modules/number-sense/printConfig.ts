@@ -17,7 +17,12 @@ export const PRINT_PER_PAGE_OPTIONS_LONG = [8, 12, 16];
 // order-numbers or sequence skills falls back to the long-prompt set.
 export function perPageOptionsForSkills(skills: NumberSenseSkill[]): number[] {
   const hasLong = skills.some(
-    s => s === 'order-numbers' || s === 'count-multiples' || s === 'negative-count'
+    s =>
+      s === 'order-numbers' ||
+      s === 'count-multiples' ||
+      s === 'negative-count' ||
+      s === 'negative-interval' ||
+      s === 'bidmas'
   );
   return hasLong ? PRINT_PER_PAGE_OPTIONS_LONG : PRINT_PER_PAGE_OPTIONS;
 }

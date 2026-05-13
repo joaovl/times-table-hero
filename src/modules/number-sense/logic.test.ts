@@ -44,14 +44,133 @@ describe('CURRICULUM_TAGS', () => {
     }
   });
 
-  it('every tag references year 3, 4, or 5', () => {
+  it('every tag references year 3, 4, 5, or 6', () => {
     for (const skill of ALL_SKILLS) {
       for (const tag of CURRICULUM_TAGS[skill]) {
-        expect([3, 4, 5]).toContain(tag.year);
+        expect([3, 4, 5, 6]).toContain(tag.year);
         expect(typeof tag.objective).toBe('string');
         expect(tag.objective.length).toBeGreaterThan(10);
       }
     }
+  });
+
+  it('Y6 skills are tagged with year 6', () => {
+    const y6Skills = ['place-value-10m', 'round-1m', 'negative-interval', 'bidmas'] as const;
+    for (const skill of y6Skills) {
+      const tags = CURRICULUM_TAGS[skill];
+      expect(tags.some(t => t.year === 6), `${skill} should reference year 6`).toBe(true);
+    }
+  });
+});
+
+describe('Y6 — place-value-10m', () => {
+  it('produces numbers up to 10,000,000 (7-8 digit)', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['place-value-10m'] }), 40);
+    qs.forEach(q => {
+      expect(q.skill).toBe('place-value-10m');
+      if (!isPlaceValueQuestion(q)) throw new Error('wrong shape');
+      expect(q.number).toBeGreaterThanOrEqual(1000000);
+      expect(q.number).toBeLessThanOrEqual(99999999);
+      const digit = parseInt(String(q.number)[q.digitIndex], 10);
+      const positionFromRight = String(q.number).length - 1 - q.digitIndex;
+      expect(q.answer).toBe(digit * 10 ** positionFromRight);
+    });
+  });
+
+  it('targets a non-zero digit', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['place-value-10m'] }), 100);
+    qs.forEach(q => {
+      if (!isPlaceValueQuestion(q)) throw new Error('wrong shape');
+      const digit = parseInt(String(q.number)[q.digitIndex], 10);
+      expect(digit).not.toBe(0);
+    });
+  });
+});
+
+describe('Y6 — round-1m', () => {
+  it('always rounds to the nearest 1,000,000', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['round-1m'], difficulty: 'medium' }), 40);
+    qs.forEach(q => {
+      if (!isRoundQuestion(q)) throw new Error('wrong shape');
+      expect(q.nearest).toBe(1000000);
+      expect(q.answer % 1000000).toBe(0);
+      expect(Math.abs(q.number - q.answer)).toBeLessThanOrEqual(500000);
+    });
+  });
+
+  it('hard difficulty can produce 9-digit inputs', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['round-1m'], difficulty: 'hard' }), 40);
+    const maxNum = qs.reduce((m, q) => (isRoundQuestion(q) ? Math.max(m, q.number) : m), 0);
+    expect(maxNum).toBeGreaterThanOrEqual(10000000);
+  });
+});
+
+describe('Y6 — negative-interval', () => {
+  it('always crosses zero (from negative to positive)', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['negative-interval'] }), 50);
+    qs.forEach(q => {
+      expect(q.skill).toBe('negative-interval');
+      if (q.skill !== 'negative-interval') throw new Error('wrong shape');
+      expect(q.from).toBeLessThan(0);
+      expect(q.to).toBeGreaterThan(0);
+      expect(q.answer).toBe(q.to - q.from);
+      expect(q.answer).toBeGreaterThan(0);
+    });
+  });
+
+  it('answer is always positive (interval magnitude)', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['negative-interval'], difficulty: 'hard' }), 30);
+    qs.forEach(q => {
+      if (q.skill !== 'negative-interval') throw new Error('wrong shape');
+      expect(q.answer).toBeGreaterThan(0);
+    });
+  });
+
+  it('checkNumberSenseAnswer accepts the canonical answer', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['negative-interval'] }), 20);
+    qs.forEach(q => {
+      expect(checkNumberSenseAnswer(q, answerText(q))).toBe(true);
+    });
+  });
+});
+
+describe('Y6 — bidmas', () => {
+  it('expression is a non-empty ASCII-safe string', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['bidmas'] }), 40);
+    qs.forEach(q => {
+      expect(q.skill).toBe('bidmas');
+      if (q.skill !== 'bidmas') throw new Error('wrong shape');
+      expect(q.expression.length).toBeGreaterThan(2);
+      // Only digits, spaces, ASCII operators, and WinAnsi-safe '×' / '÷'.
+      expect(q.expression).toMatch(/^[0-9 +\-×÷()]+$/);
+      expect(Number.isInteger(q.answer)).toBe(true);
+    });
+  });
+
+  it('canonical answer roundtrips through checkNumberSenseAnswer', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['bidmas'], difficulty: 'medium' }), 30);
+    qs.forEach(q => {
+      expect(checkNumberSenseAnswer(q, answerText(q)), `failed: ${answerText(q)}`).toBe(true);
+    });
+  });
+
+  it('hard difficulty can produce parenthesised or 5-operand expressions', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['bidmas'], difficulty: 'hard' }), 60);
+    const formsSeen = new Set<string>();
+    qs.forEach(q => {
+      if (q.skill !== 'bidmas') return;
+      if (q.expression.includes('(')) formsSeen.add('paren');
+      if (q.expression.includes(' × ') && q.expression.includes(' + ')) formsSeen.add('mixedmul');
+    });
+    expect(formsSeen.size).toBeGreaterThan(0);
+  });
+
+  it('produces non-negative integer answers', () => {
+    const qs = generateNumberSenseQuestions(baseSettings({ skills: ['bidmas'], difficulty: 'hard' }), 60);
+    qs.forEach(q => {
+      if (q.skill !== 'bidmas') throw new Error('wrong shape');
+      expect(q.answer).toBeGreaterThanOrEqual(0);
+    });
   });
 });
 
@@ -168,6 +287,7 @@ describe('generateNumberSenseQuestions — rounding', () => {
     ['round-100', [100]],
     ['round-1000', [1000]],
     ['round-10k', [10000, 100000]],
+    ['round-1m', [1000000]],
   ];
 
   it.each(cases)('%s answers are multiples of the rounding base', (skill, bases) => {

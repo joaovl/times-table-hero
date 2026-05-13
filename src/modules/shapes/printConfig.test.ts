@@ -66,10 +66,10 @@ describe('buildShapesSummary', () => {
   });
 
   it('stays reasonably compact for the longest combination', () => {
-    // v3 adds 10 more skills, so the threshold is bumped from the v1
-    // ~130-char cap. Still well within a single line in the print modal.
+    // v3 adds 10 more skills and v4 adds 4 Y6 skills, so the threshold has
+    // grown again. Still fits within the print-modal layout.
     const longest = buildShapesSummary([...SHAPE_SKILL_OPTIONS], 'mm', 'medium');
-    expect(longest.length).toBeLessThanOrEqual(260);
+    expect(longest.length).toBeLessThanOrEqual(360);
   });
 });
 

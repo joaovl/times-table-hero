@@ -37,7 +37,11 @@ export type FractionSkill =
   | 'mixed-mul-whole'
   | 'mul-frac'
   | 'to-decimal'
-  | 'from-decimal';
+  | 'from-decimal'
+  // v4 — Y6 additions.
+  | 'add-mixed'
+  | 'sub-mixed'
+  | 'div-frac-whole';
 
 export interface Frac {
   num: number;
@@ -159,6 +163,26 @@ export interface FractionFromDecimalQuestion {
   den: number; // canonical (simplified) denominator
 }
 
+// `add-mixed` / `sub-mixed` — Y6 mixed-number add/subtract with potentially
+// different denominators. The canonical answer is stored as a mixed answer
+// payload (whole + num/den), simplified; acceptance accepts any equivalent
+// improper or mixed form (mirrors mul-by-whole).
+export interface FractionMixedAddSubQuestion {
+  skill: 'add-mixed' | 'sub-mixed';
+  a: MixedNumber;
+  b: MixedNumber;
+  answer: { whole?: number; num: number; den: number };
+}
+
+// `div-frac-whole` — Y6 proper fraction ÷ whole number, e.g. 3/4 ÷ 2 = 3/8.
+// Canonical answer is the simplified Frac; acceptance accepts any equivalent.
+export interface FractionDivFracWholeQuestion {
+  skill: 'div-frac-whole';
+  frac: Frac;
+  whole: number; // 2..6
+  answer: Frac; // simplified canonical (e.g. 3/8 for 3/4 ÷ 2)
+}
+
 export type FractionQuestion =
   | FractionOpQuestion
   | FractionIdQuestion
@@ -169,7 +193,9 @@ export type FractionQuestion =
   | FractionMixedMulWholeQuestion
   | FractionMulFracQuestion
   | FractionToDecimalQuestion
-  | FractionFromDecimalQuestion;
+  | FractionFromDecimalQuestion
+  | FractionMixedAddSubQuestion
+  | FractionDivFracWholeQuestion;
 
 export interface FractionSettings {
   skills: FractionSkill[]; // chip multi-select, default ['add-same']
@@ -194,6 +220,9 @@ export const ALL_SKILLS: FractionSkill[] = [
   'mul-frac',
   'to-decimal',
   'from-decimal',
+  'add-mixed',
+  'sub-mixed',
+  'div-frac-whole',
 ];
 
 export const DENOMINATOR_OPTIONS: number[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -212,6 +241,9 @@ export const SKILL_LABELS: Record<FractionSkill, string> = {
   'mul-frac': 'Fraction × fraction',
   'to-decimal': 'Fraction → decimal',
   'from-decimal': 'Decimal → fraction',
+  'add-mixed': 'Add mixed numbers',
+  'sub-mixed': 'Subtract mixed numbers',
+  'div-frac-whole': 'Fraction ÷ whole',
 };
 
 export const SKILL_SHORT: Record<FractionSkill, string> = {
@@ -228,13 +260,19 @@ export const SKILL_SHORT: Record<FractionSkill, string> = {
   'mul-frac': 'mul-frac',
   'to-decimal': 'to-decimal',
   'from-decimal': 'from-decimal',
+  'add-mixed': 'add-mixed',
+  'sub-mixed': 'sub-mixed',
+  'div-frac-whole': 'div-frac-whole',
 };
 
 // Curriculum mapping. Used by the curriculum-coverage agent to know which
 // NC year/strand each skill targets. See the v3 header note above re:
 // overlap with the `decimals` module — to-decimal / from-decimal are
 // shared coverage, not double-counted.
-export const CURRICULUM_TAGS: Record<FractionSkill, { year: 'Y3' | 'Y4' | 'Y5' | 'Y3/Y4' | 'Y4/Y5'; strand: string }> = {
+export const CURRICULUM_TAGS: Record<
+  FractionSkill,
+  { year: 'Y3' | 'Y4' | 'Y5' | 'Y6' | 'Y3/Y4' | 'Y4/Y5'; strand: string }
+> = {
   'add-same': { year: 'Y3', strand: 'Fractions' },
   'sub-same': { year: 'Y3', strand: 'Fractions' },
   'add-diff': { year: 'Y5', strand: 'Fractions' },
@@ -248,6 +286,18 @@ export const CURRICULUM_TAGS: Record<FractionSkill, { year: 'Y3' | 'Y4' | 'Y5' |
   'mul-frac': { year: 'Y5', strand: 'Fractions' },
   'to-decimal': { year: 'Y4/Y5', strand: 'Fractions (including decimals)' },
   'from-decimal': { year: 'Y4/Y5', strand: 'Fractions (including decimals)' },
+  'add-mixed': {
+    year: 'Y6',
+    strand: 'Add and subtract fractions with different denominators and mixed numbers using simplification',
+  },
+  'sub-mixed': {
+    year: 'Y6',
+    strand: 'Add and subtract fractions with different denominators and mixed numbers using simplification',
+  },
+  'div-frac-whole': {
+    year: 'Y6',
+    strand: 'Divide proper fractions by whole numbers',
+  },
 };
 
 export function gcd(a: number, b: number): number {
@@ -550,6 +600,103 @@ function trySample(
     return { skill: 'from-decimal', decimal, num: simp.num, den: simp.den };
   }
 
+  if (skill === 'add-mixed' || skill === 'sub-mixed') {
+    // Mixed number ± mixed number. Denominators come from the picked set.
+    // Allow same or different denominators; the answer is a positive mixed
+    // value (caller's acceptance treats any equivalent improper or mixed
+    // form as correct).
+    if (denominators.length === 0) return null;
+    let d1 = pickFrom(denominators);
+    let d2 = pickFrom(denominators);
+    if (d1 < 2 || d2 < 2) return null;
+    let w1 = randInt(1, 3);
+    let w2 = randInt(1, 3);
+    const n1 = randInt(1, d1 - 1);
+    const n2 = randInt(1, d2 - 1);
+
+    // Convert both to improper to do the arithmetic, then back to mixed.
+    const a: MixedNumber = { whole: w1, num: n1, den: d1 };
+    const b: MixedNumber = { whole: w2, num: n2, den: d2 };
+
+    if (skill === 'sub-mixed') {
+      // Ensure a >= b so the result is non-negative.
+      const aImp = toImproper(a);
+      const bImp = toImproper(b);
+      // Cross-multiply to compare.
+      if (aImp.num * bImp.den < bImp.num * aImp.den) {
+        // Swap so a is bigger.
+        [w1, w2] = [w2, w1];
+        // Re-build with swapped whole/num/den.
+        const swapA: MixedNumber = { whole: w1, num: n2, den: d2 };
+        const swapB: MixedNumber = { whole: w2, num: n1, den: d1 };
+        const aImp2 = toImproper(swapA);
+        const bImp2 = toImproper(swapB);
+        // Use common denominator d1*d2.
+        const num = aImp2.num * bImp2.den - bImp2.num * aImp2.den;
+        if (num <= 0) return null;
+        const den = aImp2.den * bImp2.den;
+        const simp = simplifyFrac({ num, den });
+        const answer =
+          simp.num >= simp.den
+            ? (() => {
+                const mx = toMixed(simp);
+                return mx.num === 0
+                  ? { whole: mx.whole, num: 0, den: 1 }
+                  : { whole: mx.whole, num: mx.num, den: mx.den };
+              })()
+            : { num: simp.num, den: simp.den };
+        return { skill, a: swapA, b: swapB, answer };
+      }
+      const aImp2 = aImp;
+      const bImp2 = bImp;
+      const num = aImp2.num * bImp2.den - bImp2.num * aImp2.den;
+      if (num <= 0) return null;
+      const den = aImp2.den * bImp2.den;
+      const simp = simplifyFrac({ num, den });
+      const answer =
+        simp.num >= simp.den
+          ? (() => {
+              const mx = toMixed(simp);
+              return mx.num === 0
+                ? { whole: mx.whole, num: 0, den: 1 }
+                : { whole: mx.whole, num: mx.num, den: mx.den };
+            })()
+          : { num: simp.num, den: simp.den };
+      return { skill, a, b, answer };
+    }
+
+    // add-mixed
+    const aImp = toImproper(a);
+    const bImp = toImproper(b);
+    const num = aImp.num * bImp.den + bImp.num * aImp.den;
+    const den = aImp.den * bImp.den;
+    const simp = simplifyFrac({ num, den });
+    const answer =
+      simp.num >= simp.den
+        ? (() => {
+            const mx = toMixed(simp);
+            return mx.num === 0
+              ? { whole: mx.whole, num: 0, den: 1 }
+              : { whole: mx.whole, num: mx.num, den: mx.den };
+          })()
+        : { num: simp.num, den: simp.den };
+    return { skill, a, b, answer };
+  }
+
+  if (skill === 'div-frac-whole') {
+    // Proper fraction ÷ whole number. e.g. 3/4 ÷ 2 = 3/8.
+    if (denominators.length === 0) return null;
+    const d = pickFrom(denominators);
+    if (d < 2) return null;
+    const n = randInt(1, d - 1);
+    const w = randInt(2, 6);
+    // Result: n / (d * w), then simplify.
+    const raw: Frac = { num: n, den: d * w };
+    const ans = simplifyFrac(raw);
+    if (ans.num <= 0 || ans.num >= ans.den) return null;
+    return { skill: 'div-frac-whole', frac: { num: n, den: d }, whole: w, answer: ans };
+  }
+
   return null;
 }
 
@@ -683,6 +830,33 @@ function sampleOne(
   if (skill === 'from-decimal') {
     return { skill: 'from-decimal', decimal: 0.5, num: 1, den: 2 };
   }
+  if (skill === 'add-mixed') {
+    // 1 1/2 + 1 1/4 = 2 3/4
+    return {
+      skill: 'add-mixed',
+      a: { whole: 1, num: 1, den: 2 },
+      b: { whole: 1, num: 1, den: 4 },
+      answer: { whole: 2, num: 3, den: 4 },
+    };
+  }
+  if (skill === 'sub-mixed') {
+    // 2 1/2 - 1 1/4 = 1 1/4
+    return {
+      skill: 'sub-mixed',
+      a: { whole: 2, num: 1, den: 2 },
+      b: { whole: 1, num: 1, den: 4 },
+      answer: { whole: 1, num: 1, den: 4 },
+    };
+  }
+  if (skill === 'div-frac-whole') {
+    // 1/2 ÷ 2 = 1/4
+    return {
+      skill: 'div-frac-whole',
+      frac: { num: 1, den: 2 },
+      whole: 2,
+      answer: { num: 1, den: 4 },
+    };
+  }
   // same-denom fallback
   const d = denominators[0] >= 2 ? denominators[0] : 2;
   const a = 1;
@@ -783,6 +957,18 @@ export function isFromDecimalQuestion(
   q: FractionQuestion
 ): q is FractionFromDecimalQuestion {
   return q.skill === 'from-decimal';
+}
+
+export function isMixedAddSubQuestion(
+  q: FractionQuestion
+): q is FractionMixedAddSubQuestion {
+  return q.skill === 'add-mixed' || q.skill === 'sub-mixed';
+}
+
+export function isDivFracWholeQuestion(
+  q: FractionQuestion
+): q is FractionDivFracWholeQuestion {
+  return q.skill === 'div-frac-whole';
 }
 
 // Convert an answer payload (whole? + num/den) into a single improper

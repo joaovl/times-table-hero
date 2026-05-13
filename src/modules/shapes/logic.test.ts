@@ -1009,6 +1009,159 @@ describe('CURRICULUM_TAGS', () => {
     expect(CURRICULUM_TAGS['angle-measure']).toContain('Y5');
     expect(CURRICULUM_TAGS['translation']).toContain('Y5');
   });
+
+  it('Y6 skills are tagged Y6', () => {
+    expect(CURRICULUM_TAGS['coord-four-quadrants']).toContain('Y6');
+    expect(CURRICULUM_TAGS['angle-at-point']).toContain('Y6');
+    expect(CURRICULUM_TAGS['angle-on-line']).toContain('Y6');
+    expect(CURRICULUM_TAGS['angle-vertical']).toContain('Y6');
+  });
+});
+
+describe('Y6 — coord-four-quadrants', () => {
+  it('produces points in all four quadrants over a sample', () => {
+    const qs = generateShapeQuestions(
+      {
+        skills: ['coord-four-quadrants'],
+        units: 'cm',
+        difficulty: 'medium',
+        gameMode: 'questions',
+        questionCount: 200,
+        timeLimit: 0,
+      },
+      200
+    );
+    let pp = 0, np = 0, pn = 0, nn = 0;
+    qs.forEach(q => {
+      expect(q.skill).toBe('coord-four-quadrants');
+      expect(q.point).toBeDefined();
+      const x = q.point!.x;
+      const y = q.point!.y;
+      if (x === 0 && y === 0) throw new Error('origin not allowed');
+      if (x > 0 && y > 0) pp++;
+      else if (x < 0 && y > 0) np++;
+      else if (x < 0 && y < 0) nn++;
+      else if (x > 0 && y < 0) pn++;
+      // Coordinates within grid range.
+      expect(Math.abs(x)).toBeLessThanOrEqual(q.gridMax!);
+      expect(Math.abs(y)).toBeLessThanOrEqual(q.gridMax!);
+    });
+    // With 200 samples, every quadrant should appear with high probability.
+    expect(pp).toBeGreaterThan(5);
+    expect(np).toBeGreaterThan(5);
+    expect(nn).toBeGreaterThan(5);
+    expect(pn).toBeGreaterThan(5);
+  });
+
+  it('answerString renders the (x,y) form, including negatives', () => {
+    const q = {
+      skill: 'coord-four-quadrants' as const,
+      point: { x: -3, y: 4 },
+      gridMax: 5,
+      units: 'cm' as const,
+      answer: 3004,
+    };
+    expect(answerString(q)).toBe('(-3, 4)');
+  });
+
+  it('isAnswerCorrect accepts the canonical (x,y) string', () => {
+    const q = {
+      skill: 'coord-four-quadrants' as const,
+      point: { x: -2, y: -3 },
+      gridMax: 5,
+      units: 'cm' as const,
+      answer: 2003,
+    };
+    expect(isAnswerCorrect(q, '(-2, -3)')).toBe(true);
+    expect(isAnswerCorrect(q, '-2, -3')).toBe(true);
+    expect(isAnswerCorrect(q, '(2, 3)')).toBe(false);
+  });
+});
+
+describe('Y6 — angle-at-point', () => {
+  it('answer + visible = 360', () => {
+    const qs = generateShapeQuestions(
+      {
+        skills: ['angle-at-point'],
+        units: 'cm',
+        difficulty: 'medium',
+        gameMode: 'questions',
+        questionCount: 40,
+        timeLimit: 0,
+      },
+      40
+    );
+    qs.forEach(q => {
+      expect(q.skill).toBe('angle-at-point');
+      expect(q.angle).toBeGreaterThan(0);
+      expect(q.angle).toBeLessThan(360);
+      expect((q.angle ?? 0) + q.answer).toBe(360);
+    });
+  });
+});
+
+describe('Y6 — angle-on-line', () => {
+  it('answer + visible = 180', () => {
+    const qs = generateShapeQuestions(
+      {
+        skills: ['angle-on-line'],
+        units: 'cm',
+        difficulty: 'medium',
+        gameMode: 'questions',
+        questionCount: 40,
+        timeLimit: 0,
+      },
+      40
+    );
+    qs.forEach(q => {
+      expect(q.skill).toBe('angle-on-line');
+      expect(q.angle).toBeGreaterThan(0);
+      expect(q.angle).toBeLessThan(180);
+      expect((q.angle ?? 0) + q.answer).toBe(180);
+    });
+  });
+});
+
+describe('Y6 — angle-vertical', () => {
+  it('answer equals visible (vertically opposite angles)', () => {
+    const qs = generateShapeQuestions(
+      {
+        skills: ['angle-vertical'],
+        units: 'cm',
+        difficulty: 'medium',
+        gameMode: 'questions',
+        questionCount: 40,
+        timeLimit: 0,
+      },
+      40
+    );
+    qs.forEach(q => {
+      expect(q.skill).toBe('angle-vertical');
+      expect(q.angle).toBe(q.answer);
+    });
+  });
+
+  it('answerString includes the degree sign', () => {
+    const q = {
+      skill: 'angle-vertical' as const,
+      angle: 35,
+      units: 'cm' as const,
+      answer: 35,
+    };
+    expect(answerString(q)).toBe('35°');
+  });
+
+  it('isAnswerCorrect accepts plain integer or with degree suffix', () => {
+    const q = {
+      skill: 'angle-at-point' as const,
+      angle: 270,
+      units: 'cm' as const,
+      answer: 90,
+    };
+    expect(isAnswerCorrect(q, '90')).toBe(true);
+    expect(isAnswerCorrect(q, '90°')).toBe(true);
+    expect(isAnswerCorrect(q, '89')).toBe(false);
+  });
 });
 
 describe('angleMeasureStepForDifficulty', () => {
