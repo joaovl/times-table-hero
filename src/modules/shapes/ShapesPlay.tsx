@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { VisualQuestion } from '@/components/VisualQuestion';
 import { cn } from '@/lib/utils';
 import type { ShapeQuestion, ShapeSettings } from './logic';
 import {
@@ -258,101 +258,90 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
           )}
         </div>
 
-        <Card
-          className={cn(
-            'mb-3 md:mb-[19px] py-4 md:py-6 px-4 md:px-8 text-center shadow-card transition-all',
-            feedback === 'correct' && 'animate-pop bg-success/10',
-            feedback === 'incorrect' && 'animate-shake bg-destructive/10'
-          )}
+        <VisualQuestion
+          feedback={feedback}
+          cardClassName="py-4 md:py-6"
+          figure={<ShapeFigure shape={figureMode} question={q} size={220} />}
+          promptText={
+            <p className="text-sm md:text-base text-muted-foreground">{promptFor(q)}</p>
+          }
+          correctAnswerHint={answerString(q)}
         >
-          <div className="flex justify-center text-foreground">
-            <ShapeFigure shape={figureMode} question={q} size={220} />
-          </div>
-          <p className="mt-3 text-sm md:text-base text-muted-foreground">{promptFor(q)}</p>
-          {feedback === 'incorrect' && (
-            <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">
-              {answerString(q)}
+          {feedback === 'none' && isMcShapeName && mcChoices && (
+            <div className="grid grid-cols-2 gap-2">
+              {mcChoices.map(choice => (
+                <Button
+                  key={choice}
+                  onClick={() => submit(choice)}
+                  className="py-4 text-lg font-bold capitalize shadow-button"
+                >
+                  {choice}
+                </Button>
+              ))}
             </div>
           )}
-          {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+
+          {feedback === 'none' && isAngleMcSimple && (
+            <div className="grid grid-cols-3 gap-2">
+              {ANGLE_CATEGORIES.map(c => (
+                <Button
+                  key={c}
+                  onClick={() => submit(c)}
+                  className="py-4 text-lg font-bold capitalize shadow-button"
+                >
+                  {c}
+                </Button>
+              ))}
+            </div>
           )}
-        </Card>
 
-        {feedback === 'none' && isMcShapeName && mcChoices && (
-          <div className="grid grid-cols-2 gap-2">
-            {mcChoices.map(choice => (
-              <Button
-                key={choice}
-                onClick={() => submit(choice)}
-                className="py-4 text-lg font-bold capitalize shadow-button"
-              >
-                {choice}
-              </Button>
-            ))}
-          </div>
-        )}
+          {feedback === 'none' && isAngleMcReflex && (
+            <div className="grid grid-cols-2 gap-2">
+              {ANGLE_CATEGORIES_REFLEX.map(c => (
+                <Button
+                  key={c}
+                  onClick={() => submit(c)}
+                  className="py-4 text-lg font-bold capitalize shadow-button"
+                >
+                  {c}
+                </Button>
+              ))}
+            </div>
+          )}
 
-        {feedback === 'none' && isAngleMcSimple && (
-          <div className="grid grid-cols-3 gap-2">
-            {ANGLE_CATEGORIES.map(c => (
-              <Button
-                key={c}
-                onClick={() => submit(c)}
-                className="py-4 text-lg font-bold capitalize shadow-button"
-              >
-                {c}
-              </Button>
-            ))}
-          </div>
-        )}
-
-        {feedback === 'none' && isAngleMcReflex && (
-          <div className="grid grid-cols-2 gap-2">
-            {ANGLE_CATEGORIES_REFLEX.map(c => (
-              <Button
-                key={c}
-                onClick={() => submit(c)}
-                className="py-4 text-lg font-bold capitalize shadow-button"
-              >
-                {c}
-              </Button>
-            ))}
-          </div>
-        )}
-
-        {feedback === 'none' && isPlotPicker && q.point && (
-          <PlotPicker
-            target={q.point}
-            gridMax={q.gridMax ?? 5}
-            onPick={(x, y) => submit(`${x},${y}`)}
-          />
-        )}
-
-        {feedback === 'none' && usesTypedInput && (
-          <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
-            <Input
-              ref={inputRef}
-              type="text"
-              inputMode={
-                q.skill === 'coord-read' || q.skill === 'translation' ? 'text' : 'decimal'
-              }
-              value={typed}
-              onChange={e => setTyped(e.target.value)}
-              placeholder={inputPlaceholder(q)}
-              aria-label="Type the answer"
-              className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
-              autoFocus
+          {feedback === 'none' && isPlotPicker && q.point && (
+            <PlotPicker
+              target={q.point}
+              gridMax={q.gridMax ?? 5}
+              onPick={(x, y) => submit(`${x},${y}`)}
             />
-            <Button
-              type="submit"
-              className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
-              disabled={typed.trim() === ''}
-            >
-              Check
-            </Button>
-          </form>
-        )}
+          )}
+
+          {feedback === 'none' && usesTypedInput && (
+            <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
+              <Input
+                ref={inputRef}
+                type="text"
+                inputMode={
+                  q.skill === 'coord-read' || q.skill === 'translation' ? 'text' : 'decimal'
+                }
+                value={typed}
+                onChange={e => setTyped(e.target.value)}
+                placeholder={inputPlaceholder(q)}
+                aria-label="Type the answer"
+                className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
+                autoFocus
+              />
+              <Button
+                type="submit"
+                className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                disabled={typed.trim() === ''}
+              >
+                Check
+              </Button>
+            </form>
+          )}
+        </VisualQuestion>
       </div>
     </div>
   );

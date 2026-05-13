@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { drawFilledSector } from '@/lib/svgPdf';
 import type { FractionQuestion } from './logic';
 import {
   skillOp,
@@ -13,6 +14,8 @@ import {
   isMulFracQuestion,
   isToDecimalQuestion,
   isFromDecimalQuestion,
+  isMixedAddSubQuestion,
+  isDivFracWholeQuestion,
 } from './logic';
 
 export interface FractionPdfOptions {
@@ -132,6 +135,11 @@ function drawFractionWithBlank(
 // sector's fill with a triangle from the centre to the two chord endpoints,
 // then stroke the sector boundary lines and the outer circle. At the
 // total counts we use (<= 8), this reads cleanly as "n of total slices".
+//
+// The fill of each shaded sector is delegated to `drawFilledSector` in
+// `src/lib/svgPdf.ts` — the trig used to live inline here. The chord
+// strokes and the outer circle stroke remain inline because they are
+// fractions-specific (other consumers want different stroke patterns).
 function drawCircleFigure(
   doc: jsPDF,
   cx: number,
@@ -145,15 +153,16 @@ function drawCircleFigure(
   for (let i = 0; i < total; i++) {
     const a0 = (i / total) * Math.PI * 2 - Math.PI / 2;
     const a1 = ((i + 1) / total) * Math.PI * 2 - Math.PI / 2;
+    if (i < shaded) {
+      drawFilledSector(doc, cx, cy, r, a0, a1, [180, 180, 180]);
+    }
+    // Chord from centre to the start of this sector. We re-set the draw
+    // colour each iteration because drawFilledSector touches setFillColor
+    // but not setDrawColor — keeping this explicit avoids any future
+    // surprise if the helper grows a draw-colour side effect.
+    doc.setDrawColor(0);
     const x0 = cx + r * Math.cos(a0);
     const y0 = cy + r * Math.sin(a0);
-    const x1 = cx + r * Math.cos(a1);
-    const y1 = cy + r * Math.sin(a1);
-    if (i < shaded) {
-      doc.setFillColor(180, 180, 180);
-      doc.triangle(cx, cy, x0, y0, x1, y1, 'F');
-    }
-    doc.setDrawColor(0);
     doc.line(cx, cy, x0, y0);
   }
   doc.circle(cx, cy, r, 'S');
@@ -381,6 +390,44 @@ function drawQuestion(
     doc.line(cursor, y + 2.1, cursor + slotW, y + 2.1);
     return;
   }
+
+  if (isMixedAddSubQuestion(q)) {
+    // "2 1/3 + 1 1/4 = ___"  — uses ASCII '+' or '-' (hyphen) so PDF-safe.
+    const opStr = q.skill === 'add-mixed' ? ' + ' : ' - ';
+    const aWholeStr = String(q.a.whole);
+    doc.text(aWholeStr, cursor, y);
+    cursor += doc.getTextWidth(aWholeStr) + 2;
+    cursor += drawFraction(doc, { num: q.a.num, den: q.a.den }, cursor, y, fs) + 1;
+    doc.text(opStr, cursor, y);
+    cursor += doc.getTextWidth(opStr) + 1;
+    const bWholeStr = String(q.b.whole);
+    doc.text(bWholeStr, cursor, y);
+    cursor += doc.getTextWidth(bWholeStr) + 2;
+    cursor += drawFraction(doc, { num: q.b.num, den: q.b.den }, cursor, y, fs) + 1;
+    const eq = ' = ';
+    doc.text(eq, cursor, y);
+    cursor += doc.getTextWidth(eq) + 1;
+    doc.setLineWidth(0.3);
+    doc.line(cursor, y + 0.6, cursor + 22, y + 0.6);
+    return;
+  }
+
+  if (isDivFracWholeQuestion(q)) {
+    // "3/4 ÷ 2 = ___" — ÷ glyph is U+00F7, in WinAnsi.
+    cursor += drawFraction(doc, q.frac, cursor, y, fs) + 1;
+    const div = ' ÷ ';
+    doc.text(div, cursor, y);
+    cursor += doc.getTextWidth(div) + 1;
+    const wholeStr = String(q.whole);
+    doc.text(wholeStr, cursor, y);
+    cursor += doc.getTextWidth(wholeStr) + 2;
+    const eq = ' = ';
+    doc.text(eq, cursor, y);
+    cursor += doc.getTextWidth(eq) + 1;
+    doc.setLineWidth(0.3);
+    doc.line(cursor, y + 0.6, cursor + 18, y + 0.6);
+    return;
+  }
 }
 
 // Format a decimal as a short ASCII string. We only generate decimals
@@ -438,7 +485,7 @@ function drawPage(
   //   spec calls out "4-col grid for short questions" but our short-prompt
   //   skills coexist with 3-col-width skills so we stick to the 3-col
   //   default unless a wide skill forces 2-col).
-  const hasWide = questions.some(q => isMixedMulWholeQuestion(q));
+  const hasWide = questions.some(q => isMixedMulWholeQuestion(q) || isMixedAddSubQuestion(q));
   const cols = hasWide ? 2 : 3;
   const rows = Math.max(1, Math.ceil(questions.length / cols));
   const cellW = PRINT_W / cols;
@@ -505,6 +552,17 @@ export function answerKeyText(q: FractionQuestion, num: number): string {
   }
   if (isFromDecimalQuestion(q)) {
     return `${num}) ${q.num}/${q.den}`;
+  }
+  if (isMixedAddSubQuestion(q)) {
+    const a = q.answer;
+    if (a.whole !== undefined) {
+      if (a.num === 0 || a.den === 0) return `${num}) ${a.whole}`;
+      return `${num}) ${a.whole} ${a.num}/${a.den}`;
+    }
+    return `${num}) ${a.num}/${a.den}`;
+  }
+  if (isDivFracWholeQuestion(q)) {
+    return `${num}) ${q.answer.num}/${q.answer.den}`;
   }
   return `${num}) ?`;
 }

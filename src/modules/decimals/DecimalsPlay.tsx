@@ -3,6 +3,7 @@ import { Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { MultiFieldInput } from '@/components/MultiFieldInput';
 import { cn } from '@/lib/utils';
 import type {
   CompareDecimalsQuestion,
@@ -396,37 +397,33 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
           }}
           className="space-y-2 md:space-y-[13px]"
         >
-          <div className="flex items-center justify-center gap-2 md:gap-3">
-            <Input
-              ref={inputRef}
-              type="number"
-              inputMode="numeric"
-              value={fracNum}
-              onChange={e => setFracNum(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  fracDenRef.current?.focus();
-                  fracDenRef.current?.select();
-                }
-              }}
-              placeholder="num"
-              aria-label="Numerator"
-              className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
-              autoFocus
-            />
-            <span className="text-3xl md:text-4xl font-extrabold text-foreground">/</span>
-            <Input
-              ref={fracDenRef}
-              type="number"
-              inputMode="numeric"
-              value={fracDen}
-              onChange={e => setFracDen(e.target.value)}
-              placeholder="den"
-              aria-label="Denominator"
-              className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
-            />
-          </div>
+          {/* Two-field fraction picker is shared by decimal-to-fraction,
+              identify-tenths/hundredths/thousandths, and percent-fraction.
+              All three share the exact same input shape, so a single
+              <MultiFieldInput> covers them. See the component header for
+              the wider migration plan across other modules (arithmetic
+              quotient-r-remainder, shapes coord-read, fractions, etc.). */}
+          <MultiFieldInput
+            fields={[
+              {
+                value: fracNum,
+                onChange: setFracNum,
+                ariaLabel: 'Numerator',
+                placeholder: 'num',
+                inputRef,
+                autoFocus: true,
+              },
+              {
+                value: fracDen,
+                onChange: setFracDen,
+                ariaLabel: 'Denominator',
+                placeholder: 'den',
+                inputRef: fracDenRef,
+              },
+            ]}
+            separators={['/']}
+            inputClassName="w-24 md:w-28 text-2xl md:text-3xl"
+          />
           <Button
             type="submit"
             className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"

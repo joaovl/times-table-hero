@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { VisualQuestion } from '@/components/VisualQuestion';
 import { cn } from '@/lib/utils';
 import type { NumberTheoryQuestion, NumberTheorySettings } from './logic';
 import {
@@ -258,66 +258,52 @@ export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
           )}
         </div>
 
-        <Card
-          className={cn(
-            'mb-3 md:mb-[19px] py-6 md:py-10 px-4 md:px-8 text-center shadow-card transition-all',
-            feedback === 'correct' && 'animate-pop bg-success/10',
-            feedback === 'incorrect' && 'animate-shake bg-destructive/10'
-          )}
+        <VisualQuestion
+          feedback={feedback}
+          promptText={<PromptDisplay q={q} />}
+          correctAnswerHint={answerString(q)}
         >
-          <PromptDisplay q={q} />
-          {feedback === 'incorrect' && (
-            <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">
-              {answerString(q)}
+          {feedback === 'none' && isBool && (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={() => submit('', true)}
+                className="py-6 text-xl font-bold shadow-button"
+              >
+                Yes
+              </Button>
+              <Button
+                onClick={() => submit('', false)}
+                variant="outline"
+                className="py-6 text-xl font-bold"
+              >
+                No
+              </Button>
             </div>
           )}
-          {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">
-              Brilliant!
-            </div>
+
+          {feedback === 'none' && !isBool && (
+            <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
+              <Input
+                ref={inputRef}
+                type="text"
+                inputMode={isList ? 'text' : 'numeric'}
+                value={typed}
+                onChange={e => setTyped(e.target.value)}
+                placeholder={placeholder}
+                aria-label="Type the answer"
+                className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
+                autoFocus
+              />
+              <Button
+                type="submit"
+                className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                disabled={typed.trim() === ''}
+              >
+                Check
+              </Button>
+            </form>
           )}
-        </Card>
-
-        {feedback === 'none' && isBool && (
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              onClick={() => submit('', true)}
-              className="py-6 text-xl font-bold shadow-button"
-            >
-              Yes
-            </Button>
-            <Button
-              onClick={() => submit('', false)}
-              variant="outline"
-              className="py-6 text-xl font-bold"
-            >
-              No
-            </Button>
-          </div>
-        )}
-
-        {feedback === 'none' && !isBool && (
-          <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
-            <Input
-              ref={inputRef}
-              type="text"
-              inputMode={isList ? 'text' : 'numeric'}
-              value={typed}
-              onChange={e => setTyped(e.target.value)}
-              placeholder={placeholder}
-              aria-label="Type the answer"
-              className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
-              autoFocus
-            />
-            <Button
-              type="submit"
-              className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
-              disabled={typed.trim() === ''}
-            >
-              Check
-            </Button>
-          </form>
-        )}
+        </VisualQuestion>
       </div>
     </div>
   );
