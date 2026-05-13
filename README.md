@@ -17,6 +17,7 @@ react, typescript, vite, pwa, worksheets, printable, free
 -->
 
 
+<!-- TODO: Screenshot to be added — run app locally and capture the Hub at 1200x800, then save as public/screenshot.png. -->
 ![Times Table Hero screenshot](public/screenshot.png)
 
 ## What it does

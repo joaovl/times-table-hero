@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { VitePWA } from "vite-plugin-pwa";
@@ -36,16 +37,22 @@ export default defineConfig({
         scope: "/",
         icons: [
           {
-            src: "/favicon.png",
+            src: "/pwa-192.png",
             sizes: "192x192",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "any",
           },
           {
-            src: "/favicon.png",
+            src: "/pwa-512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "any",
+          },
+          {
+            src: "/pwa-512-maskable.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
           },
         ],
         categories: ["education", "kids"],
@@ -91,5 +98,16 @@ export default defineConfig({
         },
       },
     },
+  },
+  test: {
+    // Tests that render React components need a DOM. We use jsdom on a
+    // per-file basis (via `@vitest-environment jsdom` pragma) so the bulk
+    // of the logic / pdf suite still runs in node for speed; only the
+    // *.a11y.test.tsx files opt into jsdom.
+    environment: "node",
+    // The exhaustive end-to-end arithmetic PDF test sweeps every modal
+    // combination and can take several seconds on slower machines. Use a
+    // generous default so it doesn't trip the watchdog under CI load.
+    testTimeout: 30000,
   },
 });
