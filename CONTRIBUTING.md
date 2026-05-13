@@ -45,6 +45,38 @@ npm run build
 
 All three should pass. `npm run build` also catches issues that pure typechecking misses, like chunk-size regressions.
 
+## Translating
+
+The app ships with a small hand-rolled i18n scaffold (no `i18next`, no `react-intl`). en-GB is the source of truth.
+
+- Dictionaries live in [`src/lib/locales/`](src/lib/locales/), one file per locale.
+- `src/lib/locales/en-GB.ts` is the canonical key list. Other locales (`cy.ts`, `es.ts`, `fr.ts`) ship empty and fall back to en-GB automatically — so a partial translation is fine.
+- Keys are namespaced by area, dot-separated: `hub.title`, `arithmetic.setup.title`, `common.cancel`, etc.
+- Variables use `{name}` placeholders: `t('hub.greeting', { name: user.name })`.
+
+### Adding a translation
+
+1. Open the locale file you want to contribute to (e.g. `src/lib/locales/fr.ts`).
+2. Add the same key that exists in `en-GB.ts`, with the translated string:
+   ```ts
+   const fr: Record<string, string> = {
+     'hub.title': 'Défi Maths',
+   };
+   ```
+3. Don't remove or rename keys in `en-GB.ts` without checking usage with `grep` — other locales fall through to it.
+
+### Wiring strings to `t()`
+
+Most UI strings are still plain inline JSX. When you touch a screen, feel free to migrate its strings to `t()` as you go — there's no need to migrate everything in one PR.
+
+```tsx
+import { t } from '@/lib/i18n';
+
+<h1>{t('hub.title')}</h1>
+```
+
+A locale switcher isn't shipped yet; for now `useLocale()` and `setLocale()` exist as plumbing so forks can wire one up.
+
 ## Pull requests
 
 - Keep PRs focused. One module or one bug fix per PR is ideal.

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Palette, Clock, BarChart3, Hash, PoundSterling, Percent, Sigma, Ruler, BookOpen } from 'lucide-react';
+import { Menu, Palette, Clock, BarChart3, Hash, PoundSterling, Percent, Sigma, Ruler, BookOpen, Download } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
 import { NewUserModal } from '@/components/NewUserModal';
 import { UserProfile, getCurrentUser, getUserById } from '@/lib/userStorage';
 import { PRESET_THEMES, DEFAULT_THEME, getTheme, saveTheme, resetTheme } from '@/lib/themeStorage';
+import { t } from '@/lib/i18n';
+import { useInstallPrompt } from '@/lib/pwa-install';
 
 type YearFilter = 'all' | 3 | 4 | 5;
 
@@ -80,6 +82,7 @@ const Hub = () => {
   const [currentTheme, setCurrentTheme] = useState(getTheme());
   const [yearFilter, setYearFilter] = useState<YearFilter>(loadYear);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { canInstall, prompt: promptInstall } = useInstallPrompt();
 
   useEffect(() => {
     setCurrentUser(getCurrentUser());
@@ -113,6 +116,35 @@ const Hub = () => {
   const pickYear = (y: YearFilter) => {
     setYearFilter(y);
     saveYear(y);
+  };
+
+  // WAI-ARIA radiogroup keyboard support: ArrowRight/Down move to the next
+  // radio (wrapping), ArrowLeft/Up to the previous, Home/End jump to first
+  // and last respectively. Activating the new radio updates the filter so
+  // focus tracks the checked option (per the standard "single-tab" radio
+  // pattern). Used by the Year picker below.
+  const yearOrder: YearFilter[] = ['all', 3, 4, 5];
+  const handleYearKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, current: YearFilter) => {
+    const idx = yearOrder.indexOf(current);
+    if (idx < 0) return;
+    let next: YearFilter | null = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      next = yearOrder[(idx + 1) % yearOrder.length];
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      next = yearOrder[(idx - 1 + yearOrder.length) % yearOrder.length];
+    } else if (e.key === 'Home') {
+      next = yearOrder[0];
+    } else if (e.key === 'End') {
+      next = yearOrder[yearOrder.length - 1];
+    }
+    if (next !== null) {
+      e.preventDefault();
+      pickYear(next);
+      // Move focus to the newly checked radio so it matches the tab order.
+      const root = e.currentTarget.closest('[role="radiogroup"]');
+      const btn = root?.querySelector<HTMLButtonElement>(`button[data-year="${next}"]`);
+      btn?.focus();
+    }
   };
 
   return (
@@ -186,6 +218,18 @@ const Hub = () => {
                       </button>
                     </div>
                   )}
+                  {canInstall && (
+                    <button
+                      onClick={() => {
+                        void promptInstall();
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2 min-h-[44px]"
+                    >
+                      <Download className="w-4 h-4" />
+                      Install app
+                    </button>
+                  )}
                 </div>
                 <div className="border-t mt-1 pt-1.5 px-4 pb-1 text-[10px] text-muted-foreground/60">
                   v0.1.0-{(globalThis as unknown as { __GIT_HASH__?: string }).__GIT_HASH__ || 'dev'}
@@ -201,11 +245,11 @@ const Hub = () => {
         </div>
 
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary flex items-center justify-center gap-2 mb-1 md:mb-2">
-          <img src="/favicon.png" alt="Maths Challenge" className="w-6 h-6 md:w-10 md:h-10" />
-          Maths Challenge
+          <img src="/favicon.png" alt={t('hub.title')} className="w-6 h-6 md:w-10 md:h-10" />
+          {t('hub.title')}
         </h1>
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3 md:mb-4">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick what to practise today
+          {currentUser ? t('hub.greeting', { name: currentUser.name }) : t('hub.greeting.noUser')}
         </p>
 
         <div
@@ -221,9 +265,14 @@ const Hub = () => {
                 key={String(y)}
                 role="radio"
                 aria-checked={active}
+                // WAI-ARIA radiogroup pattern: only the checked radio is in
+                // the tab order; arrow keys move focus inside the group.
+                tabIndex={active ? 0 : -1}
+                data-year={String(y)}
                 onClick={() => pickYear(y)}
+                onKeyDown={e => handleYearKeyDown(e, y)}
                 className={cn(
-                  'min-w-[52px] min-h-[40px] px-3 rounded-full text-sm font-bold transition-colors',
+                  'min-w-[52px] min-h-[40px] px-3 rounded-full text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                   active
                     ? 'bg-primary text-primary-foreground shadow-button'
                     : 'bg-muted text-muted-foreground hover:bg-muted/70'
