@@ -470,6 +470,7 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
           value={numericInput}
           onChange={e => setNumericInput(e.target.value)}
           placeholder={isPercent ? 'e.g. 50' : 'Type the answer'}
+          aria-label="Type the answer"
           className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
           autoFocus
         />

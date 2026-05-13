@@ -357,6 +357,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
               value={typed}
               onChange={e => setTyped(e.target.value)}
               placeholder={placeholder}
+              aria-label="Type the answer"
               className="h-12 md:h-[64px] text-center text-xl md:text-3xl font-bold"
               autoFocus
             />

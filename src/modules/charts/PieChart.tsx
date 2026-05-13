@@ -25,13 +25,15 @@ const PIE_CY = 110;
 const PIE_R = 90;
 const LEGEND_TOP = 215;
 
-// Alternating warm/cool palette — picks complement the kid-friendly UI and
-// stay visually distinct under default Tailwind backgrounds.
+// Alternating light / dark palette so neighbouring slices have at least a
+// 3:1 luminance contrast — important for users with low vision and for
+// people who can't rely on hue alone to tell slices apart. Slot 0 / 2 are
+// light, slot 1 / 3 are noticeably darker.
 const SLICE_FILLS = [
-  'hsl(210 80% 70%)', // light blue
-  'hsl(140 55% 65%)', // light green
-  'hsl(45 90% 70%)',  // light yellow
-  'hsl(330 70% 75%)', // light pink
+  'hsl(210 80% 75%)', // light blue
+  'hsl(140 55% 35%)', // dark green
+  'hsl(45 90% 65%)',  // light yellow
+  'hsl(330 70% 40%)', // dark pink
 ];
 
 function sectorPath(

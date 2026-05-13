@@ -385,6 +385,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
               value={typed}
               onChange={e => setTyped(e.target.value)}
               placeholder="HH:MM"
+              aria-label="Time answer in HH:MM format"
               className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold tracking-wider"
               autoFocus
             />
@@ -442,6 +443,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
               value={typed}
               onChange={e => setTyped(e.target.value)}
               placeholder="Type your answer"
+              aria-label="Type the answer"
               className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
               autoFocus
             />
