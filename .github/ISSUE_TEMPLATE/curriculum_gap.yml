@@ -1,0 +1,43 @@
+name: Curriculum gap
+description: Flag a UK National Curriculum objective the app does not yet cover
+title: "[Curriculum] "
+labels: ["curriculum"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template if you are a teacher, parent, or learner pointing out a curriculum objective the app should cover.
+        We track coverage in `docs/curriculum/uk-ks2.md`.
+
+  - type: dropdown
+    id: year
+    attributes:
+      label: Year group
+      options:
+        - Y3
+        - Y4
+        - Y5
+        - Y6
+        - KS3
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: NC objective
+      description: The objective text, ideally copied from the curriculum document.
+    validations:
+      required: true
+
+  - type: textarea
+    id: module_fit
+    attributes:
+      label: Suggested module fit
+      description: Which existing module could this live under, or does it need a new module?
+
+  - type: textarea
+    id: comments
+    attributes:
+      label: Comments

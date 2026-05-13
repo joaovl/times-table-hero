@@ -1,0 +1,62 @@
+name: Feature request
+description: Suggest an enhancement or new skill
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: module
+    attributes:
+      label: Which module is this for?
+      options:
+        - Times Tables
+        - Arithmetic
+        - Time
+        - Fractions
+        - Shapes
+        - Charts
+        - Number Sense
+        - Money
+        - Decimals
+        - Number Theory
+        - Conversions
+        - Word Problems
+        - New module
+        - Hub / other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve? What is missing or hard today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should the app behave once this lands?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: textarea
+    id: curriculum
+    attributes:
+      label: Curriculum alignment
+      description: Optional. If this targets a UK NC year/objective, name it.
+      placeholder: Y5 — Number Theory; recognise and use square numbers and the notation for squared.
+
+  - type: checkboxes
+    id: search
+    attributes:
+      label: Pre-check
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true

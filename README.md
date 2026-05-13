@@ -1,8 +1,21 @@
 # Times Table Hero
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-Contributor%20Covenant%202.1-purple.svg)](CODE_OF_CONDUCT.md)
+[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Curriculum: UK KS2](https://img.shields.io/badge/curriculum-UK%20KS2%20Y3--Y5-orange.svg)](docs/curriculum/uk-ks2.md)
+[![Made with React + Vite](https://img.shields.io/badge/react%20%2B%20vite-PWA-61dafb.svg)](https://vitejs.dev/)
+
 Free maths practice for kids — practice online or print worksheets.
 
 Live site: https://times-table-hero.pages.dev/
+
+<!--
+Suggested GitHub repository topics (set via Settings → General → Topics):
+education, mathematics, maths, primary-school, ks2, uk-curriculum,
+react, typescript, vite, pwa, worksheets, printable, free
+-->
+
 
 ![Times Table Hero screenshot](public/screenshot.png)
 
