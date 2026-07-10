@@ -42,6 +42,12 @@ describe('isDaySuccess — score', () => {
     expect(isDaySuccess([session({ correct: 7, total: 10 }), session({ correct: 8, total: 10 })], rule)).toBe(false);
   });
 
+  it('lastNAverage with fewer than N sessions averages all sessions present', () => {
+    // n: 3, but only 1 session at 100% → should still pass (averages the 1 present session)
+    const rule: Level1Rule = { goal: { sessions: 1 }, score: { kind: 'lastNAverage', n: 3, minPercent: 100 }, dailyReward: 'x' };
+    expect(isDaySuccess([session({ correct: 10, total: 10 })], rule)).toBe(true);
+  });
+
   it('lastNAverage averages the last N sessions of the day', () => {
     const rule: Level1Rule = { goal: { sessions: 1 }, score: { kind: 'lastNAverage', n: 2, minPercent: 100 }, dailyReward: 'x' };
     const s = [

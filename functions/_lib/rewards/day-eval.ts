@@ -21,7 +21,7 @@ function scoreMet(day: PracticeSession[], score: Level1Rule['score']): boolean {
   }
   // lastNAverage: mean of the last N sessions' percentages (by startedAt).
   const ordered = [...day].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
-  const lastN = ordered.slice(-score.n);
+  const lastN = ordered.slice(-score.n); // when fewer than N sessions present, averages all of them
   const avg = lastN.reduce((s, x) => s + pct(x.correct, x.total), 0) / lastN.length;
   return avg >= score.minPercent;
 }
