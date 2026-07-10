@@ -72,7 +72,7 @@ export function evaluate(
   const need = rules.level3.target === '2weeks' ? 2 : 4;
   const met = rules.level3.enabled && weeklyStreakWeeks >= need;
   if (met) {
-    const anchor = completedWeeks[completedWeeks.length - 1];
+    const anchor = completedWeeks[completedWeeks.length - weeklyStreakWeeks];
     earned.push({
       periodType: 'extended',
       periodKey: `${isoWeekKey(anchor)}+ext`,

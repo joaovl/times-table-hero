@@ -74,6 +74,45 @@ describe('evaluate — extended', () => {
   });
 });
 
+describe('evaluate — gap week resets streak', () => {
+  it('weeklyStreakWeeks is 1 when a missed week breaks the streak (A-met, B-miss, C-met)', () => {
+    // wkA: 2026-W28 (Mon 2026-07-06) — 5 successes → met
+    const wkA = ['2026-07-06', '2026-07-07', '2026-07-08', '2026-07-09', '2026-07-10'];
+    // wkB: 2026-W29 (Mon 2026-07-13) — 0 successes → missed
+    // wkC: 2026-W30 (Mon 2026-07-20) — 5 successes → met
+    const wkC = ['2026-07-20', '2026-07-21', '2026-07-22', '2026-07-23', '2026-07-24'];
+    // Evaluate after all three weeks are complete (now = Mon 2026-07-27)
+    const now = new Date('2026-07-27T12:00:00Z');
+    const r = evaluate(rules, [...wkA, ...wkC].map(win), now);
+    expect(r.weeklyStreakWeeks).toBe(1);
+  });
+});
+
+describe('evaluate — extended periodKey stability across a growing streak', () => {
+  // Mondays: 2026-07-06, -13, -20, -27
+  const wk1 = ['2026-07-06', '2026-07-07', '2026-07-08', '2026-07-09', '2026-07-10'];
+  const wk2 = ['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'];
+  const wk3 = ['2026-07-20', '2026-07-21', '2026-07-22', '2026-07-23', '2026-07-24'];
+  const allSessions = [...wk1, ...wk2, ...wk3].map(win);
+
+  it('extended periodKey is the same whether 2 or 3 consecutive weeks are complete', () => {
+    // After 2 complete met weeks (now = start of week 3)
+    const now2 = new Date('2026-07-20T12:00:00Z');
+    const r2 = evaluate(rules, allSessions, now2);
+    const ext2 = r2.earned.find(e => e.periodType === 'extended');
+    expect(ext2).toBeDefined();
+
+    // After 3 complete met weeks (now = start of week 4)
+    const now3 = new Date('2026-07-27T12:00:00Z');
+    const r3 = evaluate(rules, allSessions, now3);
+    const ext3 = r3.earned.find(e => e.periodType === 'extended');
+    expect(ext3).toBeDefined();
+
+    // The periodKey must be identical — anchored to streak start, not latest week
+    expect(ext2!.periodKey).toBe(ext3!.periodKey);
+  });
+});
+
 describe('evaluate — recompute after a mid-week rule change', () => {
   it('re-evaluates history under the new (stricter) rules', () => {
     const now = new Date('2026-07-07T12:00:00Z');
