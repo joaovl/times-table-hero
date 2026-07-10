@@ -55,10 +55,10 @@ CREATE UNIQUE INDEX idx_rules_scope ON reward_rules(account_id, IFNULL(kid_id, '
 CREATE TABLE reward_ledger (
   id           TEXT PRIMARY KEY,
   kid_id       TEXT NOT NULL REFERENCES kids(id) ON DELETE CASCADE,
-  period_type  TEXT NOT NULL,             -- 'day' | 'week' | 'extended'
+  period_type  TEXT NOT NULL CHECK (period_type IN ('day','week','extended')),  -- 'day' | 'week' | 'extended'
   period_key   TEXT NOT NULL,             -- e.g. '2026-07-10', '2026-W28', '2026-W28+ext'
   reward_label TEXT NOT NULL,
-  status       TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'given'
+  status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','given')),  -- 'pending' | 'given'
   earned_at    TEXT NOT NULL,
   given_at     TEXT
 );
