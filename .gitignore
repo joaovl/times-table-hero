@@ -24,6 +24,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Wrangler local state (D1 SQLite files, KV, etc.)
+.wrangler/
+
 # Local scratch
 DELETE/
 
