@@ -27,6 +27,12 @@ dist-ssr
 # Wrangler local state (D1 SQLite files, KV, etc.)
 .wrangler/
 
+# Playwright E2E artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # Local scratch
 DELETE/
 

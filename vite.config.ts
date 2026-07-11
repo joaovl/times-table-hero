@@ -100,6 +100,10 @@ export default defineConfig({
     },
   },
   test: {
+    // Vitest owns unit/component tests under src/ and functions/. The e2e/
+    // directory holds Playwright specs (`*.spec.ts` using @playwright/test) and
+    // must be excluded here or Vitest tries to run them and fails to collect.
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "functions/**/*.{test,spec}.ts"],
     // Tests that render React components need a DOM. We use jsdom on a
     // per-file basis (via `@vitest-environment jsdom` pragma) so the bulk
     // of the logic / pdf suite still runs in node for speed; only the
