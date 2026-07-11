@@ -5,5 +5,5 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "tth-db"
-database_id = "local"   # replaced with the real id after `wrangler d1 create tth-db`
+database_id = "aa4f2487-7923-49e8-ba0e-89504a8f010a"
 migrations_dir = "migrations"
