@@ -1,3 +1,5 @@
+import type { RewardRulesConfig } from '@/lib/rewards-types';
+
 const TOKEN_KEY = 'tth_token';
 
 export const tokenStore = {
@@ -85,4 +87,36 @@ export async function authMe(): Promise<AccountInfo | null> {
   const { status, data } = await apiFetch<{ account: AccountInfo }>('/api/auth/me');
   if (status !== 200 || !data) return null;
   return data.account;
+}
+
+export interface Kid { id: string; name: string; color: string; icon: string }
+export interface KidInput { name: string; color: string; icon: string }
+export interface RulesRow { kidId: string | null; config: RewardRulesConfig; updatedAt: string }
+
+export async function kidsList(): Promise<Kid[]> {
+  const { status, data } = await apiFetch<{ kids: Kid[] }>('/api/kids');
+  if (status !== 200 || !data) throw new ApiError(codeOf(data), status);
+  return data.kids;
+}
+
+export async function kidsCreate(input: KidInput): Promise<Kid> {
+  const { status, data } = await apiFetch<{ kid: Kid }>('/api/kids', { method: 'POST', body: input });
+  if (status >= 400 || !data) throw new ApiError(codeOf(data), status);
+  return data.kid;
+}
+
+export async function kidsDelete(id: string): Promise<void> {
+  const { status, data } = await apiFetch<{ ok: true }>(`/api/kids/${id}`, { method: 'DELETE' });
+  if (status >= 400) throw new ApiError(codeOf(data), status);
+}
+
+export async function rulesList(): Promise<RulesRow[]> {
+  const { status, data } = await apiFetch<{ rules: RulesRow[] }>('/api/rules');
+  if (status !== 200 || !data) throw new ApiError(codeOf(data), status);
+  return data.rules;
+}
+
+export async function rulesPut(kidId: string | null, config: RewardRulesConfig): Promise<void> {
+  const { status, data } = await apiFetch<{ ok: true }>('/api/rules', { method: 'PUT', body: { kidId, rules: config } });
+  if (status >= 400) throw new ApiError(codeOf(data), status);
 }
