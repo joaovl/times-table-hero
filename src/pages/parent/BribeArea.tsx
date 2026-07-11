@@ -11,24 +11,29 @@ export default function BribeArea() {
   const [config, setConfig] = useState<RewardRulesConfig>(DEFAULT_RULES);
   const [status, setStatus] = useState('');
 
+  // Seed the form from the stored rule for a scope. Called only on explicit
+  // events (initial load, scope change) — never on every `rules` update, so a
+  // background refetch can't clobber the parent's in-progress edits.
+  const seed = (scopeVal: string, rulesData: RulesRow[]) => {
+    const kidId = scopeVal === '' ? null : scopeVal;
+    const found = rulesData.find(r => r.kidId === kidId);
+    setConfig(found ? found.config : DEFAULT_RULES);
+  };
+
   useEffect(() => {
-    Promise.all([kidsList(), rulesList()]).then(([k, r]) => { setKids(k); setRules(r); }).catch(() => setStatus('Could not load.'));
+    Promise.all([kidsList(), rulesList()])
+      .then(([k, r]) => { setKids(k); setRules(r); seed('', r); })
+      .catch(() => setStatus('Could not load.'));
   }, []);
 
-  // Seed the form from the stored rule for the selected scope (or defaults).
-  useEffect(() => {
-    const kidId = scope === '' ? null : scope;
-    const found = rules.find(r => r.kidId === kidId);
-    setConfig(found ? found.config : DEFAULT_RULES);
-  }, [scope, rules]);
+  const onScope = (v: string) => { setScope(v); seed(v, rules); };
 
   const save = async () => {
     setStatus('');
     try {
       await rulesPut(scope === '' ? null : scope, config);
       setStatus('Saved.');
-      const r = await rulesList();
-      setRules(r);
+      setRules(await rulesList()); // refresh cache without reseeding the form
     } catch { setStatus('Could not save.'); }
   };
 
@@ -38,7 +43,7 @@ export default function BribeArea() {
       <div className="flex items-center gap-2">
         <label className="text-sm font-medium" htmlFor="scope">These rules apply to</label>
         <select id="scope" aria-label="Rules apply to" className="border rounded-md px-2 py-1"
-          value={scope} onChange={e => setScope(e.target.value)}>
+          value={scope} onChange={e => onScope(e.target.value)}>
           <option value="">All kids</option>
           {kids.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
         </select>
