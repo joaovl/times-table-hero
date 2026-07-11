@@ -16,6 +16,7 @@ export default function ParentHome() {
         <div className="flex flex-col gap-2 mt-3">
           <Link className="underline text-primary" to="/parent/kids">Manage kids</Link>
           <Link className="underline text-primary" to="/parent/rewards">Reward settings (the bribe area)</Link>
+          <Link className="underline text-primary" to="/parent/dashboard">Progress &amp; rewards dashboard</Link>
         </div>
       </Card>
     </div>

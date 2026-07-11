@@ -120,3 +120,31 @@ export async function rulesPut(kidId: string | null, config: RewardRulesConfig):
   const { status, data } = await apiFetch<{ ok: true }>('/api/rules', { method: 'PUT', body: { kidId, rules: config } });
   if (status >= 400) throw new ApiError(codeOf(data), status);
 }
+
+export interface SessionInput {
+  id: string;
+  startedAt: string;
+  endedAt: string;
+  durationSec: number;
+  module: string;
+  correct: number;
+  total: number;
+  topics: string[];
+}
+
+export async function sessionsLog(kidId: string, sessions: SessionInput[]): Promise<void> {
+  const { status, data } = await apiFetch<{ inserted: number }>('/api/sessions', { method: 'POST', body: { kidId, sessions } });
+  if (status >= 400) throw new ApiError(codeOf(data), status);
+}
+
+export interface DashboardDay { date: string; units?: number; status: string }
+export type DashboardData =
+  | { mode: 'balance'; unitLabel: string; balanceUnits: number; days: DashboardDay[] }
+  | { mode: 'fixed'; earned: { periodType: string; periodKey: string; rewardLabel: string }[]; days: DashboardDay[] }
+  | { mode: 'none' };
+
+export async function dashboardGet(kidId: string): Promise<DashboardData> {
+  const { status, data } = await apiFetch<DashboardData>(`/api/dashboard?kidId=${encodeURIComponent(kidId)}`);
+  if (status !== 200 || !data) throw new ApiError(codeOf(data), status);
+  return data;
+}

@@ -62,4 +62,35 @@ describe('RewardRulesForm', () => {
     setup(); // DEFAULT_RULES uses dailyPercent
     expect(screen.queryByLabelText(/number of recent exercises/i)).toBeNull();
   });
+
+  it('switches the reward type to an earned balance', () => {
+    const { onChange } = setup();
+    fireEvent.change(screen.getByLabelText(/reward type/i), { target: { value: 'balance' } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      level1: expect.objectContaining({ mode: 'balance', balance: expect.objectContaining({ unitLabel: 'hours of TV' }) }),
+    }));
+  });
+
+  it('edits the balance rate fields when in balance mode', () => {
+    const balance: RewardRulesConfig = {
+      ...DEFAULT_RULES,
+      level1: {
+        mode: 'balance',
+        goal: { minutes: 20 },
+        score: { kind: 'dailyPercent', minPercent: 50 },
+        balance: { unitLabel: 'hours of TV', minutesPerUnit: 20, exercisesPerUnit: 10, rewardPerUnit: 1, penaltyPerMissedDay: 1 },
+      },
+    };
+    const { onChange } = setup(balance);
+    expect(screen.getByLabelText(/reward unit/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/minutes of practice per unit/i), { target: { value: '30' } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      level1: expect.objectContaining({ balance: expect.objectContaining({ minutesPerUnit: 30 }) }),
+    }));
+  });
+
+  it('hides the balance fields in fixed mode', () => {
+    setup(); // DEFAULT_RULES is fixed
+    expect(screen.queryByLabelText(/reward unit/i)).toBeNull();
+  });
 });

@@ -1,4 +1,5 @@
-import type { RewardRulesConfig, Level1Rule } from '@/lib/rewards-types';
+import type { RewardRulesConfig, Level1Rule, Level1Gate } from '@/lib/rewards-types';
+import { DEFAULT_BALANCE } from '@/lib/rewards-types';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
@@ -11,9 +12,29 @@ const num = (raw: string, min: number): number => {
 };
 
 export default function RewardRulesForm({ value, onChange }: Props) {
-  const setL1 = (patch: Partial<Level1Rule>) => onChange({ ...value, level1: { ...value.level1, ...patch } });
+  const l1 = value.level1;
+  const isBalance = l1.mode === 'balance';
+
+  // Patch gate fields (goal/score/weakTopics) — common to both reward modes.
+  const setGate = (patch: Partial<Level1Gate>) =>
+    onChange({ ...value, level1: { ...l1, ...patch } as Level1Rule });
+
   const setScore = (kind: 'dailyPercent' | 'lastNAverage') =>
-    setL1({ score: kind === 'dailyPercent' ? { kind, minPercent: 80 } : { kind, n: 2, minPercent: 100 } });
+    setGate({ score: kind === 'dailyPercent' ? { kind, minPercent: 80 } : { kind, n: 2, minPercent: 100 } });
+
+  const setRewardType = (mode: 'fixed' | 'balance') => {
+    if (mode === (l1.mode ?? 'fixed')) return;
+    const gate: Level1Gate = { goal: l1.goal, score: l1.score, weakTopics: l1.weakTopics };
+    const level1: Level1Rule = mode === 'balance'
+      ? { mode: 'balance', ...gate, balance: { ...DEFAULT_BALANCE } }
+      : { mode: 'fixed', ...gate, dailyReward: '' };
+    onChange({ ...value, level1 });
+  };
+
+  const setBalance = (patch: Partial<typeof DEFAULT_BALANCE>) => {
+    if (l1.mode !== 'balance') return;
+    onChange({ ...value, level1: { ...l1, balance: { ...l1.balance, ...patch } } });
+  };
 
   return (
     <div className="space-y-4">
@@ -21,32 +42,69 @@ export default function RewardRulesForm({ value, onChange }: Props) {
         <h3 className="font-bold">Level 1 — daily goal</h3>
         <label className="block text-sm font-medium" htmlFor="min">Minutes of practice per day</label>
         <Input id="min" type="number" inputMode="numeric" min={1}
-          value={value.level1.goal.minutes ?? 1}
-          onChange={e => setL1({ goal: { ...value.level1.goal, minutes: num(e.target.value, 1) } })} />
+          value={l1.goal.minutes ?? 1}
+          onChange={e => setGate({ goal: { ...l1.goal, minutes: num(e.target.value, 1) } })} />
 
         <label className="block text-sm font-medium" htmlFor="score">Score requirement</label>
         <select id="score" aria-label="Score requirement" className="border rounded-md px-2 py-1 w-full"
-          value={value.level1.score.kind} onChange={e => setScore(e.target.value as 'dailyPercent' | 'lastNAverage')}>
+          value={l1.score.kind} onChange={e => setScore(e.target.value as 'dailyPercent' | 'lastNAverage')}>
           <option value="dailyPercent">Minimum percent correct for the day</option>
           <option value="lastNAverage">Average of the last few exercises</option>
         </select>
-        {value.level1.score.kind === 'lastNAverage' && (
+        {l1.score.kind === 'lastNAverage' && (
           <>
             <label className="block text-sm font-medium" htmlFor="lastn">Number of recent exercises to average</label>
             <Input id="lastn" type="number" inputMode="numeric" min={1}
-              value={value.level1.score.n}
-              onChange={e => setL1({ score: { ...value.level1.score, n: num(e.target.value, 1) } })} />
+              value={l1.score.n}
+              onChange={e => setGate({ score: { ...l1.score, n: num(e.target.value, 1) } })} />
           </>
         )}
         <label className="block text-sm font-medium" htmlFor="minpct">Minimum percent</label>
         <Input id="minpct" type="number" inputMode="numeric" min={0}
-          value={value.level1.score.minPercent}
-          onChange={e => setL1({ score: { ...value.level1.score, minPercent: num(e.target.value, 0) } })} />
+          value={l1.score.minPercent}
+          onChange={e => setGate({ score: { ...l1.score, minPercent: num(e.target.value, 0) } })} />
 
-        <label className="block text-sm font-medium" htmlFor="daily">Daily reward</label>
-        <Input id="daily" placeholder="e.g. 1 pound or 2 Pokemon cards"
-          value={value.level1.dailyReward}
-          onChange={e => setL1({ dailyReward: e.target.value })} />
+        <label className="block text-sm font-medium" htmlFor="rewardtype">Reward type</label>
+        <select id="rewardtype" aria-label="Reward type" className="border rounded-md px-2 py-1 w-full"
+          value={isBalance ? 'balance' : 'fixed'}
+          onChange={e => setRewardType(e.target.value as 'fixed' | 'balance')}>
+          <option value="fixed">One fixed reward when the goal is met</option>
+          <option value="balance">Earned balance that scales (e.g. TV time)</option>
+        </select>
+
+        {!isBalance && l1.mode !== 'balance' && (
+          <>
+            <label className="block text-sm font-medium" htmlFor="daily">Daily reward</label>
+            <Input id="daily" placeholder="e.g. 1 pound or 2 Pokemon cards"
+              value={l1.dailyReward}
+              onChange={e => setGate({ dailyReward: e.target.value } as Partial<Level1Gate>)} />
+          </>
+        )}
+
+        {l1.mode === 'balance' && (
+          <div className="space-y-3 border-t pt-3">
+            <label className="block text-sm font-medium" htmlFor="unit">Reward unit (what she earns)</label>
+            <Input id="unit" placeholder="e.g. hours of TV"
+              value={l1.balance.unitLabel}
+              onChange={e => setBalance({ unitLabel: e.target.value })} />
+            <label className="block text-sm font-medium" htmlFor="mpu">Minutes of practice per unit earned</label>
+            <Input id="mpu" type="number" inputMode="numeric" min={0}
+              value={l1.balance.minutesPerUnit}
+              onChange={e => setBalance({ minutesPerUnit: num(e.target.value, 0) })} />
+            <label className="block text-sm font-medium" htmlFor="epu">Exercises per unit earned</label>
+            <Input id="epu" type="number" inputMode="numeric" min={0}
+              value={l1.balance.exercisesPerUnit}
+              onChange={e => setBalance({ exercisesPerUnit: num(e.target.value, 0) })} />
+            <label className="block text-sm font-medium" htmlFor="rpu">Units earned each time</label>
+            <Input id="rpu" type="number" inputMode="numeric" min={0}
+              value={l1.balance.rewardPerUnit}
+              onChange={e => setBalance({ rewardPerUnit: num(e.target.value, 0) })} />
+            <label className="block text-sm font-medium" htmlFor="pen">Units taken away on a missed day</label>
+            <Input id="pen" type="number" inputMode="numeric" min={0}
+              value={l1.balance.penaltyPerMissedDay}
+              onChange={e => setBalance({ penaltyPerMissedDay: num(e.target.value, 0) })} />
+          </div>
+        )}
       </Card>
 
       <Card className="p-4 space-y-3">
