@@ -15,6 +15,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:8788',
     trace: 'on-first-retry',
+    // Set PWSLOW=350 (ms) to slow actions down so a headed run is easy to watch.
+    launchOptions: { slowMo: process.env.PWSLOW ? Number(process.env.PWSLOW) : 0 },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
