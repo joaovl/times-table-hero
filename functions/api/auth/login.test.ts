@@ -5,10 +5,15 @@ import { onRequestPost as signup } from './signup';
 import { onRequestPost as login } from './login';
 import type { Db } from '../../_lib/auth/types';
 
-const MIGRATION = resolve(__dirname, '../../../migrations/0001_init.sql');
+// login now records rate-limit attempts, so the throttle table (0002) must be
+// present alongside the base schema (0001).
+const MIGRATIONS = [
+  resolve(__dirname, '../../../migrations/0001_init.sql'),
+  resolve(__dirname, '../../../migrations/0002_login_attempts.sql'),
+];
 let db: Db;
 beforeEach(async () => {
-  db = createTestDb([MIGRATION]);
+  db = createTestDb(MIGRATIONS);
   await signup({
     request: new Request('https://x/', { method: 'POST', body: JSON.stringify({ email: 'p@example.com', password: 'longenough' }) }),
     env: { DB: db },
