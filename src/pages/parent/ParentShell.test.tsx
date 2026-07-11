@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 let mockAuth: { status: string; account: { email: string } | null; logout: () => void };
 vi.mock('@/lib/auth/AuthContext', () => ({
@@ -31,7 +32,7 @@ describe('RequireAuth', () => {
 describe('ParentHome', () => {
   it('greets the signed-in parent', () => {
     mockAuth = { status: 'authed', account: { email: 'p@x.com' }, logout: vi.fn() };
-    render(<ParentHome />);
+    render(<MemoryRouter><ParentHome /></MemoryRouter>);
     expect(screen.getByText(/p@x.com/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
   });

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,7 +13,10 @@ export default function ParentHome() {
       </header>
       <Card className="p-5">
         <p className="text-muted-foreground">Signed in as <span className="font-semibold text-foreground">{account?.email}</span>.</p>
-        <p className="text-sm text-muted-foreground mt-2">Kids and the reward &ldquo;bribe area&rdquo; will appear here.</p>
+        <div className="flex flex-col gap-2 mt-3">
+          <Link className="underline text-primary" to="/parent/kids">Manage kids</Link>
+          <Link className="underline text-primary" to="/parent/rewards">Reward settings (the bribe area)</Link>
+        </div>
       </Card>
     </div>
   );

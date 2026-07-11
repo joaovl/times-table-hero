@@ -6,6 +6,8 @@ import { getTheme, applyTheme } from '@/lib/themeStorage';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import RequireAuth from './pages/parent/RequireAuth';
 import ParentHome from './pages/parent/ParentHome';
+import ParentKids from './pages/parent/ParentKids';
+import BribeArea from './pages/parent/BribeArea';
 
 // Lazy-load every module so the initial bundle only contains the Hub +
 // router + theme system. Each module ships as its own chunk and is fetched
@@ -48,6 +50,8 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Hub />} />
           <Route path="/parent" element={<RequireAuth><ParentHome /></RequireAuth>} />
+          <Route path="/parent/kids" element={<RequireAuth><ParentKids /></RequireAuth>} />
+          <Route path="/parent/rewards" element={<RequireAuth><BribeArea /></RequireAuth>} />
           <Route path="/times-tables" element={<TimesTablesIndex />} />
           <Route path="/times-tables/print" element={<TimesTablesIndex printOpen />} />
           <Route path="/arithmetic" element={<ArithmeticIndex />} />
