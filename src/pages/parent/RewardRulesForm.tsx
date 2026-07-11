@@ -30,6 +30,14 @@ export default function RewardRulesForm({ value, onChange }: Props) {
           <option value="dailyPercent">Minimum percent correct for the day</option>
           <option value="lastNAverage">Average of the last few exercises</option>
         </select>
+        {value.level1.score.kind === 'lastNAverage' && (
+          <>
+            <label className="block text-sm font-medium" htmlFor="lastn">Number of recent exercises to average</label>
+            <Input id="lastn" type="number" inputMode="numeric" min={1}
+              value={value.level1.score.n}
+              onChange={e => setL1({ score: { ...value.level1.score, n: num(e.target.value, 1) } })} />
+          </>
+        )}
         <label className="block text-sm font-medium" htmlFor="minpct">Minimum percent</label>
         <Input id="minpct" type="number" inputMode="numeric" min={0}
           value={value.level1.score.minPercent}

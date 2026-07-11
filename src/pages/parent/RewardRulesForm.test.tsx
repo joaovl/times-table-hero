@@ -45,4 +45,21 @@ describe('RewardRulesForm', () => {
       level1: expect.objectContaining({ score: expect.objectContaining({ kind: 'lastNAverage' }) }),
     }));
   });
+
+  it('exposes an editable N when the score is a rolling average', () => {
+    const rolling: RewardRulesConfig = {
+      ...DEFAULT_RULES,
+      level1: { ...DEFAULT_RULES.level1, score: { kind: 'lastNAverage', n: 2, minPercent: 100 } },
+    };
+    const { onChange } = setup(rolling);
+    fireEvent.change(screen.getByLabelText(/number of recent exercises/i), { target: { value: '3' } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      level1: expect.objectContaining({ score: expect.objectContaining({ kind: 'lastNAverage', n: 3 }) }),
+    }));
+  });
+
+  it('hides the N field for the daily-percent score', () => {
+    setup(); // DEFAULT_RULES uses dailyPercent
+    expect(screen.queryByLabelText(/number of recent exercises/i)).toBeNull();
+  });
 });
