@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Palette, Clock, BarChart3, Hash, PoundSterling, Percent, Sigma, Ruler, BookOpen, Download, Scale, Variable, LineChart } from 'lucide-react';
+import { Menu, Palette, Clock, BarChart3, Hash, PoundSterling, Percent, Sigma, Ruler, BookOpen, Download, Scale, Variable, LineChart, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { UserSelector } from '@/components/UserSelector';
@@ -236,6 +236,16 @@ const Hub = () => {
                       Install app
                     </button>
                   )}
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      navigate('/parent');
+                    }}
+                    className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2 min-h-[44px]"
+                  >
+                    <Lock className="w-4 h-4" />
+                    Parent area
+                  </button>
                 </div>
                 <div className="border-t mt-1 pt-1.5 px-4 pb-1 text-[10px] text-muted-foreground/60">
                   v0.1.0-{(globalThis as unknown as { __GIT_HASH__?: string }).__GIT_HASH__ || 'dev'}
