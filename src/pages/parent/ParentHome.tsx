@@ -17,6 +17,13 @@ export default function ParentHome() {
           <Link className="underline text-primary" to="/parent/kids">Manage kids</Link>
           <Link className="underline text-primary" to="/parent/rewards">Reward settings (the bribe area)</Link>
           <Link className="underline text-primary" to="/parent/dashboard">Progress &amp; rewards dashboard</Link>
+          <button
+            type="button"
+            className="underline text-primary text-left"
+            onClick={() => window.dispatchEvent(new CustomEvent('tth-open-feedback'))}
+          >
+            Send feedback / report a problem
+          </button>
         </div>
       </Card>
     </div>

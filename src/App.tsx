@@ -9,6 +9,7 @@ import ParentHome from './pages/parent/ParentHome';
 import ParentKids from './pages/parent/ParentKids';
 import BribeArea from './pages/parent/BribeArea';
 import Dashboard from './pages/parent/Dashboard';
+import FeedbackTrigger from './components/FeedbackTrigger';
 
 // Lazy-load every module so the initial bundle only contains the Hub +
 // router + theme system. Each module ships as its own chunk and is fetched
@@ -47,6 +48,7 @@ const App = () => {
   return (
     <AuthProvider>
     <BrowserRouter>
+      <FeedbackTrigger />
       <Suspense fallback={<ModuleLoading />}>
         <Routes>
           <Route path="/" element={<Hub />} />

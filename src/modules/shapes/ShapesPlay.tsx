@@ -17,6 +17,7 @@ import {
 } from './logic';
 import { ShapeFigure } from './ShapeFigure';
 import type { ShapeFigureMode } from './ShapeFigure';
+import { recordAttempt } from '@/lib/feedback/attemptLog';
 
 export interface ShapesGameResult {
   score: number;
@@ -121,6 +122,14 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
       const correct = isAnswerCorrect(q, value);
 
       setQuestionsAnswered(p => p + 1);
+      recordAttempt({
+        module: 'shapes',
+        skill: q.skill,
+        question: promptFor(q),
+        typed: value,
+        correct,
+        expected: answerString(q),
+      });
 
       if (correct) {
         setScore(p => p + 1);

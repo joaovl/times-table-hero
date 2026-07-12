@@ -12,6 +12,7 @@ import {
   getRandomPositiveMessage,
 } from './logic';
 import { recordAnswer } from './storage';
+import { recordAttempt } from '@/lib/feedback/attemptLog';
 import { QuestionDisplay } from './QuestionDisplay';
 
 interface TimesTablesPlayProps {
@@ -125,6 +126,17 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
 
     setQuestionsAnswered(prev => prev + 1);
     recordAnswer(currentQuestion, isCorrect, userId);
+
+    const prompt = currentQuestion.kind === 'binary'
+      ? `${currentQuestion.operand1} ${currentQuestion.op === 'multiply' ? '×' : '÷'} ${currentQuestion.operand2}`
+      : currentQuestion.op === 'square' ? `${currentQuestion.operand}²` : `√${currentQuestion.operand}`;
+    recordAttempt({
+      module: 'times-tables',
+      question: prompt,
+      typed: userAnswer === null ? '' : String(userAnswer),
+      correct: isCorrect,
+      expected: String(currentQuestion.answer),
+    });
 
     if (isCorrect) {
       setScore(prev => prev + 1);

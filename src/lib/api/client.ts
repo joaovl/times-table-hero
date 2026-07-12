@@ -148,3 +148,18 @@ export async function dashboardGet(kidId: string): Promise<DashboardData> {
   if (status !== 200 || !data) throw new ApiError(codeOf(data), status);
   return data;
 }
+
+export interface BugReportInput {
+  title: string;
+  body: string;
+  severity: 'low' | 'medium' | 'high';
+  url?: string;
+  reporter?: string | null;
+  context?: unknown;
+}
+
+export async function bugReport(input: BugReportInput): Promise<number> {
+  const { status, data } = await apiFetch<{ id: number }>('/api/bugs', { method: 'POST', body: input });
+  if (status >= 400 || !data) throw new ApiError(codeOf(data), status);
+  return data.id;
+}
