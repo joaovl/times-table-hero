@@ -22,11 +22,26 @@ describe('RewardRulesForm', () => {
     }));
   });
 
-  it('edits the weekly success-days number', () => {
+  it('edits the weekly success-days number (commits on blur)', () => {
     const { onChange } = setup();
-    fireEvent.change(screen.getByLabelText(/successful days per week/i), { target: { value: '6' } });
+    const el = screen.getByLabelText(/successful days per week/i);
+    fireEvent.change(el, { target: { value: '6' } });
+    fireEvent.blur(el);
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
       level2: expect.objectContaining({ successDaysRequired: 6 }),
+    }));
+  });
+
+  it('lets a number field be cleared and retyped without snapping to the minimum', () => {
+    const { onChange } = setup();
+    const el = screen.getByLabelText(/successful days per week/i) as HTMLInputElement;
+    fireEvent.change(el, { target: { value: '' } }); // clearing must be allowed mid-edit
+    expect(el.value).toBe('');
+    expect(onChange).not.toHaveBeenCalled(); // no commit yet
+    fireEvent.change(el, { target: { value: '3' } });
+    fireEvent.blur(el);
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      level2: expect.objectContaining({ successDaysRequired: 3 }),
     }));
   });
 
@@ -52,7 +67,9 @@ describe('RewardRulesForm', () => {
       level1: { ...DEFAULT_RULES.level1, score: { kind: 'lastNAverage', n: 2, minPercent: 100 } },
     };
     const { onChange } = setup(rolling);
-    fireEvent.change(screen.getByLabelText(/number of recent exercises/i), { target: { value: '3' } });
+    const el = screen.getByLabelText(/number of recent exercises/i);
+    fireEvent.change(el, { target: { value: '3' } });
+    fireEvent.blur(el);
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
       level1: expect.objectContaining({ score: expect.objectContaining({ kind: 'lastNAverage', n: 3 }) }),
     }));
@@ -83,7 +100,9 @@ describe('RewardRulesForm', () => {
     };
     const { onChange } = setup(balance);
     expect(screen.getByLabelText(/reward unit/i)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/minutes of practice per unit/i), { target: { value: '30' } });
+    const el = screen.getByLabelText(/minutes of practice per unit/i);
+    fireEvent.change(el, { target: { value: '30' } });
+    fireEvent.blur(el);
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
       level1: expect.objectContaining({ balance: expect.objectContaining({ minutesPerUnit: 30 }) }),
     }));

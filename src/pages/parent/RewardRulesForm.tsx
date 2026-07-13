@@ -1,15 +1,10 @@
 import type { RewardRulesConfig, Level1Rule, Level1Gate } from '@/lib/rewards-types';
 import { DEFAULT_BALANCE } from '@/lib/rewards-types';
 import { Input } from '@/components/ui/input';
+import { NumberField } from '@/components/ui/NumberField';
 import { Card } from '@/components/ui/card';
 
 interface Props { value: RewardRulesConfig; onChange: (c: RewardRulesConfig) => void }
-
-// Parse a numeric input, keeping a minimum so required fields never go invalid.
-const num = (raw: string, min: number): number => {
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= min ? n : min;
-};
 
 export default function RewardRulesForm({ value, onChange }: Props) {
   const l1 = value.level1;
@@ -41,9 +36,9 @@ export default function RewardRulesForm({ value, onChange }: Props) {
       <Card className="p-4 space-y-3">
         <h3 className="font-bold">Level 1 — daily goal</h3>
         <label className="block text-sm font-medium" htmlFor="min">Minutes of practice per day</label>
-        <Input id="min" type="number" inputMode="numeric" min={1}
+        <NumberField id="min" min={1}
           value={l1.goal.minutes ?? 1}
-          onChange={e => setGate({ goal: { ...l1.goal, minutes: num(e.target.value, 1) } })} />
+          onCommit={n => setGate({ goal: { ...l1.goal, minutes: n } })} />
 
         <label className="block text-sm font-medium" htmlFor="score">Score requirement</label>
         <select id="score" aria-label="Score requirement" className="border rounded-md px-2 py-1 w-full"
@@ -54,15 +49,15 @@ export default function RewardRulesForm({ value, onChange }: Props) {
         {l1.score.kind === 'lastNAverage' && (
           <>
             <label className="block text-sm font-medium" htmlFor="lastn">Number of recent exercises to average</label>
-            <Input id="lastn" type="number" inputMode="numeric" min={1}
+            <NumberField id="lastn" min={1}
               value={l1.score.n}
-              onChange={e => setGate({ score: { ...l1.score, n: num(e.target.value, 1) } })} />
+              onCommit={n => setGate({ score: { ...l1.score, n } })} />
           </>
         )}
         <label className="block text-sm font-medium" htmlFor="minpct">Minimum percent</label>
-        <Input id="minpct" type="number" inputMode="numeric" min={0}
+        <NumberField id="minpct" min={0} max={100}
           value={l1.score.minPercent}
-          onChange={e => setGate({ score: { ...l1.score, minPercent: num(e.target.value, 0) } })} />
+          onCommit={n => setGate({ score: { ...l1.score, minPercent: n } })} />
 
         <label className="block text-sm font-medium" htmlFor="rewardtype">Reward type</label>
         <select id="rewardtype" aria-label="Reward type" className="border rounded-md px-2 py-1 w-full"
@@ -88,21 +83,21 @@ export default function RewardRulesForm({ value, onChange }: Props) {
               value={l1.balance.unitLabel}
               onChange={e => setBalance({ unitLabel: e.target.value })} />
             <label className="block text-sm font-medium" htmlFor="mpu">Minutes of practice per unit earned</label>
-            <Input id="mpu" type="number" inputMode="numeric" min={0}
+            <NumberField id="mpu" min={0}
               value={l1.balance.minutesPerUnit}
-              onChange={e => setBalance({ minutesPerUnit: num(e.target.value, 0) })} />
+              onCommit={n => setBalance({ minutesPerUnit: n })} />
             <label className="block text-sm font-medium" htmlFor="epu">Exercises per unit earned</label>
-            <Input id="epu" type="number" inputMode="numeric" min={0}
+            <NumberField id="epu" min={0}
               value={l1.balance.exercisesPerUnit}
-              onChange={e => setBalance({ exercisesPerUnit: num(e.target.value, 0) })} />
+              onCommit={n => setBalance({ exercisesPerUnit: n })} />
             <label className="block text-sm font-medium" htmlFor="rpu">Units earned each time</label>
-            <Input id="rpu" type="number" inputMode="numeric" min={0}
+            <NumberField id="rpu" min={0}
               value={l1.balance.rewardPerUnit}
-              onChange={e => setBalance({ rewardPerUnit: num(e.target.value, 0) })} />
+              onCommit={n => setBalance({ rewardPerUnit: n })} />
             <label className="block text-sm font-medium" htmlFor="pen">Units taken away on a missed day</label>
-            <Input id="pen" type="number" inputMode="numeric" min={0}
+            <NumberField id="pen" min={0}
               value={l1.balance.penaltyPerMissedDay}
-              onChange={e => setBalance({ penaltyPerMissedDay: num(e.target.value, 0) })} />
+              onCommit={n => setBalance({ penaltyPerMissedDay: n })} />
           </div>
         )}
       </Card>
@@ -110,9 +105,9 @@ export default function RewardRulesForm({ value, onChange }: Props) {
       <Card className="p-4 space-y-3">
         <h3 className="font-bold">Level 2 — weekly streak</h3>
         <label className="block text-sm font-medium" htmlFor="days">Successful days per week</label>
-        <Input id="days" type="number" inputMode="numeric" min={1} max={7}
+        <NumberField id="days" min={1} max={7}
           value={value.level2.successDaysRequired}
-          onChange={e => onChange({ ...value, level2: { ...value.level2, successDaysRequired: num(e.target.value, 1) } })} />
+          onCommit={n => onChange({ ...value, level2: { ...value.level2, successDaysRequired: n } })} />
         <label className="block text-sm font-medium" htmlFor="weekly">Weekly reward</label>
         <Input id="weekly" placeholder="e.g. 10 pounds or a toy"
           value={value.level2.weeklyReward}
