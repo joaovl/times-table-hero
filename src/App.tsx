@@ -9,7 +9,9 @@ import ParentHome from './pages/parent/ParentHome';
 import ParentKids from './pages/parent/ParentKids';
 import BribeArea from './pages/parent/BribeArea';
 import Dashboard from './pages/parent/Dashboard';
+import ParentLink from './pages/parent/ParentLink';
 import FeedbackTrigger from './components/FeedbackTrigger';
+import { flush as flushOutbox } from '@/lib/practice/outbox';
 
 // Lazy-load every module so the initial bundle only contains the Hub +
 // router + theme system. Each module ships as its own chunk and is fetched
@@ -43,6 +45,11 @@ const App = () => {
   useEffect(() => {
     const theme = getTheme();
     applyTheme(theme);
+    // Deliver any practice sessions queued offline, and again when back online.
+    void flushOutbox();
+    const onOnline = () => { void flushOutbox(); };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
   }, []);
 
   return (
@@ -56,6 +63,7 @@ const App = () => {
           <Route path="/parent/kids" element={<RequireAuth><ParentKids /></RequireAuth>} />
           <Route path="/parent/rewards" element={<RequireAuth><BribeArea /></RequireAuth>} />
           <Route path="/parent/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+          <Route path="/parent/link" element={<RequireAuth><ParentLink /></RequireAuth>} />
           <Route path="/times-tables" element={<TimesTablesIndex />} />
           <Route path="/times-tables/print" element={<TimesTablesIndex printOpen />} />
           <Route path="/arithmetic" element={<ArithmeticIndex />} />

@@ -91,4 +91,12 @@ describe('RewardRulesForm (v2)', () => {
     fireEvent.click(screen.getByLabelText(/pause rewards for a holiday/i));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ paused: true }));
   });
+
+  it('toggles a times-table focus (targeted practice)', () => {
+    const { onChange } = setup();
+    fireEvent.click(screen.getByRole('button', { name: /focus on the 8 times table/i }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      daily: expect.objectContaining({ focus: ['table-8'] }),
+    }));
+  });
 });

@@ -13,6 +13,7 @@ import {
 } from './logic';
 import { recordAnswer } from './storage';
 import { recordAttempt } from '@/lib/feedback/attemptLog';
+import { recordPractice } from '@/lib/practice/recordPractice';
 import { QuestionDisplay } from './QuestionDisplay';
 
 interface TimesTablesPlayProps {
@@ -64,6 +65,8 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const startTimeRef = useRef(Date.now());
+  const loggedRef = useRef(false);
 
   // Generate questions on mount
   useEffect(() => {
@@ -117,8 +120,22 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
         incorrectQuestions,
         settings,
       });
+      // Log the session once, for a cloud-linked kid, so it feeds the dashboard.
+      if (!loggedRef.current) {
+        loggedRef.current = true;
+        const end = new Date();
+        recordPractice(userId, {
+          module: 'times-tables',
+          correct: score,
+          total: questionsAnswered,
+          durationSec: Math.max(1, Math.round((end.getTime() - startTimeRef.current) / 1000)),
+          topics: settings.tables.map(t => `table-${t}`),
+          startedAt: new Date(startTimeRef.current).toISOString(),
+          endedAt: end.toISOString(),
+        });
+      }
     }
-  }, [isComplete, score, questionsAnswered, bestStreak, incorrectQuestions, settings, onComplete]);
+  }, [isComplete, score, questionsAnswered, bestStreak, incorrectQuestions, settings, onComplete, userId]);
 
   const handleAnswer = useCallback((userAnswer: number | null) => {
     const currentQuestion = questions[currentIndex];

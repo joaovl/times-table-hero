@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { NumberField } from '@/components/ui/NumberField';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface Props { value: RewardRulesConfig; onChange: (c: RewardRulesConfig) => void }
 
@@ -35,6 +36,14 @@ export default function RewardRulesForm({ value, onChange }: Props) {
     onChange({ ...value, ladder: value.ladder.map((t, idx) => (idx === i ? { ...t, ...patch } : t)) });
   const addTier = () => onChange({ ...value, ladder: [...value.ladder, { ...DEFAULT_TIER }] });
   const removeTier = (i: number) => onChange({ ...value, ladder: value.ladder.filter((_, idx) => idx !== i) });
+
+  // Targeted practice: a day only counts if she practised one of these tables.
+  const focus = d.focus ?? [];
+  const toggleFocus = (t: number) => {
+    const key = `table-${t}`;
+    const next = focus.includes(key) ? focus.filter(f => f !== key) : [...focus, key];
+    setGate({ focus: next });
+  };
 
   return (
     <div className="space-y-4">
@@ -97,6 +106,25 @@ export default function RewardRulesForm({ value, onChange }: Props) {
             <NumberField id="pen" min={0} value={d.balance.penaltyPerMissedDay} onCommit={n => setBalance({ penaltyPerMissedDay: n })} />
           </div>
         )}
+      </Card>
+
+      <Card className="p-4 space-y-2">
+        <h3 className="font-bold">Focus on times tables (optional)</h3>
+        <p className="text-xs text-muted-foreground">
+          Pick the tables you want practised most. A day only counts if she practised one of them.
+          Leave all off to count any practice.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {Array.from({ length: 12 }, (_, i) => i + 1).map(t => (
+            <button key={t} type="button" aria-label={`Focus on the ${t} times table`}
+              aria-pressed={focus.includes(`table-${t}`)}
+              onClick={() => toggleFocus(t)}
+              className={cn('min-w-[40px] px-3 py-1 rounded-md text-sm font-bold border transition-colors',
+                focus.includes(`table-${t}`) ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted')}>
+              {t}
+            </button>
+          ))}
+        </div>
       </Card>
 
       <Card className="p-4 space-y-3">
