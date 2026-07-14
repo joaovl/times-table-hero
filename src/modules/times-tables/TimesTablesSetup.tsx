@@ -31,6 +31,7 @@ interface TimesTablesSetupProps {
   onUserChange: (user: UserProfile | null) => void;
   onNewUser: () => void;
   onNavigateToHub?: () => void;
+  onViewProgress?: () => void;
   autoOpenPrint?: boolean;
 }
 
@@ -47,7 +48,7 @@ const TIME_LIMITS = [
   { label: '15 min', value: 900 },
 ];
 
-export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser, onNavigateToHub, autoOpenPrint = false }: TimesTablesSetupProps) {
+export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser, onNavigateToHub, onViewProgress, autoOpenPrint = false }: TimesTablesSetupProps) {
   const [selectedTables, setSelectedTables] = useState<number[]>(TABLES);
   const [printOpen, setPrintOpen] = useState(false);
   const [printConfig, setPrintConfig] = useState({ pageCount: 1, questionsPerPage: 40 });
@@ -207,6 +208,18 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
           <p className="text-center text-[11px] md:text-sm text-muted-foreground mb-2 md:mb-4">
             {stats.totalGames} games, {stats.totalCorrect} correct!
           </p>
+        )}
+
+        {/* My facts — adaptive progress heatmap (per player). */}
+        {currentUser && onViewProgress && (
+          <div className="text-center mb-2 md:mb-4">
+            <button
+              onClick={onViewProgress}
+              className="text-primary hover:underline text-sm md:text-base font-semibold min-h-[44px]"
+            >
+              📊 My facts — see what&rsquo;s getting stronger
+            </button>
+          </div>
         )}
 
         {/* Menu and User Selector */}

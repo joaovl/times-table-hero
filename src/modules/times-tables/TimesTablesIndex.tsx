@@ -4,10 +4,11 @@ import { TimesTablesSetup } from './TimesTablesSetup';
 import { TimesTablesPlay, GameResults as GameResultsType } from './TimesTablesPlay';
 import { TimesTablesResults } from './TimesTablesResults';
 import { NewUserModal } from '@/components/NewUserModal';
+import { FactsProgress } from './FactsProgress';
 import { UserProfile, getCurrentUser, getUserById } from '@/lib/userStorage';
 import type { GameSettings } from './logic';
 
-type GameState = 'setup' | 'playing' | 'results';
+type GameState = 'setup' | 'playing' | 'results' | 'progress';
 
 interface TimesTablesIndexProps {
   printOpen?: boolean;
@@ -75,8 +76,12 @@ const TimesTablesIndex = ({ printOpen = false }: TimesTablesIndexProps) => {
           onUserChange={handleUserChange}
           onNewUser={handleNewUser}
           onNavigateToHub={() => navigate('/')}
+          onViewProgress={() => setGameState('progress')}
           autoOpenPrint={printOpen}
         />
+      )}
+      {gameState === 'progress' && (
+        <FactsProgress userId={currentUser?.id} onBack={() => setGameState('setup')} />
       )}
       {gameState === 'playing' && settings && (
         <TimesTablesPlay

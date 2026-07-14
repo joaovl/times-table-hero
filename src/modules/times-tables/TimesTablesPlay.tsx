@@ -18,6 +18,8 @@ import { recordPractice } from '@/lib/practice/recordPractice';
 import { weightFor, recordFactAttempt, type FactStore } from '@/lib/practice/factModel';
 import { loadFactStore, saveFactStore } from '@/lib/practice/factStore';
 import { QuestionDisplay } from './QuestionDisplay';
+import { FactArray } from './FactArray';
+import { strategyFor } from './strategy';
 
 interface TimesTablesPlayProps {
   settings: GameSettings;
@@ -331,6 +333,14 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
               <div className="text-3xl md:text-4xl font-bold text-foreground">
                 <QuestionDisplay q={currentQuestion} /> = {currentQuestion.answer}
               </div>
+              {feedback === 'incorrect' && (
+                <>
+                  <FactArray q={currentQuestion} />
+                  <p className="mt-2 text-sm md:text-base font-medium text-muted-foreground">
+                    {strategyFor(currentQuestion)}
+                  </p>
+                </>
+              )}
             </>
           )}
         </Card>
