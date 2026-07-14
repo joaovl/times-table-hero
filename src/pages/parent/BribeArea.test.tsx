@@ -27,7 +27,7 @@ describe('BribeArea', () => {
     fireEvent.change(await screen.findByLabelText(/daily reward/i), { target: { value: '2 stickers' } });
     fireEvent.click(screen.getByRole('button', { name: /save/i }));
     await waitFor(() => expect(rulesPut).toHaveBeenCalledWith(null, expect.objectContaining({
-      level1: expect.objectContaining({ dailyReward: '2 stickers' }),
+      daily: expect.objectContaining({ dailyReward: '2 stickers' }),
     })));
   });
 

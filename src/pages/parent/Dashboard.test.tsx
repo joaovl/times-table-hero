@@ -18,10 +18,19 @@ afterEach(() => cleanup());
 describe('Dashboard', () => {
   it('shows the earned balance for a balance-mode kid', async () => {
     kidsList.mockResolvedValue([{ id: 'k1', name: 'Mia', color: 'blue', icon: 'star' }]);
-    dashboardGet.mockResolvedValue({ mode: 'balance', unitLabel: 'hours of TV', balanceUnits: 3, days: [] });
+    dashboardGet.mockResolvedValue({
+      mode: 'balance', unitLabel: 'hours of TV', balanceUnits: 3,
+      totalSuccessfulDays: 4, paused: false,
+      tiers: [{ threshold: 3, reward: 'sticker', earned: true }, { threshold: 7, reward: 'toy', earned: false }],
+      days: [],
+    });
     render(<Dashboard />);
     await waitFor(() => expect(screen.getByText(/3 hours of TV/)).toBeInTheDocument());
     expect(dashboardGet).toHaveBeenCalledWith('k1');
+    // ladder progress is shown
+    expect(screen.getByText(/Successful days so far/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 days → sticker — earned!/)).toBeInTheDocument();
+    expect(screen.getByText(/7 days → toy/)).toBeInTheDocument();
   });
 
   it('prompts to add a kid when there are none', async () => {

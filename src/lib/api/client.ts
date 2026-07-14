@@ -137,10 +137,17 @@ export async function sessionsLog(kidId: string, sessions: SessionInput[]): Prom
   if (status >= 400) throw new ApiError(codeOf(data), status);
 }
 
-export interface DashboardDay { date: string; units?: number; status: string }
+export interface DashboardDay { date: string; status: string }
+export interface DashboardTier { threshold: number; reward: string; earned: boolean }
+interface DashboardBase {
+  totalSuccessfulDays: number;
+  tiers: DashboardTier[];
+  days: DashboardDay[];
+  paused: boolean;
+}
 export type DashboardData =
-  | { mode: 'balance'; unitLabel: string; balanceUnits: number; days: DashboardDay[] }
-  | { mode: 'fixed'; earned: { periodType: string; periodKey: string; rewardLabel: string }[]; days: DashboardDay[] }
+  | ({ mode: 'balance'; unitLabel: string; balanceUnits: number } & DashboardBase)
+  | ({ mode: 'fixed'; dailyReward: string } & DashboardBase)
   | { mode: 'none' };
 
 export async function dashboardGet(kidId: string): Promise<DashboardData> {

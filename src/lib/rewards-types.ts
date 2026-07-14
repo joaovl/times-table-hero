@@ -12,15 +12,28 @@ export interface BalanceRule {
   penaltyPerMissedDay: number;
 }
 
-// Level 1 is either a single fixed reward (met/not) or an accruing balance
-// (e.g. hours of TV) that scales with practice. Missing `mode` means fixed.
-export type Level1Rule =
-  | (Level1Gate & { mode?: 'fixed'; dailyReward: string })
-  | (Level1Gate & { mode: 'balance'; balance: BalanceRule });
+// The daily earn rule: a qualification gate (goal + score), an optional
+// targeted-practice `focus` (must have practised one of these topics), and
+// either a single fixed reward or an accruing balance.
+export interface DailyRule extends Level1Gate {
+  focus?: string[];
+  mode: 'fixed' | 'balance';
+  dailyReward?: string;
+  balance?: BalanceRule;
+}
 
-export interface Level2Rule { successDaysRequired: number; weeklyReward: string }
-export interface Level3Rule { enabled: boolean; target: '2weeks' | 'month'; reward: string }
-export interface RewardRulesConfig { level1: Level1Rule; level2: Level2Rule; level3: Level3Rule }
+// One rung of the reward ladder: reach `threshold` total successful days to
+// unlock `reward`.
+export interface Tier {
+  threshold: number;
+  reward: string;
+}
+
+export interface RewardRulesConfig {
+  daily: DailyRule;
+  ladder: Tier[];
+  paused: boolean;
+}
 
 export const DEFAULT_BALANCE: BalanceRule = {
   unitLabel: 'hours of TV',
@@ -31,7 +44,9 @@ export const DEFAULT_BALANCE: BalanceRule = {
 };
 
 export const DEFAULT_RULES: RewardRulesConfig = {
-  level1: { mode: 'fixed', goal: { minutes: 15 }, score: { kind: 'dailyPercent', minPercent: 80 }, dailyReward: '' },
-  level2: { successDaysRequired: 5, weeklyReward: '' },
-  level3: { enabled: false, target: '2weeks', reward: '' },
+  daily: { goal: { minutes: 15 }, score: { kind: 'dailyPercent', minPercent: 80 }, mode: 'fixed', dailyReward: '' },
+  ladder: [{ threshold: 5, reward: '' }],
+  paused: false,
 };
+
+export const DEFAULT_TIER: Tier = { threshold: 7, reward: '' };

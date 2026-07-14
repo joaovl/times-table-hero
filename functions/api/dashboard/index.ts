@@ -1,13 +1,12 @@
 import type { Env } from '../../_lib/auth/types';
-import type { RewardRules } from '../../_lib/rewards/types';
 import { json, error } from '../../_lib/http';
 import { requireAccount } from '../../_lib/auth/guard';
 import { getKid } from '../../_lib/kids/repo';
 import { listRules } from '../../_lib/rules/repo';
 import { resolveEffective } from '../../_lib/rules/effective';
 import { listSessions } from '../../_lib/sessions/repo';
+import { computeLadder } from '../../_lib/rewards/ladder';
 import { computeBalance } from '../../_lib/rewards/balance';
-import { evaluate } from '../../_lib/rewards';
 
 export async function onRequestGet(ctx: { request: Request; env: Env }): Promise<Response> {
   const account = await requireAccount(ctx.request, ctx.env.DB);
@@ -24,18 +23,22 @@ export async function onRequestGet(ctx: { request: Request; env: Env }): Promise
 
   if (!rule) return json({ mode: 'none' });
 
-  const l1 = rule.level1;
-  if (l1.mode === 'balance') {
-    const { balanceUnits, days } = computeBalance(
-      { goal: l1.goal, score: l1.score, weakTopics: l1.weakTopics },
-      l1.balance,
-      sessions,
-      now,
-      tz,
-    );
-    return json({ mode: 'balance', unitLabel: l1.balance.unitLabel, balanceUnits, days });
-  }
+  const daily = rule.daily;
+  const gate = { goal: daily.goal, score: daily.score, weakTopics: daily.weakTopics, focus: daily.focus };
+  const ladderRes = computeLadder({ gate, sessions, now, tzOffsetMinutes: tz, ladder: rule.ladder, paused: rule.paused });
+  const base = {
+    totalSuccessfulDays: ladderRes.totalSuccessfulDays,
+    tiers: ladderRes.tiers,
+    days: ladderRes.days,
+    paused: rule.paused,
+  };
 
-  const result = evaluate({ ...rule, timezoneOffsetMinutes: tz } as RewardRules, sessions, now);
-  return json({ mode: 'fixed', earned: result.earned, days: result.days });
+  if (daily.mode === 'balance' && daily.balance) {
+    const bal = computeBalance(
+      { goal: daily.goal, score: daily.score, weakTopics: daily.weakTopics },
+      daily.balance, sessions, now, tz, rule.paused,
+    );
+    return json({ mode: 'balance', unitLabel: daily.balance.unitLabel, balanceUnits: bal.balanceUnits, ...base });
+  }
+  return json({ mode: 'fixed', dailyReward: daily.dailyReward ?? '', ...base });
 }

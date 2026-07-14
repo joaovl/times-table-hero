@@ -1,5 +1,4 @@
-import type { Level2Rule, Level3Rule } from '../rewards/types';
-import type { Level1Config, RewardRulesConfig } from './types';
+import type { DailyRule, RewardRulesConfig } from './types';
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -7,7 +6,6 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 const isNonNegNum = (v: unknown): v is number => isNum(v) && v >= 0;
 const isStr = (v: unknown): v is string => typeof v === 'string';
 
-/** Validate the shared gate portion of Level 1 (goal + score + weak topics). */
 function gateValid(v: Record<string, unknown>): boolean {
   if (!isObj(v.goal)) return false;
   const g = v.goal;
@@ -29,6 +27,7 @@ function gateValid(v: Record<string, unknown>): boolean {
     const w = v.weakTopics;
     if (!isObj(w) || !Array.isArray(w.topics) || !w.topics.every(isStr) || !isNum(w.minPercent)) return false;
   }
+  if (v.focus !== undefined && (!Array.isArray(v.focus) || !v.focus.every(isStr))) return false;
   return true;
 }
 
@@ -43,33 +42,27 @@ function balanceValid(v: unknown): boolean {
   );
 }
 
-function parseLevel1(v: unknown): Level1Config | null {
+function parseDaily(v: unknown): DailyRule | null {
   if (!isObj(v) || !gateValid(v)) return null;
   if (v.mode === 'balance') {
     if (!balanceValid(v.balance)) return null;
   } else {
-    // fixed (mode undefined or 'fixed')
+    // fixed (mode 'fixed' or absent)
     if (!isStr(v.dailyReward)) return null;
   }
-  return v as unknown as Level1Config;
+  return v as unknown as DailyRule;
 }
 
-function parseLevel2(v: unknown): Level2Rule | null {
-  if (!isObj(v) || !isNum(v.successDaysRequired) || !isStr(v.weeklyReward)) return null;
-  return v as unknown as Level2Rule;
-}
-
-function parseLevel3(v: unknown): Level3Rule | null {
-  if (!isObj(v) || typeof v.enabled !== 'boolean' || !isStr(v.reward)) return null;
-  if (v.target !== '2weeks' && v.target !== 'month') return null;
-  return v as unknown as Level3Rule;
+function ladderValid(v: unknown): v is { threshold: number; reward: string }[] {
+  if (!Array.isArray(v)) return false;
+  return v.every(t => isObj(t) && isNum(t.threshold) && t.threshold >= 1 && isStr(t.reward));
 }
 
 export function parseRewardRules(input: unknown): RewardRulesConfig | null {
   if (!isObj(input)) return null;
-  const level1 = parseLevel1(input.level1);
-  const level2 = parseLevel2(input.level2);
-  const level3 = parseLevel3(input.level3);
-  if (!level1 || !level2 || !level3) return null;
-  return { level1, level2, level3 };
+  const daily = parseDaily(input.daily);
+  if (!daily) return null;
+  if (!ladderValid(input.ladder)) return null;
+  if (typeof input.paused !== 'boolean') return null;
+  return { daily, ladder: input.ladder, paused: input.paused };
 }

@@ -1,63 +1,68 @@
-import type { RewardRulesConfig, Level1Rule, Level1Gate } from '@/lib/rewards-types';
-import { DEFAULT_BALANCE } from '@/lib/rewards-types';
+import type { RewardRulesConfig, DailyRule } from '@/lib/rewards-types';
+import { DEFAULT_BALANCE, DEFAULT_TIER } from '@/lib/rewards-types';
 import { Input } from '@/components/ui/input';
 import { NumberField } from '@/components/ui/NumberField';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 interface Props { value: RewardRulesConfig; onChange: (c: RewardRulesConfig) => void }
 
+type DailyGate = Pick<DailyRule, 'goal' | 'score' | 'weakTopics' | 'focus'>;
+
 export default function RewardRulesForm({ value, onChange }: Props) {
-  const l1 = value.level1;
-  const isBalance = l1.mode === 'balance';
+  const d = value.daily;
+  const isBalance = d.mode === 'balance';
 
-  // Patch gate fields (goal/score/weakTopics) — common to both reward modes.
-  const setGate = (patch: Partial<Level1Gate>) =>
-    onChange({ ...value, level1: { ...l1, ...patch } as Level1Rule });
-
+  const setGate = (patch: Partial<DailyGate>) =>
+    onChange({ ...value, daily: { ...d, ...patch } as DailyRule });
   const setScore = (kind: 'dailyPercent' | 'lastNAverage') =>
     setGate({ score: kind === 'dailyPercent' ? { kind, minPercent: 80 } : { kind, n: 2, minPercent: 100 } });
-
   const setRewardType = (mode: 'fixed' | 'balance') => {
-    if (mode === (l1.mode ?? 'fixed')) return;
-    const gate: Level1Gate = { goal: l1.goal, score: l1.score, weakTopics: l1.weakTopics };
-    const level1: Level1Rule = mode === 'balance'
+    if (mode === d.mode) return;
+    const gate: DailyGate = { goal: d.goal, score: d.score, weakTopics: d.weakTopics, focus: d.focus };
+    const daily: DailyRule = mode === 'balance'
       ? { mode: 'balance', ...gate, balance: { ...DEFAULT_BALANCE } }
       : { mode: 'fixed', ...gate, dailyReward: '' };
-    onChange({ ...value, level1 });
+    onChange({ ...value, daily });
+  };
+  const setBalance = (patch: Partial<typeof DEFAULT_BALANCE>) => {
+    if (d.mode !== 'balance' || !d.balance) return;
+    onChange({ ...value, daily: { ...d, balance: { ...d.balance, ...patch } } });
   };
 
-  const setBalance = (patch: Partial<typeof DEFAULT_BALANCE>) => {
-    if (l1.mode !== 'balance') return;
-    onChange({ ...value, level1: { ...l1, balance: { ...l1.balance, ...patch } } });
-  };
+  // Ladder helpers.
+  const setTier = (i: number, patch: Partial<{ threshold: number; reward: string }>) =>
+    onChange({ ...value, ladder: value.ladder.map((t, idx) => (idx === i ? { ...t, ...patch } : t)) });
+  const addTier = () => onChange({ ...value, ladder: [...value.ladder, { ...DEFAULT_TIER }] });
+  const removeTier = (i: number) => onChange({ ...value, ladder: value.ladder.filter((_, idx) => idx !== i) });
 
   return (
     <div className="space-y-4">
       <Card className="p-4 space-y-3">
-        <h3 className="font-bold">Level 1 — daily goal</h3>
+        <h3 className="font-bold">Every day</h3>
         <label className="block text-sm font-medium" htmlFor="min">Minutes of practice per day</label>
         <NumberField id="min" min={1}
-          value={l1.goal.minutes ?? 1}
-          onCommit={n => setGate({ goal: { ...l1.goal, minutes: n } })} />
+          value={d.goal.minutes ?? 1}
+          onCommit={n => setGate({ goal: { ...d.goal, minutes: n } })} />
 
         <label className="block text-sm font-medium" htmlFor="score">Score requirement</label>
         <select id="score" aria-label="Score requirement" className="border rounded-md px-2 py-1 w-full"
-          value={l1.score.kind} onChange={e => setScore(e.target.value as 'dailyPercent' | 'lastNAverage')}>
+          value={d.score.kind} onChange={e => setScore(e.target.value as 'dailyPercent' | 'lastNAverage')}>
           <option value="dailyPercent">Minimum percent correct for the day</option>
           <option value="lastNAverage">Average of the last few exercises</option>
         </select>
-        {l1.score.kind === 'lastNAverage' && (
+        {d.score.kind === 'lastNAverage' && (
           <>
             <label className="block text-sm font-medium" htmlFor="lastn">Number of recent exercises to average</label>
             <NumberField id="lastn" min={1}
-              value={l1.score.n}
-              onCommit={n => setGate({ score: { ...l1.score, n } })} />
+              value={d.score.n}
+              onCommit={n => setGate({ score: { ...d.score, n } })} />
           </>
         )}
         <label className="block text-sm font-medium" htmlFor="minpct">Minimum percent</label>
         <NumberField id="minpct" min={0} max={100}
-          value={l1.score.minPercent}
-          onCommit={n => setGate({ score: { ...l1.score, minPercent: n } })} />
+          value={d.score.minPercent}
+          onCommit={n => setGate({ score: { ...d.score, minPercent: n } })} />
 
         <label className="block text-sm font-medium" htmlFor="rewardtype">Reward type</label>
         <select id="rewardtype" aria-label="Reward type" className="border rounded-md px-2 py-1 w-full"
@@ -67,72 +72,66 @@ export default function RewardRulesForm({ value, onChange }: Props) {
           <option value="balance">Earned balance that scales (e.g. TV time)</option>
         </select>
 
-        {!isBalance && l1.mode !== 'balance' && (
+        {!isBalance && (
           <>
             <label className="block text-sm font-medium" htmlFor="daily">Daily reward</label>
             <Input id="daily" placeholder="e.g. 1 pound or 2 Pokemon cards"
-              value={l1.dailyReward}
-              onChange={e => setGate({ dailyReward: e.target.value } as Partial<Level1Gate>)} />
+              value={d.dailyReward ?? ''}
+              onChange={e => onChange({ ...value, daily: { ...d, dailyReward: e.target.value } })} />
           </>
         )}
 
-        {l1.mode === 'balance' && (
+        {d.mode === 'balance' && d.balance && (
           <div className="space-y-3 border-t pt-3">
             <label className="block text-sm font-medium" htmlFor="unit">Reward unit (what she earns)</label>
             <Input id="unit" placeholder="e.g. hours of TV"
-              value={l1.balance.unitLabel}
+              value={d.balance.unitLabel}
               onChange={e => setBalance({ unitLabel: e.target.value })} />
             <label className="block text-sm font-medium" htmlFor="mpu">Minutes of practice per unit earned</label>
-            <NumberField id="mpu" min={0}
-              value={l1.balance.minutesPerUnit}
-              onCommit={n => setBalance({ minutesPerUnit: n })} />
+            <NumberField id="mpu" min={0} value={d.balance.minutesPerUnit} onCommit={n => setBalance({ minutesPerUnit: n })} />
             <label className="block text-sm font-medium" htmlFor="epu">Exercises per unit earned</label>
-            <NumberField id="epu" min={0}
-              value={l1.balance.exercisesPerUnit}
-              onCommit={n => setBalance({ exercisesPerUnit: n })} />
+            <NumberField id="epu" min={0} value={d.balance.exercisesPerUnit} onCommit={n => setBalance({ exercisesPerUnit: n })} />
             <label className="block text-sm font-medium" htmlFor="rpu">Units earned each time</label>
-            <NumberField id="rpu" min={0}
-              value={l1.balance.rewardPerUnit}
-              onCommit={n => setBalance({ rewardPerUnit: n })} />
+            <NumberField id="rpu" min={0} value={d.balance.rewardPerUnit} onCommit={n => setBalance({ rewardPerUnit: n })} />
             <label className="block text-sm font-medium" htmlFor="pen">Units taken away on a missed day</label>
-            <NumberField id="pen" min={0}
-              value={l1.balance.penaltyPerMissedDay}
-              onCommit={n => setBalance({ penaltyPerMissedDay: n })} />
+            <NumberField id="pen" min={0} value={d.balance.penaltyPerMissedDay} onCommit={n => setBalance({ penaltyPerMissedDay: n })} />
           </div>
         )}
       </Card>
 
       <Card className="p-4 space-y-3">
-        <h3 className="font-bold">Level 2 — weekly streak</h3>
-        <label className="block text-sm font-medium" htmlFor="days">Successful days per week</label>
-        <NumberField id="days" min={1} max={7}
-          value={value.level2.successDaysRequired}
-          onCommit={n => onChange({ ...value, level2: { ...value.level2, successDaysRequired: n } })} />
-        <label className="block text-sm font-medium" htmlFor="weekly">Weekly reward</label>
-        <Input id="weekly" placeholder="e.g. 10 pounds or a toy"
-          value={value.level2.weeklyReward}
-          onChange={e => onChange({ ...value, level2: { ...value.level2, weeklyReward: e.target.value } })} />
+        <h3 className="font-bold">Reward ladder</h3>
+        <p className="text-xs text-muted-foreground">
+          Add as many rewards (&ldquo;jumps&rdquo;) as you like. Each unlocks after a number of <strong>total successful days</strong> — progress is never lost.
+        </p>
+        <ul className="space-y-2">
+          {value.ladder.map((tier, i) => (
+            <li key={i} className="flex items-end gap-2 border rounded-lg p-2">
+              <div className="flex-none">
+                <label className="block text-[11px] font-medium" htmlFor={`tier-th-${i}`}>After (days)</label>
+                <NumberField id={`tier-th-${i}`} min={1} className="w-20"
+                  value={tier.threshold} onCommit={n => setTier(i, { threshold: n })} />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[11px] font-medium" htmlFor={`tier-rw-${i}`}>Reward</label>
+                <Input id={`tier-rw-${i}`} placeholder="e.g. a toy"
+                  value={tier.reward} onChange={e => setTier(i, { reward: e.target.value })} />
+              </div>
+              <Button type="button" variant="outline" aria-label={`Remove tier ${i + 1}`} onClick={() => removeTier(i)}>Remove</Button>
+            </li>
+          ))}
+          {value.ladder.length === 0 && <li className="text-sm text-muted-foreground">No reward tiers yet.</li>}
+        </ul>
+        <Button type="button" variant="outline" onClick={addTier}>Add a reward</Button>
       </Card>
 
-      <Card className="p-4 space-y-3">
-        <h3 className="font-bold">Level 3 — bigger reward</h3>
+      <Card className="p-4">
         <label className="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" aria-label="Enable a bigger reward"
-            checked={value.level3.enabled}
-            onChange={e => onChange({ ...value, level3: { ...value.level3, enabled: e.target.checked } })} />
-          Enable a bigger reward
+          <input type="checkbox" aria-label="Pause rewards for a holiday"
+            checked={value.paused}
+            onChange={e => onChange({ ...value, paused: e.target.checked })} />
+          Pause rewards (holiday) — missed days won&rsquo;t count against her
         </label>
-        <label className="block text-sm font-medium" htmlFor="target">Earned after</label>
-        <select id="target" aria-label="Extended target" className="border rounded-md px-2 py-1 w-full"
-          value={value.level3.target}
-          onChange={e => onChange({ ...value, level3: { ...value.level3, target: e.target.value as '2weeks' | 'month' } })}>
-          <option value="2weeks">2 weeks in a row</option>
-          <option value="month">A whole month</option>
-        </select>
-        <label className="block text-sm font-medium" htmlFor="big">Bigger reward</label>
-        <Input id="big" placeholder="e.g. shoes or a day out"
-          value={value.level3.reward}
-          onChange={e => onChange({ ...value, level3: { ...value.level3, reward: e.target.value } })} />
       </Card>
     </div>
   );

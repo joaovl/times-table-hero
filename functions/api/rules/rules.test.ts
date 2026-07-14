@@ -18,9 +18,9 @@ beforeEach(async () => {
 const auth = () => ({ Authorization: `Bearer ${token}` });
 
 const config = {
-  level1: { goal: { minutes: 20 }, score: { kind: 'dailyPercent', minPercent: 80 }, dailyReward: '1 pound' },
-  level2: { successDaysRequired: 5, weeklyReward: '10 pounds' },
-  level3: { enabled: true, target: '2weeks', reward: 'shoes' },
+  daily: { goal: { minutes: 20 }, score: { kind: 'dailyPercent', minPercent: 80 }, mode: 'fixed', dailyReward: '1 pound' },
+  ladder: [{ threshold: 5, reward: '10 pounds' }, { threshold: 14, reward: 'shoes' }],
+  paused: false,
 };
 
 const put = (body: unknown) => putRules({ request: new Request('https://x/', { method: 'PUT', headers: auth(), body: JSON.stringify(body) }), env: { DB: db } });
@@ -37,11 +37,11 @@ describe('/api/rules', () => {
     const { rules } = await res.json() as { rules: { kidId: string | null; config: typeof config }[] };
     expect(rules).toHaveLength(1);
     expect(rules[0].kidId).toBeNull();
-    expect(rules[0].config.level3.reward).toBe('shoes');
+    expect(rules[0].config.ladder[1].reward).toBe('shoes');
   });
 
   it('rejects a malformed config with 400', async () => {
-    expect((await put({ kidId: null, rules: { level1: {} } })).status).toBe(400);
+    expect((await put({ kidId: null, rules: { daily: {} } })).status).toBe(400);
   });
 
   it('rejects rules for a kid that is not yours with 404', async () => {

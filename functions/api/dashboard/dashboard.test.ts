@@ -27,9 +27,9 @@ const put = (body: unknown) => putRules({ request: new Request('https://x/', { m
 const getDash = (kidId: string) => dashboard({ request: new Request(`https://x/api/dashboard?kidId=${kidId}`, { headers: auth() }), env: { DB: db } });
 
 const balanceRule = {
-  level1: { mode: 'balance', goal: { minutes: 20 }, score: { kind: 'dailyPercent', minPercent: 50 }, balance: { unitLabel: 'hours of TV', minutesPerUnit: 20, exercisesPerUnit: 10, rewardPerUnit: 1, penaltyPerMissedDay: 1 } },
-  level2: { successDaysRequired: 5, weeklyReward: 'w' },
-  level3: { enabled: false, target: '2weeks', reward: 'x' },
+  daily: { mode: 'balance', goal: { minutes: 20 }, score: { kind: 'dailyPercent', minPercent: 50 }, balance: { unitLabel: 'hours of TV', minutesPerUnit: 20, exercisesPerUnit: 10, rewardPerUnit: 1, penaltyPerMissedDay: 1 } },
+  ladder: [{ threshold: 3, reward: 'cinema' }],
+  paused: false,
 };
 
 // Yesterday at 10:00 UTC, so its local (tz 0) day is strictly before today.
@@ -60,7 +60,7 @@ describe('GET /api/dashboard', () => {
 
   it('reports fixed mode for a fixed rule', async () => {
     const kidId = await makeKid();
-    await put({ kidId, rules: { level1: { mode: 'fixed', goal: { minutes: 20 }, score: { kind: 'dailyPercent', minPercent: 50 }, dailyReward: '1 pound' }, level2: { successDaysRequired: 5, weeklyReward: 'w' }, level3: { enabled: false, target: '2weeks', reward: 'x' } } });
+    await put({ kidId, rules: { daily: { mode: 'fixed', goal: { minutes: 20 }, score: { kind: 'dailyPercent', minPercent: 50 }, dailyReward: '1 pound' }, ladder: [{ threshold: 5, reward: 'w' }], paused: false } });
     const body = await (await getDash(kidId)).json() as { mode: string };
     expect(body.mode).toBe('fixed');
   });

@@ -31,18 +31,17 @@ test('parent signs up, adds a kid, sets rewards, and everything persists', async
   await page.goto('/parent/rewards');
   await expect(page.getByRole('heading', { name: 'Reward settings' })).toBeVisible();
   await page.getByLabel('Daily reward').fill('2 stickers');
-  await page.getByLabel('Successful days per week').fill('6');
-  await page.getByLabel('Enable a bigger reward').check();
-  await page.getByLabel('Bigger reward', { exact: true }).fill('a bike');
+  // Edit the first ladder tier ("jump").
+  await page.getByLabel('After (days)').fill('14');
+  await page.getByLabel('Reward', { exact: true }).fill('a bike');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Saved.')).toBeVisible();
 
   // 4. Persist across a full page reload (re-fetched from D1).
   await page.reload();
   await expect(page.getByLabel('Daily reward')).toHaveValue('2 stickers');
-  await expect(page.getByLabel('Successful days per week')).toHaveValue('6');
-  await expect(page.getByLabel('Enable a bigger reward')).toBeChecked();
-  await expect(page.getByLabel('Bigger reward', { exact: true })).toHaveValue('a bike');
+  await expect(page.getByLabel('After (days)')).toHaveValue('14');
+  await expect(page.getByLabel('Reward', { exact: true })).toHaveValue('a bike');
 
   // 5. Log out.
   await page.goto('/parent');
@@ -60,7 +59,7 @@ test('parent signs up, adds a kid, sets rewards, and everything persists', async
 
   await page.goto('/parent/rewards');
   await expect(page.getByLabel('Daily reward')).toHaveValue('2 stickers');
-  await expect(page.getByLabel('Bigger reward', { exact: true })).toHaveValue('a bike');
+  await expect(page.getByLabel('Reward', { exact: true })).toHaveValue('a bike');
 });
 
 test('login rejects wrong credentials with a friendly message', async ({ page }) => {

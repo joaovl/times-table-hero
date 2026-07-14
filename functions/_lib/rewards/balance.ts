@@ -36,6 +36,7 @@ export function computeBalance(
   sessions: PracticeSession[],
   now: Date,
   tzOffsetMinutes: number,
+  paused = false,
 ): BalanceResult {
   const todayKey = localDayKey(now.toISOString(), tzOffsetMinutes);
   const byDay = groupByLocalDay(sessions, tzOffsetMinutes);
@@ -53,7 +54,9 @@ export function computeBalance(
       const byCount = balance.exercisesPerUnit > 0 ? Math.floor(exercises / balance.exercisesPerUnit) : 0;
       return { date, units: Math.max(byTime, byCount) * balance.rewardPerUnit, status: 'earned' };
     }
-    if (date < todayKey) return { date, units: -balance.penaltyPerMissedDay, status: 'missed' };
+    // While paused (holiday), a missed day neither subtracts nor counts against
+    // the child — treat it as pending, not a penalised miss.
+    if (date < todayKey && !paused) return { date, units: -balance.penaltyPerMissedDay, status: 'missed' };
     return { date, units: 0, status: 'pending' };
   });
 

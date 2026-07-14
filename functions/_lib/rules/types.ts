@@ -1,14 +1,21 @@
-import type { Level1Rule, Level2Rule, Level3Rule } from '../rewards/types';
+import type { Level1Rule } from '../rewards/types';
 import type { BalanceRule } from '../rewards/balance';
+import type { Tier } from '../rewards/ladder';
 
-/** Level 1 in a stored rule: either a fixed reward or an earned balance. A
- *  missing `mode` means fixed (backward compatible with earlier rows). */
-export type Level1Config =
-  | (Level1Rule & { mode?: 'fixed' })
-  | (Omit<Level1Rule, 'dailyReward'> & { mode: 'balance'; balance: BalanceRule });
+export interface DailyRule {
+  goal: Level1Rule['goal'];
+  score: Level1Rule['score'];
+  weakTopics?: Level1Rule['weakTopics'];
+  focus?: string[];
+  mode: 'fixed' | 'balance';
+  dailyReward?: string;
+  balance?: BalanceRule;
+}
 
+// v2 reward config: a daily earn rule + a ladder of milestone tiers (which
+// replaced the fixed Daily/Weekly/Extended levels) + a holiday pause flag.
 export interface RewardRulesConfig {
-  level1: Level1Config;
-  level2: Level2Rule;
-  level3: Level3Rule;
+  daily: DailyRule;
+  ladder: Tier[];
+  paused: boolean;
 }
