@@ -1,3 +1,5 @@
+import { recordPractice } from '@/lib/practice/recordPractice';
+import { getCurrentUser } from '@/lib/userStorage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,6 +45,8 @@ export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
   const [typed, setTyped] = useState('');
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
+  const startTimeRef = useRef(Date.now());
+  const loggedRef = useRef(false);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -81,6 +85,19 @@ export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
         incorrectQuestions: incorrect,
         settings,
       });
+      if (!loggedRef.current) {
+        loggedRef.current = true;
+        const end = new Date();
+        recordPractice(getCurrentUser()?.id, {
+          module: 'algebra',
+          correct: score,
+          total: questionsAnswered,
+          durationSec: Math.max(1, Math.round((end.getTime() - startTimeRef.current) / 1000)),
+          topics: [],
+          startedAt: new Date(startTimeRef.current).toISOString(),
+          endedAt: end.toISOString(),
+        });
+      }
     }
   }, [isComplete, score, questionsAnswered, bestStreak, incorrect, settings, onComplete]);
 
