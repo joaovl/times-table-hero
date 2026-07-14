@@ -10,10 +10,13 @@ import {
   generateWrongAnswers,
   shuffleOptions,
   getRandomPositiveMessage,
+  factKey,
 } from './logic';
 import { recordAnswer } from './storage';
 import { recordAttempt } from '@/lib/feedback/attemptLog';
 import { recordPractice } from '@/lib/practice/recordPractice';
+import { weightFor, recordFactAttempt, type FactStore } from '@/lib/practice/factModel';
+import { loadFactStore, saveFactStore } from '@/lib/practice/factStore';
 import { QuestionDisplay } from './QuestionDisplay';
 
 interface TimesTablesPlayProps {
@@ -67,13 +70,24 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
   const inputRef = useRef<HTMLInputElement>(null);
   const startTimeRef = useRef(Date.now());
   const loggedRef = useRef(false);
+  // Adaptive engine: a per-fact store loaded once for this player, plus the
+  // moment the current question appeared (for response-time tracking).
+  const factStoreRef = useRef<FactStore>(loadFactStore(userId));
+  const questionStartRef = useRef(Date.now());
 
-  // Generate questions on mount
+  // Generate questions on mount, biased toward this player's weak/overdue facts.
   useEffect(() => {
     const count = settings.gameMode === 'questions' ? settings.questionCount : 100;
-    const generated = generateQuestions(settings.tables, count, settings.operation);
+    const store = factStoreRef.current;
+    const now = Date.now();
+    const generated = generateQuestions(
+      settings.tables,
+      count,
+      settings.operation,
+      userId ? q => weightFor(store[factKey(q)], now) : undefined,
+    );
     setQuestions(generated);
-  }, [settings]);
+  }, [settings, userId]);
 
   // Generate options when question changes
   useEffect(() => {
@@ -85,6 +99,7 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
       setOptions(shuffleOptions(currentQuestion.answer, wrong));
     }
     setTypedAnswer('');
+    questionStartRef.current = Date.now();
 
     // Focus input for hard mode
     if (settings.difficulty === 'hard' && inputRef.current) {
@@ -143,6 +158,13 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
 
     setQuestionsAnswered(prev => prev + 1);
     recordAnswer(currentQuestion, isCorrect, userId);
+
+    // Adaptive engine: record this fact's outcome + response time on-device.
+    if (userId) {
+      const ms = Date.now() - questionStartRef.current;
+      factStoreRef.current = recordFactAttempt(factStoreRef.current, factKey(currentQuestion), isCorrect, ms);
+      saveFactStore(userId, factStoreRef.current);
+    }
 
     const prompt = currentQuestion.kind === 'binary'
       ? `${currentQuestion.operand1} ${currentQuestion.op === 'multiply' ? '×' : '÷'} ${currentQuestion.operand2}`

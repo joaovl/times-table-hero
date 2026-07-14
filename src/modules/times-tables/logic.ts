@@ -1,5 +1,7 @@
 // Game logic utilities
 
+import { weightedPick } from '@/lib/practice/factModel';
+
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type GameMode = 'questions' | 'time';
 export type Operation = 'multiply' | 'divide' | 'square' | 'sqrt' | 'all';
@@ -60,6 +62,29 @@ function buildPool(tables: number[], operation: Exclude<Operation, 'all'>): Ques
   return pool;
 }
 
+// A canonical key for the underlying fact a question tests, so that 3×4, 4×3
+// and 12÷3 all map to the same multiplication fact ("mul:3x4"). Squares and
+// roots are their own facts.
+export function factKey(q: Question): string {
+  if (q.kind === 'unary') return `${q.op}:${q.operand}`;
+  if (q.op === 'multiply') {
+    const [a, b] = [q.operand1, q.operand2].sort((x, y) => x - y);
+    return `mul:${a}x${b}`;
+  }
+  // divide: operand1 / operand2 = answer, i.e. the fact operand2 × answer.
+  const [a, b] = [q.operand2, q.answer].sort((x, y) => x - y);
+  return `mul:${a}x${b}`;
+}
+
+// Weighted sample of `n` questions from a pool, biased by `weightFn`. Reuses
+// the tested weighted picker by keying on pool index; allows repeats so a weak
+// fact can legitimately recur within a session.
+function sampleWeighted(pool: Question[], n: number, weightFn: (q: Question) => number): Question[] {
+  if (pool.length === 0 || n <= 0) return [];
+  const weights = pool.map((q, i) => ({ key: String(i), weight: weightFn(q) }));
+  return weightedPick(weights, n).map(k => pool[Number(k)]);
+}
+
 function sampleFromPool(pool: Question[], n: number): Question[] {
   if (pool.length === 0 || n <= 0) return [];
   const out: Question[] = [];
@@ -75,7 +100,11 @@ function sampleFromPool(pool: Question[], n: number): Question[] {
 export function generateQuestions(
   tables: number[],
   count: number,
-  operation: Operation
+  operation: Operation,
+  // When supplied, questions are drawn weighted toward higher-weight facts
+  // (the adaptive engine passes weakness/spacing weights here). Omitted → the
+  // original uniform behaviour, so nothing changes for account-free play.
+  weightFn?: (q: Question) => number
 ): Question[] {
   const concreteOps: Exclude<Operation, 'all'>[] =
     operation === 'all' ? ['multiply', 'divide', 'square', 'sqrt'] : [operation];
@@ -93,7 +122,7 @@ export function generateQuestions(
   const result: Question[] = [];
   opsWithPools.forEach(({ pool }, idx) => {
     const target = perOp + (idx < remainder ? 1 : 0);
-    result.push(...sampleFromPool(pool, target));
+    result.push(...(weightFn ? sampleWeighted(pool, target, weightFn) : sampleFromPool(pool, target)));
   });
 
   result.sort(() => Math.random() - 0.5);
