@@ -1,8 +1,0 @@
-{
-	"appId": "dev.pages.timestablehero",
-	"appName": "Times Table Hero",
-	"webDir": "dist",
-	"android": {
-		"allowMixedContent": false
-	}
-}

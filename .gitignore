@@ -38,3 +38,6 @@ DELETE/
 
 # Local Claude Code settings (contains machine-specific paths)
 .claude/settings.local.json
+
+# Orphaned native build tree (mobile apps live on their own branch)
+android/
