@@ -11,6 +11,7 @@
 // positive integer (or an integer ratio in the case of mean which we
 // construct so it stays integer).
 
+import { integerChoices } from '@/lib/game/choices';
 export type StatsSkill =
   | 'mean-calc'
   | 'mean-find-missing'
@@ -337,4 +338,14 @@ export function isModeQuestion(q: StatsQuestion): q is ModeQuestion {
 }
 export function isRangeQuestion(q: StatsQuestion): q is RangeQuestion {
   return q.skill === 'range';
+}
+
+// Multiple-choice options for easy/medium. When the canonical answer is a lone
+// integer we offer value buttons; otherwise we return [] and the caller falls
+// back to a typed input (lists, decimals, units, coords, names, times, etc.).
+// Distractors are filtered through the module grader so exactly one is correct.
+export function generateChoices(q: StatsQuestion, difficulty: Difficulty): string[] {
+  const s = answerText(q).trim();
+  if (!/^-?\d+$/.test(s)) return [];
+  return integerChoices(parseInt(s, 10), difficulty, c => !checkStatsAnswer(q, c));
 }

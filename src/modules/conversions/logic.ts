@@ -10,6 +10,7 @@
 // than the Unicode "≈" glyph, and U+00B2 / U+00B3 for sq / cubic units
 // (both are in WinAnsi).
 
+import { integerChoices } from '@/lib/game/choices';
 export type ConversionSkill =
   // Length
   | 'length-cm-mm'
@@ -688,4 +689,14 @@ export function isAnswerCorrect(q: ConversionQuestion, typed: string): boolean {
   // integer; 2.5 h → 150 min — integer). With round2 the answer is at
   // most 2-dp; use 0.01 tolerance.
   return Math.abs(n - q.answer) < 0.011;
+}
+
+// Multiple-choice options for easy/medium. When the canonical answer is a lone
+// integer we offer value buttons; otherwise we return [] and the caller falls
+// back to a typed input (lists, decimals, units, coords, names, times, etc.).
+// Distractors are filtered through the module grader so exactly one is correct.
+export function generateChoices(q: ConversionQuestion, difficulty: Difficulty): string[] {
+  const s = answerString(q).trim();
+  if (!/^-?\d+$/.test(s)) return [];
+  return integerChoices(parseInt(s, 10), difficulty, c => !isAnswerCorrect(q, c));
 }

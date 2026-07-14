@@ -5,6 +5,7 @@
 // `skill` field; legacy read-clock questions retain their original shape so
 // the existing UI, PDF, and tests keep working unchanged.
 
+import { integerChoices } from '@/lib/game/choices';
 export type TimePrecision = 'hour' | 'half' | 'quarter' | '5min' | '1min';
 export type TimeFormat = '12h' | '24h' | 'both';
 export type TimeSkill =
@@ -759,3 +760,13 @@ export function numeralForHour(hour: number, style: TimeNumerals): string {
 // Re-exported helper for tests that exercise the internal arithmetic engine
 // without going through the public picker.
 export { addMinutes as _addMinutesForTests };
+
+// Multiple-choice options for easy/medium. When the canonical answer is a lone
+// integer we offer value buttons; otherwise we return [] and the caller falls
+// back to a typed input (lists, decimals, units, coords, names, times, etc.).
+// Distractors are filtered through the module grader so exactly one is correct.
+export function generateChoices(q: TimeQuestion, difficulty: Difficulty): string[] {
+  const s = expectedAnswerString(q).trim();
+  if (!/^-?\d+$/.test(s)) return [];
+  return integerChoices(parseInt(s, 10), difficulty, c => !isAnswerCorrect(q, c));
+}

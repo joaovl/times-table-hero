@@ -1,3 +1,5 @@
+import { AnswerChoices } from '@/components/game/AnswerChoices';
+import { generateChoices } from './logic';
 import { recordPractice } from '@/lib/practice/recordPractice';
 import { getCurrentUser } from '@/lib/userStorage';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -49,6 +51,7 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
   const [incorrect, setIncorrect] = useState<ConversionsGameResult['incorrectQuestions']>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [typed, setTyped] = useState('');
+  const [choices, setChoices] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
   const startTimeRef = useRef(Date.now());
@@ -64,6 +67,11 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
 
   useEffect(() => {
     setTyped('');
+    if (questions.length > 0) {
+      setChoices(settings.difficulty !== 'hard'
+        ? generateChoices(questions[currentIndex], settings.difficulty)
+        : []);
+    }
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [currentIndex, questions.length]);
 
@@ -246,6 +254,9 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
         </Card>
 
         {feedback === 'none' && (
+          settings.difficulty !== 'hard' && choices.length > 0 ? (
+            <AnswerChoices options={choices} onChoose={submit} />
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
             <Input
               ref={inputRef}
@@ -266,6 +277,7 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
               Check
             </Button>
           </form>
+          )
         )}
       </div>
     </div>

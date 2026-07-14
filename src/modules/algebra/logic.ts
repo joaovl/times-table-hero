@@ -10,6 +10,7 @@
 // PDF-safe glyphs only ('+', '-', '×', '÷', '=', parens). Variables are
 // ASCII letters ('a', 'b', 'x', 'p', 'l', 'w', 'n', ...).
 
+import { integerChoices } from '@/lib/game/choices';
 export type AlgebraSkill =
   | 'formula-eval'
   | 'missing-number'
@@ -391,4 +392,14 @@ export function isExpressionEvaluateQuestion(
   q: AlgebraQuestion
 ): q is ExpressionEvaluateQuestion {
   return q.skill === 'expression-evaluate';
+}
+
+// Multiple-choice options for easy/medium. When the canonical answer is a lone
+// integer we offer value buttons; otherwise we return [] and the caller falls
+// back to a typed input (lists, decimals, units, coords, names, times, etc.).
+// Distractors are filtered through the module grader so exactly one is correct.
+export function generateChoices(q: AlgebraQuestion, difficulty: Difficulty): string[] {
+  const s = answerText(q).trim();
+  if (!/^-?\d+$/.test(s)) return [];
+  return integerChoices(parseInt(s, 10), difficulty, c => !checkAlgebraAnswer(q, c));
 }

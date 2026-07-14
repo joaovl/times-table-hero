@@ -8,6 +8,7 @@
 // coord-plot, translation). Volume-of-cubes/cuboids is intentionally
 // left to the conversions module to avoid duplication.
 
+import { integerChoices } from '@/lib/game/choices';
 export type ShapeSkill =
   | 'name-2d'
   | 'count-sides'
@@ -901,4 +902,14 @@ export function categoriseAngleReflex(deg: number): AngleCategoryReflex {
   if (deg < 90) return 'acute';
   if (deg < 180) return 'obtuse';
   return 'reflex';
+}
+
+// Multiple-choice options for easy/medium. When the canonical answer is a lone
+// integer we offer value buttons; otherwise we return [] and the caller falls
+// back to a typed input (lists, decimals, units, coords, names, times, etc.).
+// Distractors are filtered through the module grader so exactly one is correct.
+export function generateChoices(q: ShapeQuestion, difficulty: Difficulty): string[] {
+  const s = answerString(q).trim();
+  if (!/^-?\d+$/.test(s)) return [];
+  return integerChoices(parseInt(s, 10), difficulty, c => !isAnswerCorrect(q, c));
 }

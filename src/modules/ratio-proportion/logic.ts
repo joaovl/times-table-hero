@@ -5,6 +5,8 @@
 //
 // All generators are pure functions on Math.random(); no external deps.
 
+import { buildChoices, numberDistractors, spreadFor } from '@/lib/game/choices';
+
 export type RatioSkill =
   | 'percent-of'
   | 'scale-factor'
@@ -338,6 +340,42 @@ export function checkRatioAnswer(q: RatioQuestion, input: string): boolean {
   const ua = parsed.a / g;
   const ub = parsed.b / g;
   return ua === q.answer[0] && ub === q.answer[1];
+}
+
+// Build multiple-choice options for easy/medium: the correct answer plus a
+// couple of plausible wrong ones, shuffled. Distractors the grader would
+// accept are filtered out so exactly one option is correct.
+export function generateRatioChoices(q: RatioQuestion, difficulty: Difficulty): string[] {
+  const correct = answerText(q);
+  const spread = spreadFor(difficulty);
+
+  if (q.skill === 'percent-of' || q.skill === 'scale-factor' || q.skill === 'ratio-equivalent') {
+    const ds = numberDistractors(q.answer, 5, spread).map(String);
+    return buildChoices(correct, ds.filter(d => !checkRatioAnswer(q, d)), 3);
+  }
+
+  if (q.skill === 'ratio-share') {
+    const [a, b] = q.answer;
+    const cands = [
+      `${b} and ${a}`,
+      `${a + spread} and ${b}`,
+      `${a} and ${b + spread}`,
+      `${a + 1} and ${Math.max(1, b - 1)}`,
+      `${Math.max(1, a - 1)} and ${b + 1}`,
+    ];
+    return buildChoices(correct, cands.filter(d => !checkRatioAnswer(q, d)), 3);
+  }
+
+  // ratio-simplify
+  const [a, b] = q.answer;
+  const cands = [
+    `${b}:${a}`,
+    `${a + 1}:${b}`,
+    `${a}:${b + 1}`,
+    `${a + 1}:${b + 1}`,
+    `${a + 2}:${b}`,
+  ];
+  return buildChoices(correct, cands.filter(d => !checkRatioAnswer(q, d)), 3);
 }
 
 // Discriminator helpers.

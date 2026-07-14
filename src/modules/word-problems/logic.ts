@@ -13,6 +13,7 @@
 // "approximately" is spelled out (no ≈), "less than" / "more than"
 // preferred over ≤/≥.
 
+import { integerChoices } from '@/lib/game/choices';
 export type WordProblemSkill =
   | 'arith-1step'
   | 'arith-2step'
@@ -889,4 +890,14 @@ export function generateWordQuestions(
 export function expectedAnswerString(q: WordQuestion): string {
   if (typeof q.answer === 'string') return q.answer;
   return q.unit ? `${q.answer} ${q.unit}` : `${q.answer}`;
+}
+
+// Multiple-choice options for easy/medium. When the canonical answer is a lone
+// integer we offer value buttons; otherwise we return [] and the caller falls
+// back to a typed input (lists, decimals, units, coords, names, times, etc.).
+// Distractors are filtered through the module grader so exactly one is correct.
+export function generateChoices(q: WordQuestion, difficulty: Difficulty): string[] {
+  const s = expectedAnswerString(q).trim();
+  if (!/^-?\d+$/.test(s)) return [];
+  return integerChoices(parseInt(s, 10), difficulty, c => !checkWordAnswer(q, c));
 }

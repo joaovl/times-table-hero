@@ -5,6 +5,7 @@
 // order-of-operations. All generators use Math.random() with no external
 // dependencies.
 
+import { integerChoices } from '@/lib/game/choices';
 export type NumberSenseSkill =
   | 'place-value-3d'
   | 'place-value-4d'
@@ -548,11 +549,11 @@ function buildBidmas(difficulty: Difficulty): NumberSenseBidmasQuestion {
   forms.push(() => {
     const a = small();
     const b = small();
-    const c = small();
     const ab = a * b;
-    // Ensure positive result so the kid doesn't have to handle negatives.
-    if (ab > c) return { expression: `${a} × ${b} - ${c}`, answer: ab - c };
-    return { expression: `${b} × ${a} - ${c}`, answer: b * a - c };
+    // Pick c strictly below the product so the result stays non-negative.
+    // (A commutative swap can't help — a×b == b×a — so clamp c instead.)
+    const c = randInt(1, ab - 1);
+    return { expression: `${a} × ${b} - ${c}`, answer: ab - c };
   });
 
   if (difficulty !== 'easy') {
@@ -794,4 +795,14 @@ export function isNegativeIntervalQuestion(
 
 export function isBidmasQuestion(q: NumberSenseQuestion): q is NumberSenseBidmasQuestion {
   return q.skill === 'bidmas';
+}
+
+// Multiple-choice options for easy/medium. When the canonical answer is a lone
+// integer we offer value buttons; otherwise we return [] and the caller falls
+// back to a typed input (lists, decimals, units, coords, names, times, etc.).
+// Distractors are filtered through the module grader so exactly one is correct.
+export function generateChoices(q: NumberSenseQuestion, difficulty: Difficulty): string[] {
+  const s = answerText(q).trim();
+  if (!/^-?\d+$/.test(s)) return [];
+  return integerChoices(parseInt(s, 10), difficulty, c => !checkNumberSenseAnswer(q, c));
 }

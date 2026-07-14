@@ -5,10 +5,12 @@ import { Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { AnswerChoices } from '@/components/game/AnswerChoices';
 import { cn } from '@/lib/utils';
 import type { RatioQuestion, RatioSettings } from './logic';
 import {
   generateRatioQuestions,
+  generateRatioChoices,
   checkRatioAnswer,
   answerText,
   questionPromptText,
@@ -43,6 +45,7 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
   const [incorrect, setIncorrect] = useState<RatioIncorrectEntry[]>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [typed, setTyped] = useState('');
+  const [choices, setChoices] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
   const startTimeRef = useRef(Date.now());
@@ -58,8 +61,11 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
 
   useEffect(() => {
     setTyped('');
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, [currentIndex, questions.length]);
+    if (questions.length > 0 && settings.difficulty !== 'hard') {
+      setChoices(generateRatioChoices(questions[currentIndex], settings.difficulty));
+    }
+    if (settings.difficulty === 'hard') setTimeout(() => inputRef.current?.focus(), 50);
+  }, [currentIndex, questions, settings.difficulty]);
 
   useEffect(() => {
     if (settings.gameMode !== 'time' || isComplete) return;
@@ -237,26 +243,30 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
         </Card>
 
         {feedback === 'none' && (
-          <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
-            <Input
-              ref={inputRef}
-              type={inputType}
-              inputMode={inputMode}
-              value={typed}
-              onChange={e => setTyped(e.target.value)}
-              placeholder={placeholder}
-              aria-label="Type the answer"
-              className="h-12 md:h-[64px] text-center text-xl md:text-3xl font-bold"
-              autoFocus
-            />
-            <Button
-              type="submit"
-              className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
-              disabled={typed.trim() === ''}
-            >
-              Check
-            </Button>
-          </form>
+          settings.difficulty === 'hard' ? (
+            <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
+              <Input
+                ref={inputRef}
+                type={inputType}
+                inputMode={inputMode}
+                value={typed}
+                onChange={e => setTyped(e.target.value)}
+                placeholder={placeholder}
+                aria-label="Type the answer"
+                className="h-12 md:h-[64px] text-center text-xl md:text-3xl font-bold"
+                autoFocus
+              />
+              <Button
+                type="submit"
+                className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
+                disabled={typed.trim() === ''}
+              >
+                Check
+              </Button>
+            </form>
+          ) : (
+            <AnswerChoices options={choices} onChoose={submit} />
+          )
         )}
       </div>
     </div>
