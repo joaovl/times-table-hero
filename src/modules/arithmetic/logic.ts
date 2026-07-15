@@ -4,6 +4,8 @@
 // remainders are allowed we instead pick dividend and divisor directly and
 // take floor(a/b) / a%b.
 
+import { integerChoices, numericChoicesWithNone } from '@/lib/game/choices';
+
 export type ArithOp = 'add' | 'subtract' | 'multiply' | 'divide' | 'all';
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -75,6 +77,21 @@ export function checkArithAnswer(
     return quotientInput === q.answer && actualRemainder === expectedRemainder;
   }
   return quotientInput === q.answer;
+}
+
+// Multiple-choice options for easy/medium (typed on hard). Answers are lone
+// integers except remainder divisions ("2 r 3", two fields), which return []
+// so the caller falls back to typed input. Medium adds a 'None of these' button
+// that is correct when `hideCorrect` hides the true answer.
+export function generateArithChoices(
+  q: ArithQuestion,
+  difficulty: Difficulty,
+  hideCorrect = false,
+): string[] {
+  if (divideUsesRemainderField(q)) return [];
+  const isWrong = (c: string) => !checkArithAnswer(q, Number(c), null);
+  if (difficulty === 'easy') return integerChoices(q.answer, 'easy', isWrong);
+  return numericChoicesWithNone(q.answer, isWrong, String, hideCorrect);
 }
 
 export interface ArithSettings {

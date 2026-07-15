@@ -7,11 +7,11 @@ import { cn } from '@/lib/utils';
 import type { GameSettings, Question } from './logic';
 import {
   generateQuestions,
-  generateWrongAnswers,
-  shuffleOptions,
+  factChoices,
   getRandomPositiveMessage,
   factKey,
 } from './logic';
+import { NONE_OF_THESE, isChoiceCorrect } from '@/lib/game/choices';
 import { recordAnswer } from './storage';
 import { recordAttempt } from '@/lib/feedback/attemptLog';
 import { recordPractice } from '@/lib/practice/recordPractice';
@@ -63,7 +63,7 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
   const [incorrectQuestions, setIncorrectQuestions] = useState<GameResults['incorrectQuestions']>([]);
   const [feedback, setFeedback] = useState<FeedbackState>('none');
   const [feedbackMessage, setFeedbackMessage] = useState('');
-  const [options, setOptions] = useState<number[]>([]);
+  const [options, setOptions] = useState<string[]>([]);
   const [typedAnswer, setTypedAnswer] = useState('');
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
@@ -97,8 +97,9 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
 
     const currentQuestion = questions[currentIndex];
     if (settings.difficulty !== 'hard') {
-      const wrong = generateWrongAnswers(currentQuestion.answer, settings.difficulty);
-      setOptions(shuffleOptions(currentQuestion.answer, wrong));
+      // On medium, hide the answer ~1 in 4 so 'None of these' is the right pick.
+      const hideCorrect = settings.difficulty === 'medium' && Math.random() < 0.25;
+      setOptions(factChoices(currentQuestion.answer, settings.difficulty, hideCorrect));
     }
     setTypedAnswer('');
     questionStartRef.current = Date.now();
@@ -154,9 +155,8 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
     }
   }, [isComplete, score, questionsAnswered, bestStreak, incorrectQuestions, settings, onComplete, userId]);
 
-  const handleAnswer = useCallback((userAnswer: number | null) => {
+  const submitAnswer = useCallback((isCorrect: boolean, userAnswer: number | null) => {
     const currentQuestion = questions[currentIndex];
-    const isCorrect = userAnswer === currentQuestion.answer;
 
     setQuestionsAnswered(prev => prev + 1);
     recordAnswer(currentQuestion, isCorrect, userId);
@@ -236,7 +236,17 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
   const handleSubmitTyped = (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = parseInt(typedAnswer, 10);
-    handleAnswer(isNaN(parsed) ? null : parsed);
+    const userAnswer = isNaN(parsed) ? null : parsed;
+    submitAnswer(userAnswer === questions[currentIndex].answer, userAnswer);
+  };
+
+  // A multiple-choice pick. 'None of these' is correct when the answer was
+  // hidden (no shown option grades right); otherwise the numeric pick is graded.
+  const handleChoose = (option: string) => {
+    const answer = questions[currentIndex].answer;
+    const isCorrect = isChoiceCorrect(option, options, c => Number(c) !== answer);
+    const userAnswer = option === NONE_OF_THESE ? null : Number(option);
+    submitAnswer(isCorrect, userAnswer);
   };
 
   if (questions.length === 0) {
@@ -374,9 +384,14 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
                 {options.map((option, idx) => (
                   <Button
                     key={idx}
-                    onClick={() => handleAnswer(option)}
+                    onClick={() => handleChoose(option)}
                     variant="outline"
-                    className="h-12 md:h-[64px] text-2xl md:text-3xl font-bold transition-all hover:scale-105 hover:bg-primary hover:text-primary-foreground active:scale-95"
+                    className={cn(
+                      'h-12 md:h-[64px] font-bold transition-all hover:scale-105 hover:bg-primary hover:text-primary-foreground active:scale-95',
+                      option === NONE_OF_THESE
+                        ? 'col-span-3 text-lg md:text-xl'
+                        : 'text-2xl md:text-3xl',
+                    )}
                   >
                     {option}
                   </Button>

@@ -6,6 +6,8 @@
 // timetables (timetable-read, timetable-duration) and multi-step bar problems
 // (multi-step-bar).
 
+import { integerChoices, numericChoicesWithNone } from '@/lib/game/choices';
+
 export type ChartSkill =
   | 'read-bar'
   | 'compare-bar'
@@ -1061,6 +1063,24 @@ export function isAnswerCorrect(
   const parsed = parseChartAnswer(typed);
   if (parsed === null) return false;
   return parsed === q.answer;
+}
+
+/**
+ * Multiple-choice options for easy/medium (typed on hard). Only numeric-answer
+ * skills (bar/pie/line reads, totals, durations, multi-step) get choices;
+ * fraction/trend/time/label skills return [] so the caller falls back to a
+ * typed input. Medium adds a 'None of these' button that is the correct pick
+ * when `hideCorrect` hides the true answer.
+ */
+export function generateChartChoices(
+  q: ChartQuestion,
+  difficulty: 'easy' | 'medium' | 'hard',
+  hideCorrect = false,
+): string[] {
+  if ((q.expectedKind ?? 'number') !== 'number') return [];
+  const isWrong = (c: string) => !isAnswerCorrect(q, c);
+  if (difficulty === 'easy') return integerChoices(q.answer, 'easy', isWrong);
+  return numericChoicesWithNone(q.answer, isWrong, String, hideCorrect);
 }
 
 /**

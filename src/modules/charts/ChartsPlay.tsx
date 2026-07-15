@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { AnswerChoices } from '@/components/game/AnswerChoices';
+import { NONE_OF_THESE, isChoiceCorrect } from '@/lib/game/choices';
 import type { ChartQuestion, ChartSettings } from './logic';
 import {
+  generateChartChoices,
   generateChartQuestions,
   isAnswerCorrect,
   isLineSkill,
@@ -80,6 +83,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
   const [typed, setTyped] = useState('');
   const [fracNum, setFracNum] = useState('');
   const [fracDen, setFracDen] = useState('');
+  const [numberChoices, setNumberChoices] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
   const startTimeRef = useRef(Date.now());
@@ -100,6 +104,10 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
     setFracDen('');
     const q = questions[currentIndex];
     const kind = q?.expectedKind ?? 'number';
+    // Numeric-answer skills get multiple-choice buttons (obvious distractors),
+    // matching how label/trend skills already present buttons. Charts has no
+    // easy/medium/hard toggle, so we use the easy spread uniformly.
+    setNumberChoices(q && kind === 'number' ? generateChartChoices(q, 'easy') : []);
     setTimeout(() => {
       if (kind === 'fraction') numRef.current?.focus();
       else inputRef.current?.focus();
@@ -146,11 +154,10 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
     }
   }, [isComplete, score, questionsAnswered, bestStreak, incorrect, settings, onComplete]);
 
-  const submit = useCallback(
-    (value: string, displayValue?: string) => {
+  const finalize = useCallback(
+    (correct: boolean, shown: string | null) => {
       if (questions.length === 0) return;
       const q = questions[currentIndex];
-      const correct = isAnswerCorrect(q, value);
 
       setQuestionsAnswered(p => p + 1);
 
@@ -165,7 +172,6 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
       } else {
         setStreak(0);
         setFeedback('incorrect');
-        const shown = displayValue ?? value;
         setIncorrect(prev => [
           ...prev,
           {
@@ -192,6 +198,16 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
     [currentIndex, questions, settings]
   );
 
+  // Grade a typed/fraction/label answer through the module's own matcher.
+  const submit = useCallback(
+    (value: string, displayValue?: string) => {
+      if (questions.length === 0) return;
+      const q = questions[currentIndex];
+      finalize(isAnswerCorrect(q, value), (displayValue ?? value) || null);
+    },
+    [currentIndex, questions, finalize]
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     submit(typed.trim());
@@ -209,6 +225,15 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
   const handleLabelChoice = (label: string) => {
     if (feedback !== 'none') return;
     submit(label, label);
+  };
+
+  // A numeric multiple-choice pick, graded so 'None of these' wins when no shown
+  // option matches (defensive — charts uses the easy spread, which shows it).
+  const handleNumberChoice = (option: string) => {
+    if (feedback !== 'none' || questions.length === 0) return;
+    const q = questions[currentIndex];
+    const correct = isChoiceCorrect(option, numberChoices, c => !isAnswerCorrect(q, c));
+    finalize(correct, option);
   };
 
   if (questions.length === 0) {
@@ -451,7 +476,11 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
           </form>
         )}
 
-        {feedback === 'none' && kind === 'number' && (
+        {feedback === 'none' && kind === 'number' && numberChoices.length > 0 && (
+          <AnswerChoices options={numberChoices} onChoose={handleNumberChoice} />
+        )}
+
+        {feedback === 'none' && kind === 'number' && numberChoices.length === 0 && (
           <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
             <Input
               ref={inputRef}

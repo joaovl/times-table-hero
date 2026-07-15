@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { generateQuestions, generateWrongAnswers, shuffleOptions } from './logic';
+import { generateQuestions, factChoices } from './logic';
+import { NONE_OF_THESE, isChoiceCorrect } from '@/lib/game/choices';
 import type { Question } from './logic';
 
 const isMultiply = (q: Question) => q.kind === 'binary' && q.op === 'multiply';
@@ -117,30 +118,29 @@ describe('generateQuestions — count and tables empty handling', () => {
   });
 });
 
-describe('generateWrongAnswers', () => {
-  it('returns 2 wrong answers different from correct, all non-negative', () => {
-    const wrong = generateWrongAnswers(20, 'easy');
-    expect(wrong).toHaveLength(2);
-    wrong.forEach(w => {
-      expect(w).not.toBe(20);
-      expect(w).toBeGreaterThanOrEqual(0);
-    });
-    expect(wrong[0]).not.toBe(wrong[1]);
-  });
+describe('factChoices', () => {
+  const isWrong = (answer: number) => (c: string) => Number(c) !== answer;
 
-  it('medium answers stay close to correct', () => {
-    const wrong = generateWrongAnswers(50, 'medium');
-    expect(wrong).toHaveLength(2);
-    wrong.forEach(w => expect(Math.abs(w - 50)).toBeLessThanOrEqual(10));
-  });
-});
-
-describe('shuffleOptions', () => {
-  it('returns three options containing the correct value', () => {
-    const opts = shuffleOptions(42, [40, 44]);
+  it('easy: three numeric options including the correct answer, no None button', () => {
+    const opts = factChoices(20, 'easy');
     expect(opts).toHaveLength(3);
-    expect(opts).toContain(42);
-    expect(opts).toContain(40);
-    expect(opts).toContain(44);
+    expect(opts).toContain('20');
+    expect(opts).not.toContain(NONE_OF_THESE);
+    expect(opts.filter(o => isChoiceCorrect(o, opts, isWrong(20))).length).toBe(1);
+  });
+
+  it('medium (shown): includes the correct answer plus a None button', () => {
+    const opts = factChoices(50, 'medium', false);
+    expect(opts).toContain('50');
+    expect(opts).toContain(NONE_OF_THESE);
+    expect(isChoiceCorrect('50', opts, isWrong(50))).toBe(true);
+    expect(isChoiceCorrect(NONE_OF_THESE, opts, isWrong(50))).toBe(false);
+  });
+
+  it('medium (hidden): omits the answer so None of these is correct', () => {
+    const opts = factChoices(50, 'medium', true);
+    expect(opts).not.toContain('50');
+    expect(opts).toContain(NONE_OF_THESE);
+    expect(isChoiceCorrect(NONE_OF_THESE, opts, isWrong(50))).toBe(true);
   });
 });

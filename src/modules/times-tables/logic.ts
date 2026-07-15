@@ -1,6 +1,7 @@
 // Game logic utilities
 
 import { weightedPick } from '@/lib/practice/factModel';
+import { integerChoices, numericChoicesWithNone } from '@/lib/game/choices';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type GameMode = 'questions' | 'time';
@@ -129,66 +130,19 @@ export function generateQuestions(
   return result;
 }
 
-export function generateWrongAnswers(
-  correctAnswer: number,
-  difficulty: Difficulty
-): number[] {
-  const wrongAnswers: Set<number> = new Set();
-
-  if (difficulty === 'easy') {
-    // Wrong answers are noticeably different (±5 to ±20)
-    while (wrongAnswers.size < 2) {
-      const offset = Math.floor(Math.random() * 16) + 5;
-      const sign = Math.random() > 0.5 ? 1 : -1;
-      let wrong = correctAnswer + (offset * sign);
-
-      // Ensure wrong answer is non-negative and different from correct
-      if (wrong < 0) {
-        wrong = correctAnswer + offset; // Force positive offset if negative
-      }
-
-      if (wrong !== correctAnswer && wrong >= 0) {
-        wrongAnswers.add(wrong);
-      }
-    }
-  } else if (difficulty === 'medium') {
-    // Wrong answers within ±2
-    const possibleWrong = [
-      correctAnswer - 2,
-      correctAnswer - 1,
-      correctAnswer + 1,
-      correctAnswer + 2,
-    ].filter(n => n >= 0 && n !== correctAnswer);
-
-    while (wrongAnswers.size < 2 && possibleWrong.length > 0) {
-      const idx = Math.floor(Math.random() * possibleWrong.length);
-      wrongAnswers.add(possibleWrong[idx]);
-      possibleWrong.splice(idx, 1);
-    }
-
-    // Fallback if not enough close answers
-    while (wrongAnswers.size < 2) {
-      const offset = Math.floor(Math.random() * 3) + 3;
-      const sign = Math.random() > 0.5 ? 1 : -1;
-      let wrong = correctAnswer + (offset * sign);
-
-      // Ensure wrong answer is non-negative and different from correct
-      if (wrong < 0) {
-        wrong = correctAnswer + offset; // Force positive offset if negative
-      }
-
-      if (wrong !== correctAnswer && wrong >= 0) {
-        wrongAnswers.add(wrong);
-      }
-    }
-  }
-
-  return Array.from(wrongAnswers);
-}
-
-export function shuffleOptions(correct: number, wrong: number[]): number[] {
-  const options = [correct, ...wrong];
-  return options.sort(() => Math.random() - 0.5);
+// Multiple-choice options (as strings) for a fact answer, sharing the app-wide
+// spread so Times Tables feels like every other module: easy = obviously
+// different (±9), medium = close (±3) plus a 'None of these' button that is the
+// correct pick when `hideCorrect` is set (forces computing over eyeballing).
+// Hard has no options — the player types the answer.
+export function factChoices(
+  answer: number,
+  difficulty: Difficulty,
+  hideCorrect = false,
+): string[] {
+  const isWrong = (c: string) => Number(c) !== answer;
+  if (difficulty === 'easy') return integerChoices(answer, 'easy', isWrong);
+  return numericChoicesWithNone(answer, isWrong, String, hideCorrect);
 }
 
 export const POSITIVE_MESSAGES = [

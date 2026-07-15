@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { AnswerChoices } from '@/components/game/AnswerChoices';
+import { NONE_OF_THESE, isChoiceCorrect } from '@/lib/game/choices';
 import type { ArithQuestion, ArithSettings } from './logic';
-import { checkArithAnswer, divideUsesRemainderField, generateArithQuestions } from './logic';
+import { checkArithAnswer, divideUsesRemainderField, generateArithChoices, generateArithQuestions } from './logic';
 
 export interface ArithGameResult {
   score: number;
@@ -65,6 +67,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
   const [typed, setTyped] = useState('');
   const [typedRemainder, setTypedRemainder] = useState('');
+  const [choices, setChoices] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState(settings.timeLimit);
   const [isComplete, setIsComplete] = useState(false);
   const startTimeRef = useRef(Date.now());
@@ -85,8 +88,15 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
   useEffect(() => {
     setTyped('');
     setTypedRemainder('');
+    if (questions.length > 0 && currentIndex < questions.length && settings.difficulty !== 'hard') {
+      // On medium, hide the answer ~1 in 4 so 'None of these' is the right pick.
+      const hideCorrect = settings.difficulty === 'medium' && Math.random() < 0.25;
+      setChoices(generateArithChoices(questions[currentIndex], settings.difficulty, hideCorrect));
+    } else {
+      setChoices([]);
+    }
     setTimeout(() => inputRef.current?.focus(), 50);
-  }, [currentIndex, questions.length]);
+  }, [currentIndex, questions, settings.difficulty]);
 
   useEffect(() => {
     if (settings.gameMode !== 'time' || isComplete) return;
@@ -128,10 +138,9 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
     }
   }, [isComplete, score, questionsAnswered, bestStreak, incorrect, settings, onComplete]);
 
-  const submit = useCallback((quotient: number | null, remainder: number | null) => {
+  const finalize = useCallback((isCorrect: boolean, userAnswer: number | null) => {
     if (questions.length === 0) return;
     const q = questions[currentIndex];
-    const isCorrect = checkArithAnswer(q, quotient, remainder);
 
     setQuestionsAnswered(p => p + 1);
 
@@ -148,7 +157,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
       setFeedback('incorrect');
       setIncorrect(prev => [
         ...prev,
-        { op: q.op, operand1: q.operand1, operand2: q.operand2, userAnswer: quotient, correctAnswer: q.answer },
+        { op: q.op, operand1: q.operand1, operand2: q.operand2, userAnswer, correctAnswer: q.answer },
       ]);
     }
 
@@ -168,12 +177,20 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const q = questions[currentIndex];
     const parsedQ = parseInt(typed, 10);
     const parsedR = parseInt(typedRemainder, 10);
-    submit(
-      isNaN(parsedQ) ? null : parsedQ,
-      isNaN(parsedR) ? null : parsedR
-    );
+    const quotient = isNaN(parsedQ) ? null : parsedQ;
+    const remainder = isNaN(parsedR) ? null : parsedR;
+    finalize(checkArithAnswer(q, quotient, remainder), quotient);
+  };
+
+  // A multiple-choice pick. 'None of these' is correct when the answer was
+  // hidden (no shown option grades right); otherwise the numeric pick is graded.
+  const handleChoose = (option: string) => {
+    const q = questions[currentIndex];
+    const isCorrect = isChoiceCorrect(option, choices, c => !checkArithAnswer(q, Number(c), null));
+    finalize(isCorrect, option === NONE_OF_THESE ? null : Number(option));
   };
 
   if (questions.length === 0) {
@@ -261,7 +278,11 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
           )}
         </Card>
 
-        {feedback === 'none' && (
+        {feedback === 'none' && settings.difficulty !== 'hard' && choices.length > 0 && (
+          <AnswerChoices options={choices} onChoose={handleChoose} />
+        )}
+
+        {feedback === 'none' && !(settings.difficulty !== 'hard' && choices.length > 0) && (
           <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
             {showRemainderField ? (
               <div className="flex items-center gap-2 md:gap-3">

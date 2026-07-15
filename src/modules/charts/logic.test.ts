@@ -6,6 +6,7 @@ import {
   CURRICULUM_TAGS,
   CHART_SKILL_OPTIONS,
   formatHHMM,
+  generateChartChoices,
   generateChartQuestions,
   isAnswerCorrect,
   isLineSkill,
@@ -16,6 +17,7 @@ import {
   reduceFraction,
 } from './logic';
 import type { ChartSettings, ChartSkill } from './logic';
+import { NONE_OF_THESE, isChoiceCorrect } from '@/lib/game/choices';
 
 const baseSettings = (over: Partial<ChartSettings>): ChartSettings => ({
   skills: ['read-bar'],
@@ -705,5 +707,39 @@ describe('isAnswerCorrect — v3 kinds', () => {
     expect(isAnswerCorrect(q, '  7:45 ')).toBe(true);
     expect(isAnswerCorrect(q, '07:46')).toBe(false);
     expect(isAnswerCorrect(q, 'foo')).toBe(false);
+  });
+});
+
+describe('generateChartChoices', () => {
+  const grader = (q: Parameters<typeof isAnswerCorrect>[0]) => (c: string) => !isAnswerCorrect(q, c);
+
+  it('numeric bar-reading skills offer choices with exactly one correct (easy)', () => {
+    const qs = generateChartQuestions(baseSettings({ skills: ['read-bar', 'total-bar'] }), 40);
+    let offered = 0;
+    for (const q of qs) {
+      const opts = generateChartChoices(q, 'easy');
+      if (opts.length === 0) continue;
+      offered++;
+      expect(opts).toContain(String(q.answer));
+      expect(opts).not.toContain(NONE_OF_THESE);
+      expect(opts.filter(o => isChoiceCorrect(o, opts, grader(q))).length).toBe(1);
+    }
+    expect(offered).toBeGreaterThan(0);
+  });
+
+  it('medium (hidden) makes None of these the correct pick', () => {
+    const qs = generateChartQuestions(baseSettings({ skills: ['read-bar'] }), 20);
+    const q = qs[0];
+    const opts = generateChartChoices(q, 'medium', true);
+    expect(opts).toContain(NONE_OF_THESE);
+    expect(opts).not.toContain(String(q.answer));
+    expect(isChoiceCorrect(NONE_OF_THESE, opts, grader(q))).toBe(true);
+  });
+
+  it('non-numeric skills (pie-fraction, line-trend) fall back to typed (returns [])', () => {
+    const fracQs = generateChartQuestions(baseSettings({ skills: ['pie-fraction'] }), 20);
+    for (const q of fracQs) expect(generateChartChoices(q, 'easy')).toEqual([]);
+    const trendQs = generateChartQuestions(baseSettings({ skills: ['line-trend'] }), 20);
+    for (const q of trendQs) expect(generateChartChoices(q, 'medium')).toEqual([]);
   });
 });

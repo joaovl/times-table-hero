@@ -3,10 +3,12 @@ import {
   countCarries,
   countBorrows,
   generateArithQuestions,
+  generateArithChoices,
   checkArithAnswer,
   divideUsesRemainderField,
 } from './logic';
 import type { ArithQuestion, ArithSettings } from './logic';
+import { NONE_OF_THESE, isChoiceCorrect } from '@/lib/game/choices';
 
 const baseSettings = (over: Partial<ArithSettings>): ArithSettings => ({
   operation: 'add',
@@ -551,5 +553,41 @@ describe('checkArithAnswer', () => {
     it('passes with correct quotient and no remainder typed', () => {
       expect(checkArithAnswer(q, 4, null)).toBe(true);
     });
+  });
+});
+
+describe('generateArithChoices', () => {
+  const graderFor = (q: ArithQuestion) => (c: string) =>
+    !checkArithAnswer(q, Number(c), null);
+
+  it('easy: three numeric options incl. the answer, no None button', () => {
+    const q: ArithQuestion = { op: 'add', operand1: 23, operand2: 24, answer: 47 };
+    const opts = generateArithChoices(q, 'easy');
+    expect(opts).toHaveLength(3);
+    expect(opts).toContain('47');
+    expect(opts).not.toContain(NONE_OF_THESE);
+    expect(opts.filter(o => isChoiceCorrect(o, opts, graderFor(q))).length).toBe(1);
+  });
+
+  it('medium (shown): answer plus a None button, only the number is correct', () => {
+    const q: ArithQuestion = { op: 'multiply', operand1: 7, operand2: 8, answer: 56 };
+    const opts = generateArithChoices(q, 'medium', false);
+    expect(opts).toContain('56');
+    expect(opts).toContain(NONE_OF_THESE);
+    expect(isChoiceCorrect('56', opts, graderFor(q))).toBe(true);
+    expect(isChoiceCorrect(NONE_OF_THESE, opts, graderFor(q))).toBe(false);
+  });
+
+  it('medium (hidden): answer omitted so None of these is correct', () => {
+    const q: ArithQuestion = { op: 'multiply', operand1: 7, operand2: 8, answer: 56 };
+    const opts = generateArithChoices(q, 'medium', true);
+    expect(opts).not.toContain('56');
+    expect(isChoiceCorrect(NONE_OF_THESE, opts, graderFor(q))).toBe(true);
+  });
+
+  it('remainder division falls back to typed (returns [])', () => {
+    const q: ArithQuestion = { op: 'divide', operand1: 13, operand2: 5, answer: 2, remainder: 3 };
+    expect(generateArithChoices(q, 'easy')).toEqual([]);
+    expect(generateArithChoices(q, 'medium')).toEqual([]);
   });
 });
