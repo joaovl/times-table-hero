@@ -17,7 +17,7 @@ import {
   generateFractionQuestions,
   simplifyFrac,
   fracEquals,
-  fracIsSimplified,
+  gradeOpAnswer,
   skillOp,
   toMixed,
   isOpQuestion,
@@ -208,6 +208,9 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [incorrect, setIncorrect] = useState<FractionIncorrectEntry[]>([]);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
+  // Optional teaching note shown with a correct answer (e.g. the simplest form
+  // when the child entered an equivalent-but-unsimplified fraction).
+  const [feedbackNote, setFeedbackNote] = useState<string | null>(null);
   // Op-style inputs (also used by `id`, `mul-by-whole`, `mul-frac`, `from-decimal`).
   const [numInput, setNumInput] = useState('');
   const [denInput, setDenInput] = useState('');
@@ -304,8 +307,9 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
   }, [isComplete, score, questionsAnswered, bestStreak, incorrect, settings, onComplete]);
 
   const advance = useCallback(
-    (isCorrect: boolean) => {
+    (isCorrect: boolean, note?: string) => {
       setQuestionsAnswered(p => p + 1);
+      setFeedbackNote(note ?? null);
       if (isCorrect) {
         setScore(p => p + 1);
         setStreak(p => {
@@ -318,9 +322,12 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
         setStreak(0);
         setFeedback('incorrect');
       }
-      const delay = isCorrect ? 800 : 1400;
+      // Give a wrong answer longer on screen so the child can read the correct
+      // one; a correct answer with a teaching note also lingers a little.
+      const delay = isCorrect ? (note ? 1800 : 800) : 2600;
       setTimeout(() => {
         setFeedback('none');
+        setFeedbackNote(null);
         const next = currentIndex + 1;
         if (settings.gameMode === 'questions' && next >= settings.questionCount) {
           setIsComplete(true);
@@ -339,16 +346,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
       if (questions.length === 0) return;
       const q = questions[currentIndex];
       if (!(isOpQuestion(q) || isIdQuestion(q))) return;
-      let isCorrect = false;
-      if (value !== null && value.den !== 0) {
-        if (isOpQuestion(q) && settings.simplify) {
-          isCorrect = fracEquals(value, q.answer) && fracIsSimplified(value);
-        } else {
-          // `id` accepts any equivalent form; op skills with simplify off too.
-          isCorrect = fracEquals(value, q.answer);
-        }
-      }
-      if (!isCorrect) {
+
+      const recordWrong = () =>
         setIncorrect(prev => [
           ...prev,
           {
@@ -356,7 +355,25 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
             userAnswer: value ? { kind: 'frac', value } : { kind: 'none' },
           },
         ]);
+
+      if (isOpQuestion(q)) {
+        // Equivalent-but-unsimplified answers (e.g. 10/16 for 5/8) count as
+        // correct with a gentle nudge toward simplest form, rather than wrong.
+        const grade = gradeOpAnswer(value, q.answer, settings.simplify);
+        if (grade === 'wrong') {
+          recordWrong();
+          advance(false);
+        } else if (grade === 'equivalent') {
+          advance(true, `${q.answer.num}/${q.answer.den} is the simplest form`);
+        } else {
+          advance(true);
+        }
+        return;
       }
+
+      // `id` accepts any equivalent form.
+      const isCorrect = value !== null && value.den !== 0 && fracEquals(value, q.answer);
+      if (!isCorrect) recordWrong();
       advance(isCorrect);
     },
     [currentIndex, questions, settings, advance]
@@ -812,7 +829,12 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">
+                  {feedbackNote ? 'Correct!' : 'Brilliant!'}
+                </div>
+              )}
+              {feedback === 'correct' && feedbackNote && (
+                <p className="mt-1 text-sm md:text-base font-medium text-muted-foreground">{feedbackNote}</p>
               )}
             </>
           )}

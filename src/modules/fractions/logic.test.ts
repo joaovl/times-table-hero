@@ -21,6 +21,7 @@ import {
   isMixedAddSubQuestion,
   isDivFracWholeQuestion,
   answerToImproper,
+  gradeOpAnswer,
   mulAnswerAccepted,
   decimalAnswerAccepted,
   CURRICULUM_TAGS,
@@ -94,10 +95,58 @@ describe('fracEquals / fracIsSimplified', () => {
   });
 });
 
+describe('gradeOpAnswer (bug #9 — accept equivalent fractions)', () => {
+  const five8 = { num: 5, den: 8 };
+  it('exact simplest-form answer is correct', () => {
+    expect(gradeOpAnswer({ num: 5, den: 8 }, five8, true)).toBe('correct');
+  });
+  it('equivalent but unsimplified (10/16 for 5/8) is accepted as equivalent, not wrong', () => {
+    expect(gradeOpAnswer({ num: 10, den: 16 }, five8, true)).toBe('equivalent');
+  });
+  it('with simplify off, an equivalent form is fully correct', () => {
+    expect(gradeOpAnswer({ num: 10, den: 16 }, five8, false)).toBe('correct');
+  });
+  it('a non-equivalent fraction is wrong', () => {
+    expect(gradeOpAnswer({ num: 1, den: 2 }, five8, true)).toBe('wrong');
+  });
+  it('null / zero-denominator input is wrong', () => {
+    expect(gradeOpAnswer(null, five8, true)).toBe('wrong');
+    expect(gradeOpAnswer({ num: 5, den: 0 }, five8, true)).toBe('wrong');
+  });
+});
+
 describe('generateFractionQuestions — count', () => {
   it('returns the requested number of questions', () => {
     const qs = generateFractionQuestions(baseSettings(), 25);
     expect(qs).toHaveLength(25);
+  });
+});
+
+describe('generateFractionQuestions — no consecutive repeats (bug #7/#8)', () => {
+  const consecutiveDupsIn = (qs: unknown[]) => {
+    let dups = 0;
+    for (let i = 1; i < qs.length; i++) {
+      if (JSON.stringify(qs[i]) === JSON.stringify(qs[i - 1])) dups++;
+    }
+    return dups;
+  };
+
+  // Small-space skills used to repeat the identical question many times in a
+  // row ("everytime the same question"). Whenever the space has >= 2 questions,
+  // no two consecutive questions may be identical.
+  it.each<FractionSkill>(['add-same', 'sub-same', 'cmp', 'id', 'to-decimal', 'from-decimal'])(
+    '%s never shows the same question twice in a row',
+    skill => {
+      const qs = generateFractionQuestions(baseSettings({ skills: [skill] }), 40);
+      expect(consecutiveDupsIn(qs)).toBe(0);
+    },
+  );
+
+  it('degenerate single-question space still returns the requested count (no hang)', () => {
+    // add-same with a single small denominator has essentially one question;
+    // we can't add variety, but generation must still terminate and fill up.
+    const qs = generateFractionQuestions(baseSettings({ skills: ['add-same'], denominators: [2] }), 10);
+    expect(qs).toHaveLength(10);
   });
 });
 

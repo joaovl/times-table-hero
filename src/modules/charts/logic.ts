@@ -1066,6 +1066,17 @@ export function isAnswerCorrect(
 }
 
 /**
+ * Which chart elements to visually highlight. We deliberately do NOT highlight
+ * the element a question asks about — every prompt already names the category,
+ * so highlighting it would hand over the answer (bug #10: "no clues"). The one
+ * exception is pie-fraction, whose prompt explicitly refers to "the highlighted
+ * slice", so that slice must stay marked.
+ */
+export function chartHighlightIndices(q: ChartQuestion): number[] {
+  return q.skill === 'pie-fraction' ? q.targets : [];
+}
+
+/**
  * Multiple-choice options for easy/medium (typed on hard). Only numeric-answer
  * skills (bar/pie/line reads, totals, durations, multi-step) get choices;
  * fraction/trend/time/label skills return [] so the caller falls back to a

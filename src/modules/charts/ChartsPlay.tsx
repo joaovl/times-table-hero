@@ -10,6 +10,7 @@ import { AnswerChoices } from '@/components/game/AnswerChoices';
 import { NONE_OF_THESE, isChoiceCorrect } from '@/lib/game/choices';
 import type { ChartQuestion, ChartSettings } from './logic';
 import {
+  chartHighlightIndices,
   generateChartChoices,
   generateChartQuestions,
   isAnswerCorrect,
@@ -319,14 +320,14 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
             {isPie ? (
               <PieChart
                 categories={q.categories}
-                highlightIndices={q.skill === 'pie-fraction' ? q.targets : []}
+                highlightIndices={chartHighlightIndices(q)}
                 width={320}
                 height={260}
               />
             ) : isLine ? (
               <LineChart
                 categories={q.categories}
-                highlightIndices={q.skill === 'read-line' ? q.targets : []}
+                highlightIndices={chartHighlightIndices(q)}
                 width={360}
                 height={260}
                 unit={q.unit}
@@ -367,7 +368,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
             ) : (
               <BarChart
                 categories={q.categories}
-                highlightIndices={q.targets}
+                highlightIndices={chartHighlightIndices(q)}
                 width={360}
                 height={260}
                 unit={q.unit}

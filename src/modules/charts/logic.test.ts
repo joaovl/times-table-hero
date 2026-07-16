@@ -5,6 +5,7 @@ import {
   chartTypeFor,
   CURRICULUM_TAGS,
   CHART_SKILL_OPTIONS,
+  chartHighlightIndices,
   formatHHMM,
   generateChartChoices,
   generateChartQuestions,
@@ -741,5 +742,29 @@ describe('generateChartChoices', () => {
     for (const q of fracQs) expect(generateChartChoices(q, 'easy')).toEqual([]);
     const trendQs = generateChartQuestions(baseSettings({ skills: ['line-trend'] }), 20);
     for (const q of trendQs) expect(generateChartChoices(q, 'medium')).toEqual([]);
+  });
+});
+
+describe('chartHighlightIndices (bug #10 — no answer clues)', () => {
+  it('does not highlight the queried element for label/value skills', () => {
+    for (const skill of ['read-bar', 'compare-bar', 'total-bar', 'multi-step-bar'] as ChartSkill[]) {
+      const qs = generateChartQuestions(baseSettings({ skills: [skill] }), 15);
+      for (const q of qs) expect(chartHighlightIndices(q)).toEqual([]);
+    }
+  });
+
+  it('does not highlight read-line / line-max points', () => {
+    for (const skill of ['read-line', 'line-max'] as ChartSkill[]) {
+      const qs = generateChartQuestions(baseSettings({ skills: [skill] }), 15);
+      for (const q of qs) expect(chartHighlightIndices(q)).toEqual([]);
+    }
+  });
+
+  it('still highlights the pie-fraction slice (its prompt refers to it)', () => {
+    const qs = generateChartQuestions(baseSettings({ skills: ['pie-fraction'] }), 15);
+    for (const q of qs) {
+      expect(chartHighlightIndices(q)).toEqual(q.targets);
+      expect(chartHighlightIndices(q).length).toBeGreaterThan(0);
+    }
   });
 });

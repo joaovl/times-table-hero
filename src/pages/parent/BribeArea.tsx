@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { kidsList, rulesList, rulesPut, type Kid, type RulesRow } from '@/lib/api/client';
 import { DEFAULT_RULES, type RewardRulesConfig } from '@/lib/rewards-types';
 import RewardRulesForm from './RewardRulesForm';
+import { preflightRulesError, saveErrorMessage } from './saveFeedback';
 import { Button } from '@/components/ui/button';
 
 export default function BribeArea() {
@@ -35,11 +36,17 @@ export default function BribeArea() {
 
   const save = async () => {
     setStatus('');
+    // Catch the one field the server hard-requires before a round-trip, so the
+    // parent gets a specific hint instead of an opaque failure (bug #5).
+    const preflight = preflightRulesError(config);
+    if (preflight) { setStatus(preflight); return; }
     try {
       await rulesPut(scope === '' ? null : scope, config);
       setStatus('Saved.');
       setRules(await rulesList()); // refresh cache without reseeding the form
-    } catch { setStatus('Could not save.'); }
+    } catch (e) {
+      setStatus(saveErrorMessage((e as { status?: number }).status));
+    }
   };
 
   return (

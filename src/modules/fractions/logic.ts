@@ -327,6 +327,21 @@ export function fracIsSimplified(f: Frac): boolean {
   return gcd(f.num, f.den) === 1;
 }
 
+// How a typed fraction grades against the canonical op answer:
+//   'correct'    — equal, and in simplest form when the skill asks for it
+//   'equivalent' — mathematically equal but not simplest form (e.g. 10/16 for
+//                  5/8): accepted as correct, with a nudge toward simplest form
+//   'wrong'      — not equal (or missing / zero-denominator input)
+// Counting equivalent forms as wrong frustrated real users; we now accept them.
+export type OpGrade = 'correct' | 'equivalent' | 'wrong';
+
+export function gradeOpAnswer(value: Frac | null, answer: Frac, simplify: boolean): OpGrade {
+  if (value === null || value.den === 0) return 'wrong';
+  if (!fracEquals(value, answer)) return 'wrong';
+  if (simplify && !fracIsSimplified(value)) return 'equivalent';
+  return 'correct';
+}
+
 // Compare two fractions and return the strict relation. Uses cross
 // multiplication; assumes positive denominators (we never generate negatives).
 export function compareFrac(a: Frac, b: Frac): CmpSymbol {
@@ -888,10 +903,30 @@ export function generateFractionQuestions(
       ? [...settings.denominators].sort((a, b) => a - b)
       : [2, 3, 4];
 
+  // Anti-repetition: small skill/denominator spaces used to serve the identical
+  // question over and over ("everytime the same question"). We softly avoid the
+  // last few questions, and hard-guarantee no two consecutive questions are
+  // identical whenever the space has more than one possible question. Degenerate
+  // single-question spaces fall through gracefully after bounded retries.
+  const RECENT_WINDOW = 4;
+  const recent: string[] = [];
   const result: FractionQuestion[] = [];
   for (let i = 0; i < count; i++) {
     const skill = pickFrom(skills);
-    result.push(sampleOne(skill, denominators, settings.simplify));
+    let q = sampleOne(skill, denominators, settings.simplify);
+    // Prefer a question not seen in the recent window.
+    for (let t = 0; t < 15 && recent.includes(JSON.stringify(q)); t++) {
+      q = sampleOne(skill, denominators, settings.simplify);
+    }
+    // Guarantee it differs from the immediately previous one (achievable
+    // whenever the space has >= 2 questions).
+    const prevKey = result.length > 0 ? JSON.stringify(result[result.length - 1]) : null;
+    for (let t = 0; t < 20 && prevKey !== null && JSON.stringify(q) === prevKey; t++) {
+      q = sampleOne(skill, denominators, settings.simplify);
+    }
+    result.push(q);
+    recent.push(JSON.stringify(q));
+    if (recent.length > RECENT_WINDOW) recent.shift();
   }
   return result;
 }
