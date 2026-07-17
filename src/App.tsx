@@ -10,6 +10,8 @@ import ParentKids from './pages/parent/ParentKids';
 import BribeArea from './pages/parent/BribeArea';
 import Dashboard from './pages/parent/Dashboard';
 import ParentLink from './pages/parent/ParentLink';
+import ParentDevices from './pages/parent/ParentDevices';
+import SetupDevice from './pages/SetupDevice';
 import FeedbackTrigger from './components/FeedbackTrigger';
 import { flush as flushOutbox } from '@/lib/practice/outbox';
 
@@ -64,6 +66,8 @@ const App = () => {
           <Route path="/parent/rewards" element={<RequireAuth><BribeArea /></RequireAuth>} />
           <Route path="/parent/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
           <Route path="/parent/link" element={<RequireAuth><ParentLink /></RequireAuth>} />
+          <Route path="/parent/devices" element={<RequireAuth><ParentDevices /></RequireAuth>} />
+          <Route path="/setup-device" element={<SetupDevice />} />
           <Route path="/times-tables" element={<TimesTablesIndex />} />
           <Route path="/times-tables/print" element={<TimesTablesIndex printOpen />} />
           <Route path="/arithmetic" element={<ArithmeticIndex />} />

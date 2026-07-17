@@ -18,6 +18,7 @@ export default function ParentHome() {
           <Link className="underline text-primary" to="/parent/rewards">Reward settings (the bribe area)</Link>
           <Link className="underline text-primary" to="/parent/dashboard">Progress &amp; rewards dashboard</Link>
           <Link className="underline text-primary" to="/parent/link">Link players to your kids</Link>
+          <Link className="underline text-primary" to="/parent/devices">Paired devices</Link>
           <button
             type="button"
             className="underline text-primary text-left"

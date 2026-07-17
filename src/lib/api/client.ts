@@ -1,11 +1,18 @@
 import type { RewardRulesConfig } from '@/lib/rewards-types';
 
 const TOKEN_KEY = 'tth_token';
+const PAIRING_TOKEN_KEY = 'tth_pairing_token';
 
 export const tokenStore = {
   get: (): string | null => localStorage.getItem(TOKEN_KEY),
   set: (t: string): void => localStorage.setItem(TOKEN_KEY, t),
   clear: (): void => localStorage.removeItem(TOKEN_KEY),
+};
+
+export const pairingTokenStore = {
+  get: (): string | null => localStorage.getItem(PAIRING_TOKEN_KEY),
+  set: (t: string): void => localStorage.setItem(PAIRING_TOKEN_KEY, t),
+  clear: (): void => localStorage.removeItem(PAIRING_TOKEN_KEY),
 };
 
 export class ApiError extends Error {
@@ -175,4 +182,29 @@ export async function bugReport(input: BugReportInput): Promise<number> {
   const { status, data } = await apiFetch<{ id: number }>('/api/bugs', { method: 'POST', body: input });
   if (status >= 400 || !data) throw new ApiError(codeOf(data), status);
   return data.id;
+}
+
+export interface PairedDevice {
+  tokenHashPrefix: string;
+  label: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export async function pairDevice(email: string, pin: string): Promise<{ token: string }> {
+  const { status, data } = await apiFetch<{ token: string }>('/api/pair', { method: 'POST', body: { email, pin } });
+  if (status >= 400 || !data) throw new ApiError(codeOf(data), status);
+  pairingTokenStore.set(data.token);
+  return data;
+}
+
+export async function pairList(): Promise<PairedDevice[]> {
+  const { status, data } = await apiFetch<{ devices: PairedDevice[] }>('/api/pair/list');
+  if (status !== 200 || !data) throw new ApiError(codeOf(data), status);
+  return data.devices;
+}
+
+export async function pairRevoke(tokenHashPrefix: string): Promise<void> {
+  const { status, data } = await apiFetch<{ ok: true }>('/api/pair/revoke', { method: 'POST', body: { tokenHashPrefix } });
+  if (status >= 400) throw new ApiError(codeOf(data), status);
 }
