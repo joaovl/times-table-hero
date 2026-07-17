@@ -16,12 +16,39 @@ const map = (r: KidRow): Kid => ({
 
 export async function createKid(
   db: Db,
-  k: { id: string; accountId: string; name: string; color: string; icon: string; createdAt: string },
+  k: {
+    id: string;
+    accountId: string;
+    name: string;
+    color: string;
+    icon: string;
+    createdAt: string;
+    pin?: { hash: string; salt: string } | null;
+  },
 ): Promise<void> {
   await db
-    .prepare('INSERT INTO kids (id,account_id,name,color,icon,created_at) VALUES (?,?,?,?,?,?)')
-    .bind(k.id, k.accountId, k.name, k.color, k.icon, k.createdAt)
+    .prepare('INSERT INTO kids (id,account_id,name,color,icon,created_at,pin_hash,pin_salt) VALUES (?,?,?,?,?,?,?,?)')
+    .bind(k.id, k.accountId, k.name, k.color, k.icon, k.createdAt, k.pin?.hash ?? null, k.pin?.salt ?? null)
     .run();
+}
+
+export async function updateKid(
+  db: Db,
+  accountId: string,
+  id: string,
+  patch: { name: string; color: string; icon: string; pin?: { hash: string; salt: string } | null },
+): Promise<void> {
+  if (patch.pin) {
+    await db
+      .prepare('UPDATE kids SET name = ?, color = ?, icon = ?, pin_hash = ?, pin_salt = ? WHERE account_id = ? AND id = ?')
+      .bind(patch.name, patch.color, patch.icon, patch.pin.hash, patch.pin.salt, accountId, id)
+      .run();
+  } else {
+    await db
+      .prepare('UPDATE kids SET name = ?, color = ?, icon = ? WHERE account_id = ? AND id = ?')
+      .bind(patch.name, patch.color, patch.icon, accountId, id)
+      .run();
+  }
 }
 
 export async function listKids(db: Db, accountId: string): Promise<Kid[]> {
