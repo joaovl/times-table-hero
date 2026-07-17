@@ -61,7 +61,7 @@ export default function ParentAuth() {
           {mode === 'signup' && (
             <>
               <label className="block text-sm font-medium" htmlFor="family-pin">Family PIN</label>
-              <Input id="family-pin" aria-label="Family PIN" inputMode="numeric" maxLength={6}
+              <Input id="family-pin" aria-label="Family PIN" inputMode="numeric" maxLength={6} autoComplete="off"
                 value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} />
               <p className="text-xs text-muted-foreground">
                 A 6-digit PIN your kids will use to set up their own device.

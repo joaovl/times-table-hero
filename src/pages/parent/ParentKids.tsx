@@ -78,7 +78,7 @@ export default function ParentKids() {
             {resetKidId === k.id && (
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium" htmlFor={`reset-pin-${k.id}`}>New PIN for {k.name}</label>
-                <Input id={`reset-pin-${k.id}`} aria-label={`New PIN for ${k.name}`} inputMode="numeric" maxLength={6}
+                <Input id={`reset-pin-${k.id}`} aria-label={`New PIN for ${k.name}`} inputMode="numeric" maxLength={6} autoComplete="off"
                   value={resetPin} onChange={e => setResetPin(e.target.value.replace(/\D/g, ''))} className="w-24" />
                 <Button onClick={() => saveReset(k)}>Save new PIN</Button>
                 <Button variant="outline" onClick={cancelReset}>Cancel</Button>
@@ -101,7 +101,7 @@ export default function ParentKids() {
           </select>
         </div>
         <label className="block text-sm font-medium" htmlFor="kid-pin">PIN</label>
-        <Input id="kid-pin" aria-label="PIN" inputMode="numeric" maxLength={6}
+        <Input id="kid-pin" aria-label="PIN" inputMode="numeric" maxLength={6} autoComplete="off"
           value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} />
         <p className="text-xs text-muted-foreground">Your child enters this to pick their profile.</p>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
