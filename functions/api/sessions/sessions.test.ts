@@ -8,11 +8,12 @@ import { listSessions } from '../../_lib/sessions/repo';
 import type { Db } from '../../_lib/auth/types';
 
 const MIGRATION = resolve(__dirname, '../../../migrations/0001_init.sql');
+const MIGRATION_0004 = resolve(__dirname, '../../../migrations/0004_kid_pins.sql');
 let db: Db;
 let token: string;
 
 beforeEach(async () => {
-  db = createTestDb([MIGRATION]);
+  db = createTestDb([MIGRATION, MIGRATION_0004]);
   const res = await signup({ request: new Request('https://x/', { method: 'POST', body: JSON.stringify({ email: 'p@x.com', password: 'longenough' }) }), env: { DB: db } });
   token = (await res.json() as { token: string }).token;
 });

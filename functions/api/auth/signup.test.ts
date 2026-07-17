@@ -6,8 +6,9 @@ import { authenticate } from '../../_lib/auth/authenticate';
 import type { Db } from '../../_lib/auth/types';
 
 const MIGRATION = resolve(__dirname, '../../../migrations/0001_init.sql');
+const MIGRATION_0004 = resolve(__dirname, '../../../migrations/0004_kid_pins.sql');
 let db: Db;
-beforeEach(() => { db = createTestDb([MIGRATION]); });
+beforeEach(() => { db = createTestDb([MIGRATION, MIGRATION_0004]); });
 
 const post = (body: unknown) =>
   onRequestPost({
@@ -46,5 +47,20 @@ describe('POST /api/auth/signup', () => {
     const res = await post({ email: 'dup@example.com', password: 'longenough' });
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: 'email_taken' });
+  });
+
+  it('stores a hashed family pairing PIN when a valid pin is supplied', async () => {
+    const res = await post({ email: 'p@example.com', password: 'longenough', pin: '135790' });
+    expect(res.status).toBe(201);
+    const row = await db.prepare('SELECT pairing_pin_hash, pairing_pin_salt FROM accounts WHERE email = ?')
+      .bind('p@example.com').first<{ pairing_pin_hash: string | null; pairing_pin_salt: string | null }>();
+    expect(row?.pairing_pin_hash).toBeTruthy();
+    expect(row?.pairing_pin_salt).toBeTruthy();
+    expect(row?.pairing_pin_hash).not.toBe('135790'); // hashed, not plaintext
+  });
+
+  it('rejects a malformed pin', async () => {
+    const res = await post({ email: 'q@example.com', password: 'longenough', pin: '12ab' });
+    expect(res.status).toBe(400);
   });
 });

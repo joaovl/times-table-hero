@@ -10,6 +10,7 @@ import type { Db } from '../../_lib/auth/types';
 const MIGRATIONS = [
   resolve(__dirname, '../../../migrations/0001_init.sql'),
   resolve(__dirname, '../../../migrations/0002_login_attempts.sql'),
+  resolve(__dirname, '../../../migrations/0004_kid_pins.sql'),
 ];
 let db: Db;
 beforeEach(async () => {

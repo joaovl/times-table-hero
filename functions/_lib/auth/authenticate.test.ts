@@ -7,11 +7,12 @@ import { authenticate } from './authenticate';
 import type { Db } from './types';
 
 const MIGRATION = resolve(__dirname, '../../../migrations/0001_init.sql');
+const MIGRATION_0004 = resolve(__dirname, '../../../migrations/0004_kid_pins.sql');
 let db: Db;
 const now = new Date('2026-07-11T00:00:00Z');
 
 beforeEach(async () => {
-  db = createTestDb([MIGRATION]);
+  db = createTestDb([MIGRATION, MIGRATION_0004]);
   await createAccount(db, {
     id: 'acc1', email: 'p@example.com', passwordHash: 'H', salt: 'S',
     tzOffsetMin: 0, createdAt: '2026-07-10T00:00:00Z',

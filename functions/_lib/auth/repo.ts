@@ -23,11 +23,22 @@ function mapAccount(r: AccountRow | null): Account | null {
 
 export async function createAccount(
   db: Db,
-  a: { id: string; email: string; passwordHash: string; salt: string; tzOffsetMin: number; createdAt: string },
+  a: {
+    id: string;
+    email: string;
+    passwordHash: string;
+    salt: string;
+    tzOffsetMin: number;
+    createdAt: string;
+    pairingPinHash?: string | null;
+    pairingPinSalt?: string | null;
+  },
 ): Promise<void> {
   await db
-    .prepare('INSERT INTO accounts (id,email,password_hash,salt,tz_offset_min,created_at) VALUES (?,?,?,?,?,?)')
-    .bind(a.id, a.email, a.passwordHash, a.salt, a.tzOffsetMin, a.createdAt)
+    .prepare(
+      'INSERT INTO accounts (id,email,password_hash,salt,tz_offset_min,created_at,pairing_pin_hash,pairing_pin_salt) VALUES (?,?,?,?,?,?,?,?)',
+    )
+    .bind(a.id, a.email, a.passwordHash, a.salt, a.tzOffsetMin, a.createdAt, a.pairingPinHash ?? null, a.pairingPinSalt ?? null)
     .run();
 }
 

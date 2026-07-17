@@ -8,10 +8,11 @@ import {
 import type { Db } from './types';
 
 const MIGRATION = resolve(__dirname, '../../../migrations/0001_init.sql');
+const MIGRATION_0004 = resolve(__dirname, '../../../migrations/0004_kid_pins.sql');
 let db: Db;
 
 beforeEach(() => {
-  db = createTestDb([MIGRATION]);
+  db = createTestDb([MIGRATION, MIGRATION_0004]);
 });
 
 const acct = {

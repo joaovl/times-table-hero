@@ -6,10 +6,11 @@ import { createKid, listKids, getKid, deleteKid } from './repo';
 import type { Db } from '../auth/types';
 
 const MIGRATION = resolve(__dirname, '../../../migrations/0001_init.sql');
+const MIGRATION_0004 = resolve(__dirname, '../../../migrations/0004_kid_pins.sql');
 let db: Db;
 
 beforeEach(async () => {
-  db = createTestDb([MIGRATION]);
+  db = createTestDb([MIGRATION, MIGRATION_0004]);
   await createAccount(db, { id: 'acc1', email: 'p@x.com', passwordHash: 'H', salt: 'S', tzOffsetMin: 0, createdAt: '2026-07-10T00:00:00Z' });
   await createAccount(db, { id: 'acc2', email: 'q@x.com', passwordHash: 'H', salt: 'S', tzOffsetMin: 0, createdAt: '2026-07-10T00:00:00Z' });
 });
