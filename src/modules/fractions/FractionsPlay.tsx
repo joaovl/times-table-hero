@@ -36,6 +36,9 @@ import {
   decimalAnswerAccepted,
 } from './logic';
 import { FractionDisplay } from './FractionDisplay';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { feedbackDelay } from '@/lib/e2e/env';
+import { fractionOpOracle } from './oracle';
 
 // Generic user-answer payload — different skills have different shapes.
 // Stored in incorrectQuestions so the results screen can render whatever the
@@ -324,7 +327,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
       }
       // Give a wrong answer longer on screen so the child can read the correct
       // one; a correct answer with a teaching note also lingers a little.
-      const delay = isCorrect ? (note ? 1800 : 800) : 2600;
+      const delay = feedbackDelay(isCorrect ? (note ? 1800 : 800) : 2600);
       setTimeout(() => {
         setFeedback('none');
         setFeedbackNote(null);
@@ -822,6 +825,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 <FractionDisplay frac={q.b} size="md" />
                 <span className="text-4xl md:text-5xl font-extrabold">=</span>
               </div>
+              <E2EOracle data={fractionOpOracle(q)} />
               {feedback === 'incorrect' && correctOpDisplay && (
                 <div className="mt-3 flex items-center justify-center gap-2 text-destructive">
                   <span className="text-2xl md:text-3xl font-bold">=</span>
