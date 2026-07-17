@@ -57,18 +57,18 @@ function codeOf(data: unknown): string {
     : 'request_failed';
 }
 
-async function authCall(path: string, email: string, password: string): Promise<AccountInfo> {
+async function authCall(path: string, email: string, password: string, pin?: string): Promise<AccountInfo> {
   const { status, data } = await apiFetch<{ token: string; account: AccountInfo }>(path, {
     method: 'POST',
-    body: { email, password },
+    body: pin !== undefined ? { email, password, pin } : { email, password },
   });
   if (status >= 400 || !data) throw new ApiError(codeOf(data), status);
   tokenStore.set(data.token);
   return data.account;
 }
 
-export function authSignup(email: string, password: string): Promise<AccountInfo> {
-  return authCall('/api/auth/signup', email, password);
+export function authSignup(email: string, password: string, pin?: string): Promise<AccountInfo> {
+  return authCall('/api/auth/signup', email, password, pin);
 }
 
 export function authLogin(email: string, password: string): Promise<AccountInfo> {
@@ -90,7 +90,7 @@ export async function authMe(): Promise<AccountInfo | null> {
 }
 
 export interface Kid { id: string; name: string; color: string; icon: string }
-export interface KidInput { name: string; color: string; icon: string }
+export interface KidInput { name: string; color: string; icon: string; pin?: string }
 export interface RulesRow { kidId: string | null; config: RewardRulesConfig; updatedAt: string }
 
 export async function kidsList(): Promise<Kid[]> {
@@ -101,6 +101,12 @@ export async function kidsList(): Promise<Kid[]> {
 
 export async function kidsCreate(input: KidInput): Promise<Kid> {
   const { status, data } = await apiFetch<{ kid: Kid }>('/api/kids', { method: 'POST', body: input });
+  if (status >= 400 || !data) throw new ApiError(codeOf(data), status);
+  return data.kid;
+}
+
+export async function kidsUpdate(id: string, input: KidInput): Promise<Kid> {
+  const { status, data } = await apiFetch<{ kid: Kid }>(`/api/kids/${id}`, { method: 'PUT', body: input });
   if (status >= 400 || !data) throw new ApiError(codeOf(data), status);
   return data.kid;
 }

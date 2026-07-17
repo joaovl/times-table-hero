@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { kidsList, kidsCreate, kidsDelete, rulesList, rulesPut, tokenStore } from './client';
+import { kidsList, kidsCreate, kidsDelete, kidsUpdate, rulesList, rulesPut, tokenStore } from './client';
 import { DEFAULT_RULES } from '@/lib/rewards-types';
 
 const okJson = (status: number, body: unknown) =>
@@ -29,6 +29,22 @@ describe('kids client', () => {
     const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(okJson(200, { ok: true }));
     await kidsDelete('k1');
     expect(f).toHaveBeenCalledWith('/api/kids/k1', expect.objectContaining({ method: 'DELETE' }));
+  });
+
+  it('creates a kid with a pin', async () => {
+    const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(okJson(201, { kid: { id: 'k1', name: 'Sam', color: 'blue', icon: 'star' } }));
+    await kidsCreate({ name: 'Sam', color: 'blue', icon: 'star', pin: '246810' });
+    const init = f.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(init.body as string)).toEqual({ name: 'Sam', color: 'blue', icon: 'star', pin: '246810' });
+  });
+
+  it('updates a kid, optionally resetting the pin', async () => {
+    const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(okJson(200, { kid: { id: 'k1', name: 'Sam', color: 'blue', icon: 'star' } }));
+    const kid = await kidsUpdate('k1', { name: 'Sam', color: 'blue', icon: 'star', pin: '112233' });
+    expect(kid.id).toBe('k1');
+    expect(f).toHaveBeenCalledWith('/api/kids/k1', expect.objectContaining({ method: 'PUT' }));
+    const init = f.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(init.body as string)).toEqual({ name: 'Sam', color: 'blue', icon: 'star', pin: '112233' });
   });
 });
 

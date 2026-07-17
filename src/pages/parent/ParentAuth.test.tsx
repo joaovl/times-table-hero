@@ -42,7 +42,19 @@ describe('ParentAuth', () => {
     fireEvent.click(screen.getByRole('button', { name: /create an account/i }));
     type(/email/i, 'new@x.com');
     type(/password/i, 'longenough');
+    type(/family pin/i, '135790');
     fireEvent.click(screen.getByRole('button', { name: /sign up/i }));
-    await waitFor(() => expect(signup).toHaveBeenCalledWith('new@x.com', 'longenough'));
+    await waitFor(() => expect(signup).toHaveBeenCalledWith('new@x.com', 'longenough', '135790'));
+  });
+
+  it('sends a 6-digit family PIN on sign up', async () => {
+    signup.mockResolvedValue(undefined);
+    render(<ParentAuth />);
+    fireEvent.click(screen.getByRole('button', { name: /create an account/i }));
+    type(/email/i, 'new2@x.com');
+    type(/password/i, 'longenough');
+    type(/family pin/i, '135790');
+    fireEvent.click(screen.getByRole('button', { name: /sign up/i }));
+    await waitFor(() => expect(signup).toHaveBeenCalledWith('new2@x.com', 'longenough', '135790'));
   });
 });

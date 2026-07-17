@@ -27,6 +27,24 @@ describe('authSignup', () => {
     await expect(authSignup('p@x.com', 'longenough')).rejects.toMatchObject({ code: 'email_taken', status: 409 });
     expect(tokenStore.get()).toBeNull();
   });
+
+  it('sends the family pin in the body when provided', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      okJson(201, { token: 'tok1', account: { id: 'a1', email: 'p@x.com' } }),
+    );
+    await authSignup('p@x.com', 'longenough', '135790');
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(init.body as string)).toEqual({ email: 'p@x.com', password: 'longenough', pin: '135790' });
+  });
+
+  it('omits the pin from the body when not provided', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      okJson(201, { token: 'tok1', account: { id: 'a1', email: 'p@x.com' } }),
+    );
+    await authSignup('p@x.com', 'longenough');
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(init.body as string)).toEqual({ email: 'p@x.com', password: 'longenough' });
+  });
 });
 
 describe('authLogin', () => {

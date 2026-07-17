@@ -7,7 +7,7 @@ interface AuthValue {
   status: Status;
   account: AccountInfo | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, pin?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -39,8 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('authed');
   }, []);
 
-  const signup = useCallback(async (email: string, password: string) => {
-    const a = await authSignup(email, password);
+  const signup = useCallback(async (email: string, password: string, pin?: string) => {
+    const a = await authSignup(email, password, pin);
     setAccount(a);
     setStatus('authed');
   }, []);

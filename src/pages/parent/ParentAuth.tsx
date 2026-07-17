@@ -12,21 +12,30 @@ const MESSAGES: Record<string, string> = {
   invalid_input: 'Please enter a valid email and a password of at least 8 characters.',
 };
 
+const PIN_RE = /^\d{6}$/;
+
 export default function ParentAuth() {
   const { login, signup } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const pinValid = mode === 'login' || PIN_RE.test(pin);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    if (mode === 'signup' && !PIN_RE.test(pin)) {
+      setError('Please enter a 6-digit family PIN.');
+      return;
+    }
     setBusy(true);
     try {
       if (mode === 'login') await login(email, password);
-      else await signup(email, password);
+      else await signup(email, password, pin);
     } catch (err) {
       const code = err instanceof ApiError ? err.code : 'request_failed';
       setError(MESSAGES[code] ?? 'Something went wrong. Please try again.');
@@ -49,8 +58,18 @@ export default function ParentAuth() {
           <Input id="password" type="password"
             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             value={password} onChange={e => setPassword(e.target.value)} />
+          {mode === 'signup' && (
+            <>
+              <label className="block text-sm font-medium" htmlFor="family-pin">Family PIN</label>
+              <Input id="family-pin" aria-label="Family PIN" inputMode="numeric" maxLength={6}
+                value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} />
+              <p className="text-xs text-muted-foreground">
+                A 6-digit PIN your kids will use to set up their own device.
+              </p>
+            </>
+          )}
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={busy}>
+          <Button type="submit" className="w-full" disabled={busy || !pinValid}>
             {mode === 'login' ? 'Log in' : 'Sign up'}
           </Button>
         </form>
