@@ -28,7 +28,9 @@ async function resolveAccount(ctx: { request: Request; env: Env }, now: Date): P
   }
   const email = normalizeEmail(body.email);
 
-  if ((await recordAndCheck(ctx.env.DB, email, now)).blocked) {
+  // Separate rate-limit bucket from /api/auth/login so a parent mistyping their
+  // login password doesn't consume their device-pairing attempts (and vice versa).
+  if ((await recordAndCheck(ctx.env.DB, `pair:${email}`, now)).blocked) {
     return { status: 429 };
   }
 
