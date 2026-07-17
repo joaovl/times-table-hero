@@ -23,4 +23,6 @@ export interface Account {
   salt: string;
   tzOffsetMin: number;
   createdAt: string;
+  pairingPinHash: string | null;
+  pairingPinSalt: string | null;
 }

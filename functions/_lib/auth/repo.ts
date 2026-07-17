@@ -7,6 +7,8 @@ interface AccountRow {
   salt: string;
   tz_offset_min: number;
   created_at: string;
+  pairing_pin_hash: string | null;
+  pairing_pin_salt: string | null;
 }
 
 function mapAccount(r: AccountRow | null): Account | null {
@@ -18,6 +20,8 @@ function mapAccount(r: AccountRow | null): Account | null {
     salt: r.salt,
     tzOffsetMin: r.tz_offset_min,
     createdAt: r.created_at,
+    pairingPinHash: r.pairing_pin_hash ?? null,
+    pairingPinSalt: r.pairing_pin_salt ?? null,
   };
 }
 
