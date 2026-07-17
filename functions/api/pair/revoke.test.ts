@@ -118,4 +118,22 @@ describe('POST /api/pair/revoke', () => {
     const res = await revokeRequest(session, {});
     expect(res.status).toBe(400);
   });
+
+  it('400s on a malformed tokenHashPrefix (wrong length or LIKE metacharacters) and deletes nothing', async () => {
+    const { token: session } = await doSignup('rev-d@example.com', 'longenough');
+    await doPair(session);
+    const before = (await (await listRequest(session)).json()) as { devices: unknown[] };
+    expect(before.devices).toHaveLength(1);
+
+    // Truncated prefix (too short) would otherwise LIKE-match more broadly.
+    const shortRes = await revokeRequest(session, { tokenHashPrefix: 'ab' });
+    expect(shortRes.status).toBe(400);
+
+    // LIKE metacharacter '%' would otherwise match every device on the account.
+    const wildcardRes = await revokeRequest(session, { tokenHashPrefix: '%%%%%%%%' });
+    expect(wildcardRes.status).toBe(400);
+
+    const after = (await (await listRequest(session)).json()) as { devices: unknown[] };
+    expect(after.devices).toHaveLength(1);
+  });
 });

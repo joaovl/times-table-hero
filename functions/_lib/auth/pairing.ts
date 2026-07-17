@@ -27,7 +27,13 @@ export async function deleteDevicePairing(db: Db, tokenHash: string, accountId: 
     .bind(tokenHash, accountId).run();
 }
 
-/** Deletes a pairing identified by the token-hash prefix shown to the caller via listDevicePairings, scoped to accountId. */
+/**
+ * Deletes a pairing identified by the token-hash prefix shown to the caller via listDevicePairings,
+ * scoped to accountId. Callers MUST validate tokenHashPrefix is exactly 8 characters from the
+ * base64 alphabet [A-Za-z0-9+/] (the format listDevicePairings emits) before calling this, since
+ * it is used unescaped in a LIKE pattern (`${tokenHashPrefix}%`) and an under-length or
+ * metacharacter-laden ('%'/'_') prefix can match more than the intended row.
+ */
 export async function deleteDevicePairingByPrefix(db: Db, tokenHashPrefix: string, accountId: string): Promise<void> {
   await db.prepare('DELETE FROM device_pairings WHERE account_id = ? AND token_hash LIKE ?')
     .bind(accountId, `${tokenHashPrefix}%`).run();
