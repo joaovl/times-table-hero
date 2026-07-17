@@ -63,4 +63,13 @@ describe('POST /api/auth/signup', () => {
     const res = await post({ email: 'q@example.com', password: 'longenough', pin: '12ab' });
     expect(res.status).toBe(400);
   });
+
+  it('signs up without a pin (columns stay null)', async () => {
+    const res = await post({ email: 'nopin@example.com', password: 'longenough' });
+    expect(res.status).toBe(201);
+    const row = await db.prepare('SELECT pairing_pin_hash, pairing_pin_salt FROM accounts WHERE email = ?')
+      .bind('nopin@example.com').first<{ pairing_pin_hash: string | null; pairing_pin_salt: string | null }>();
+    expect(row?.pairing_pin_hash).toBeNull();
+    expect(row?.pairing_pin_salt).toBeNull();
+  });
 });
