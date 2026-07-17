@@ -1,4 +1,6 @@
 import type { Db } from './types';
+import { getRequestToken } from './cookies';
+import { hashToken } from './tokens';
 
 export async function createDevicePairing(
   db: Db,
@@ -23,6 +25,21 @@ export async function findDevicePairing(
 export async function deleteDevicePairing(db: Db, tokenHash: string, accountId: string): Promise<void> {
   await db.prepare('DELETE FROM device_pairings WHERE token_hash = ? AND account_id = ?')
     .bind(tokenHash, accountId).run();
+}
+
+/** Deletes a pairing identified by the token-hash prefix shown to the caller via listDevicePairings, scoped to accountId. */
+export async function deleteDevicePairingByPrefix(db: Db, tokenHashPrefix: string, accountId: string): Promise<void> {
+  await db.prepare('DELETE FROM device_pairings WHERE account_id = ? AND token_hash LIKE ?')
+    .bind(accountId, `${tokenHashPrefix}%`).run();
+}
+
+/** Authenticates a request carrying a device-pairing token (Authorization: Bearer or session cookie). */
+export async function authenticatePairing(
+  request: Request, db: Db, now: Date,
+): Promise<{ accountId: string } | null> {
+  const raw = getRequestToken(request);
+  if (!raw) return null;
+  return findDevicePairing(db, await hashToken(raw), now);
 }
 
 export async function listDevicePairings(

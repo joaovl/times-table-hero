@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 import { createTestDb } from './__testutils__/testdb';
 import { createAccount } from './repo';
 import { createDevicePairing, findDevicePairing, deleteDevicePairing, listDevicePairings } from './pairing';
+import { requireAccount, requireDevicePairing } from './guard';
+import { generateSessionToken, hashToken, sessionExpiry } from './tokens';
 import type { Db } from './types';
 
 const MIGRATION = resolve(__dirname, '../../../migrations/0001_init.sql');
@@ -52,5 +54,25 @@ describe('device pairing repo', () => {
     expect(list).toEqual([
       { tokenHashPrefix: 'abcdefgh', label: 'iPad', createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + 86_400_000).toISOString() },
     ]);
+  });
+
+  it('requireAccount rejects a device-pairing token (capability scoping)', async () => {
+    const now = new Date('2026-07-17T10:00:00Z');
+    const pairToken = generateSessionToken();
+    await createDevicePairing(db, {
+      tokenHash: await hashToken(pairToken), accountId: 'acc1', label: 'iPad',
+      createdAt: now.toISOString(), expiresAt: sessionExpiry(now, 180),
+    });
+
+    const request = new Request('https://x/api/kids', {
+      headers: { Authorization: `Bearer ${pairToken}` },
+    });
+
+    const accountResult = await requireAccount(request, db);
+    expect(accountResult).toBeInstanceOf(Response);
+    expect((accountResult as Response).status).toBe(401);
+
+    const pairingResult = await requireDevicePairing(request, db);
+    expect(pairingResult).toEqual({ accountId: 'acc1' });
   });
 });
