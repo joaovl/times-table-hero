@@ -13,3 +13,7 @@ export function isValidEmail(email: string): boolean {
 export function isValidPassword(password: string): boolean {
   return password.length >= 8;
 }
+
+export function isValidPin(pin: string): boolean {
+  return /^\d{6}$/.test(pin);
+}
