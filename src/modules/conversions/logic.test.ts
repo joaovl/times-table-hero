@@ -494,8 +494,10 @@ describe('isAnswerCorrect — simple conversions', () => {
   });
 });
 
-describe('isAnswerCorrect — metric-imperial (rough ±0.5)', () => {
-  it('5 miles ≈ 8 km accepts 7.5..8.5', () => {
+describe('isAnswerCorrect — metric-imperial (approximate, ±1)', () => {
+  // Metric<->imperial is an approximation (the 5:8 ratio is itself rough), so a
+  // sensible close answer must not be marked wrong (bug #16).
+  it('5 miles ≈ 8 km accepts 7..9, rejects clearly-off values', () => {
     const q: ConversionQuestion = {
       skill: 'metric-imperial',
       fromValue: 5,
@@ -504,9 +506,24 @@ describe('isAnswerCorrect — metric-imperial (rough ±0.5)', () => {
       answer: 8,
     };
     expect(isAnswerCorrect(q, '8')).toBe(true);
-    expect(isAnswerCorrect(q, '7.5')).toBe(true);
-    expect(isAnswerCorrect(q, '8.5')).toBe(true);
-    expect(isAnswerCorrect(q, '9')).toBe(false);
+    expect(isAnswerCorrect(q, '7')).toBe(true);
+    expect(isAnswerCorrect(q, '9')).toBe(true);
+    expect(isAnswerCorrect(q, '6')).toBe(false);
+    expect(isAnswerCorrect(q, '10')).toBe(false);
+  });
+
+  it('15 km ≈ 9 miles accepts a close 10 (the reported case)', () => {
+    const q: ConversionQuestion = {
+      skill: 'metric-imperial',
+      fromValue: 15,
+      fromUnit: 'km',
+      toUnit: 'miles',
+      answer: 9,
+    };
+    expect(isAnswerCorrect(q, '9')).toBe(true);
+    expect(isAnswerCorrect(q, '10')).toBe(true);
+    expect(isAnswerCorrect(q, '8')).toBe(true);
+    expect(isAnswerCorrect(q, '11')).toBe(false);
     expect(isAnswerCorrect(q, '7')).toBe(false);
   });
 });

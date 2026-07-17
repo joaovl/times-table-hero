@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { kidsList, rulesList, rulesPut, type Kid, type RulesRow } from '@/lib/api/client';
 import { DEFAULT_RULES, type RewardRulesConfig } from '@/lib/rewards-types';
 import RewardRulesForm from './RewardRulesForm';
@@ -51,6 +52,7 @@ export default function BribeArea() {
 
   return (
     <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto space-y-4">
+      <Link to="/parent" className="inline-block text-sm underline text-primary">← Parent area</Link>
       <h1 className="text-2xl font-bold">Reward settings</h1>
       {!loaded ? (
         <p className="text-muted-foreground" role="status" aria-live="polite">Loading…</p>

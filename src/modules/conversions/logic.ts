@@ -672,8 +672,10 @@ export function isAnswerCorrect(q: ConversionQuestion, typed: string): boolean {
   if (!Number.isFinite(n)) return false;
 
   if (q.skill === 'metric-imperial') {
-    // 5:8 ratio is rough — allow ±0.5.
-    return Math.abs(n - q.answer) <= 0.5;
+    // This is an approximate conversion (the 5:8 ratio is itself rough), so a
+    // sensible close answer must be accepted rather than marked wrong — e.g.
+    // 15 km is "about 9 or 10 miles" (bug #16). Allow ±1.
+    return Math.abs(n - q.answer) <= 1;
   }
   if (q.skill === 'area-irregular') {
     return n === q.answer;

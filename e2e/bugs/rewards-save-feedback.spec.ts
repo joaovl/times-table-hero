@@ -30,3 +30,17 @@ test('blank reward unit gives a specific message; filling it saves', async ({ pa
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Saved.')).toBeVisible();
 });
+
+// Bug #14: the reward settings page must offer a way back to the parent area.
+test('reward settings has a back link to the parent area', async ({ page }) => {
+  await page.goto('/parent');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page.getByText('Signed in as')).toBeVisible();
+
+  await page.goto('/parent/rewards');
+  await page.getByRole('link', { name: /parent area/i }).click();
+  await expect(page).toHaveURL(/\/parent$/);
+  await expect(page.getByRole('heading', { name: 'Parent area' })).toBeVisible();
+});
