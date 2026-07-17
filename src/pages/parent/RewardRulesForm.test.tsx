@@ -36,6 +36,14 @@ describe('RewardRulesForm (v2)', () => {
     }));
   });
 
+  it('explains the "unit" concept in balance mode (bug #6/#11/#12)', () => {
+    setup(balanceConfig);
+    // A plain-language explanation of what a "unit" is, so parents aren't lost.
+    expect(screen.getByText(/one chunk of the reward she earns/i)).toBeInTheDocument();
+    // Concrete example for the confusing "minutes per unit earned" field.
+    expect(screen.getByText(/1 unit for every 20 minutes/i)).toBeInTheDocument();
+  });
+
   it('edits a balance rate field (commits on blur)', () => {
     const { onChange } = setup(balanceConfig);
     const el = screen.getByLabelText(/minutes of practice per unit/i);

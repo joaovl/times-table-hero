@@ -92,18 +92,29 @@ export default function RewardRulesForm({ value, onChange }: Props) {
 
         {d.mode === 'balance' && d.balance && (
           <div className="space-y-3 border-t pt-3">
+            <p className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+              A <strong>unit</strong> is one chunk of the reward she earns — for example{' '}
+              <em>1 hour of TV</em>. She builds up units by practising, and you decide how much
+              practice earns one unit. Example: with a unit of &ldquo;hours of TV&rdquo; and
+              &ldquo;20 minutes per unit&rdquo;, 40 minutes of practice earns 2 hours of TV.
+            </p>
             <label className="block text-sm font-medium" htmlFor="unit">Reward unit (what she earns)</label>
             <Input id="unit" placeholder="e.g. hours of TV"
               value={d.balance.unitLabel}
               onChange={e => setBalance({ unitLabel: e.target.value })} />
+            <p className="text-xs text-muted-foreground">The thing she&rsquo;s earning, e.g. hours of TV, minutes of tablet, or pounds.</p>
             <label className="block text-sm font-medium" htmlFor="mpu">Minutes of practice per unit earned</label>
             <NumberField id="mpu" min={0} value={d.balance.minutesPerUnit} onCommit={n => setBalance({ minutesPerUnit: n })} />
+            <p className="text-xs text-muted-foreground">e.g. 20 → she earns 1 unit for every 20 minutes she practises.</p>
             <label className="block text-sm font-medium" htmlFor="epu">Exercises per unit earned</label>
             <NumberField id="epu" min={0} value={d.balance.exercisesPerUnit} onCommit={n => setBalance({ exercisesPerUnit: n })} />
+            <p className="text-xs text-muted-foreground">e.g. 10 → she also earns 1 unit for every 10 questions answered. Set to 0 to ignore.</p>
             <label className="block text-sm font-medium" htmlFor="rpu">Units earned each time</label>
             <NumberField id="rpu" min={0} value={d.balance.rewardPerUnit} onCommit={n => setBalance({ rewardPerUnit: n })} />
+            <p className="text-xs text-muted-foreground">How many units to award each time she reaches the amount above.</p>
             <label className="block text-sm font-medium" htmlFor="pen">Units taken away on a missed day</label>
             <NumberField id="pen" min={0} value={d.balance.penaltyPerMissedDay} onCommit={n => setBalance({ penaltyPerMissedDay: n })} />
+            <p className="text-xs text-muted-foreground">If she does no practice on a day, subtract this many units. Set to 0 for no penalty.</p>
           </div>
         )}
       </Card>
