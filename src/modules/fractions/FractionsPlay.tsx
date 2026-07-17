@@ -37,7 +37,7 @@ import {
 } from './logic';
 import { FractionDisplay } from './FractionDisplay';
 import { E2EOracle } from '@/lib/e2e/oracle';
-import { feedbackDelay } from '@/lib/e2e/env';
+import { E2E_ENABLED, feedbackDelay } from '@/lib/e2e/env';
 import { fractionOpOracle } from './oracle';
 
 // Generic user-answer payload — different skills have different shapes.
@@ -825,7 +825,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 <FractionDisplay frac={q.b} size="md" />
                 <span className="text-4xl md:text-5xl font-extrabold">=</span>
               </div>
-              <E2EOracle data={fractionOpOracle(q)} />
+              {E2E_ENABLED && <E2EOracle data={fractionOpOracle(q)} />}
               {feedback === 'incorrect' && correctOpDisplay && (
                 <div className="mt-3 flex items-center justify-center gap-2 text-destructive">
                   <span className="text-2xl md:text-3xl font-bold">=</span>

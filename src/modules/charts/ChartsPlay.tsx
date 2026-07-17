@@ -22,7 +22,7 @@ import { BarChart } from './BarChart';
 import { LineChart } from './LineChart';
 import { PieChart } from './PieChart';
 import { E2EOracle } from '@/lib/e2e/oracle';
-import { feedbackDelay } from '@/lib/e2e/env';
+import { E2E_ENABLED, feedbackDelay } from '@/lib/e2e/env';
 import { chartOracle } from './oracle';
 
 export interface ChartsGameResult {
@@ -319,7 +319,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
-          <E2EOracle data={chartOracle(q, numberChoices)} />
+          {E2E_ENABLED && <E2EOracle data={chartOracle(q, numberChoices)} />}
           <div className="flex justify-center text-foreground">
             {isPie ? (
               <PieChart
