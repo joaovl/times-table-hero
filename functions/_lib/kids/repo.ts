@@ -70,3 +70,21 @@ export async function getKid(db: Db, accountId: string, id: string): Promise<Kid
 export async function deleteKid(db: Db, accountId: string, id: string): Promise<void> {
   await db.prepare('DELETE FROM kids WHERE account_id = ? AND id = ?').bind(accountId, id).run();
 }
+
+/**
+ * Account-scoped read exposing the kid's PIN hash/salt for sign-in verification.
+ * Distinct from getKid/listKids (and serializeKid), which must keep omitting the PIN
+ * from any response. Returns null if the kid does not exist or belongs to a
+ * different account (no enumeration of kids across accounts).
+ */
+export async function getKidWithPin(
+  db: Db,
+  accountId: string,
+  id: string,
+): Promise<{ id: string; pinHash: string | null; pinSalt: string | null } | null> {
+  const row = await db
+    .prepare('SELECT id, pin_hash, pin_salt FROM kids WHERE account_id = ? AND id = ?')
+    .bind(accountId, id)
+    .first<{ id: string; pin_hash: string | null; pin_salt: string | null }>();
+  return row ? { id: row.id, pinHash: row.pin_hash, pinSalt: row.pin_salt } : null;
+}
