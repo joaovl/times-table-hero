@@ -30,11 +30,13 @@ test('TV-hours balance is computed live in the dashboard', async ({ page }) => {
   await page.getByRole('button', { name: 'Create an account' }).click();
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Family PIN').fill('123456');
   await page.getByRole('button', { name: 'Sign up' }).click();
   await expect(page.getByText('Signed in as')).toBeVisible();
 
   await page.goto('/parent/kids');
   await page.getByLabel('Name').fill('Mia');
+  await page.getByLabel('PIN', { exact: true }).fill('222333');
   await page.getByRole('button', { name: 'Add kid' }).click();
   await expect(page.getByText('Mia', { exact: true })).toBeVisible();
 

@@ -16,6 +16,7 @@ test('parent signs up, adds a kid, sets rewards, and everything persists', async
   await expect(page.getByRole('heading', { name: 'Create parent account' })).toBeVisible();
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Family PIN').fill('123456');
   await page.getByRole('button', { name: 'Sign up' }).click();
   await expect(page.getByText('Signed in as')).toBeVisible();
   await expect(page.getByText(email)).toBeVisible();
@@ -24,6 +25,7 @@ test('parent signs up, adds a kid, sets rewards, and everything persists', async
   await page.getByRole('link', { name: 'Manage kids' }).click();
   await expect(page).toHaveURL(/\/parent\/kids$/);
   await page.getByLabel('Name').fill('Sam');
+  await page.getByLabel('PIN', { exact: true }).fill('222333');
   await page.getByRole('button', { name: 'Add kid' }).click();
   await expect(page.getByText('Sam')).toBeVisible();
 

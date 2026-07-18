@@ -13,6 +13,7 @@ test('blank reward unit gives a specific message; filling it saves', async ({ pa
   await page.getByRole('button', { name: 'Create an account' }).click();
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Family PIN').fill('123456');
   await page.getByRole('button', { name: 'Sign up' }).click();
   await expect(page.getByText('Signed in as')).toBeVisible();
 

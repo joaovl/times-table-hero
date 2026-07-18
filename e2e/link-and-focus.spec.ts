@@ -22,12 +22,14 @@ test('focus picker persists through save + reload, and a player links to a kid',
   await page.getByRole('button', { name: 'Create an account' }).click();
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Family PIN').fill('123456');
   await page.getByRole('button', { name: 'Sign up' }).click();
   await expect(page.getByText('Signed in as')).toBeVisible();
 
   // Add a kid.
   await page.getByRole('link', { name: 'Manage kids' }).click();
   await page.getByLabel('Name').fill('Sam');
+  await page.getByLabel('PIN', { exact: true }).fill('222333');
   await page.getByRole('button', { name: 'Add kid' }).click();
   await expect(page.getByText('Sam')).toBeVisible();
 
