@@ -6,6 +6,7 @@ beforeEach(() => { localStorage.clear(); });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('t()', () => {
+  beforeEach(() => { setLocale('en'); });
   it('returns the English string with interpolation', () => {
     expect(t('play.score', { n: 7 })).toBe('Score: 7');
   });
