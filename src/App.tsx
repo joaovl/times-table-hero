@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Hub from './pages/Hub';
 import NotFound from './pages/NotFound';
 import { getTheme, applyTheme } from '@/lib/themeStorage';
+import { t } from '@/lib/i18n/i18n';
+import { LocaleProvider } from '@/lib/i18n/react';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import RequireAuth from './pages/parent/RequireAuth';
 import ParentHome from './pages/parent/ParentHome';
@@ -36,10 +38,12 @@ const RatioProportionIndex = lazy(() => import('./modules/ratio-proportion/Ratio
 const AlgebraIndex = lazy(() => import('./modules/algebra/AlgebraIndex'));
 const StatisticsIndex = lazy(() => import('./modules/statistics/StatisticsIndex'));
 
+// Suspense fallbacks may render before React context is available, so import
+// `t` directly from i18n.ts here rather than using the `useT()` hook.
 const ModuleLoading = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
     <div className="text-xl font-bold text-primary" role="status" aria-live="polite">
-      Loading...
+      {t('common.loading')}
     </div>
   </div>
 );
@@ -56,6 +60,7 @@ const App = () => {
   }, []);
 
   return (
+    <LocaleProvider>
     <AuthProvider>
     <BrowserRouter>
       <FeedbackTrigger />
@@ -105,6 +110,7 @@ const App = () => {
       </Suspense>
     </BrowserRouter>
     </AuthProvider>
+    </LocaleProvider>
   );
 };
 
