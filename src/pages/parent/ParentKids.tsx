@@ -74,7 +74,7 @@ export default function ParentKids() {
               <span className="font-semibold">{k.name}</span>
               <div className="flex gap-2">
                 <Button variant="outline" aria-label={t('parent.kids.resetPinFor', { name: k.name })} onClick={() => startReset(k.id)}>{t('parent.kids.resetPin')}</Button>
-                <Button variant="outline" aria-label={t('parent.kids.removeName', { name: k.name })} onClick={() => remove(k.id)}>{t('parent.kids.remove')}</Button>
+                <Button variant="outline" aria-label={t('parent.kids.removeName', { name: k.name })} onClick={() => remove(k.id)}>{t('common.remove')}</Button>
               </div>
             </div>
             {resetKidId === k.id && (

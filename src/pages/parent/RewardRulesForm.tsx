@@ -155,7 +155,7 @@ export default function RewardRulesForm({ value, onChange }: Props) {
                 <Input id={`tier-rw-${i}`} placeholder={t('parent.rewards.form.rewardPlaceholder')}
                   value={tier.reward} onChange={e => setTier(i, { reward: e.target.value })} />
               </div>
-              <Button type="button" variant="outline" aria-label={t('parent.rewards.form.removeTier', { n: i + 1 })} onClick={() => removeTier(i)}>{t('parent.kids.remove')}</Button>
+              <Button type="button" variant="outline" aria-label={t('parent.rewards.form.removeTier', { n: i + 1 })} onClick={() => removeTier(i)}>{t('common.remove')}</Button>
             </li>
           ))}
           {value.ladder.length === 0 && <li className="text-sm text-muted-foreground">{t('parent.rewards.form.noTiersYet')}</li>}
