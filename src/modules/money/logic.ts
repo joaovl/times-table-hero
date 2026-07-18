@@ -5,6 +5,8 @@
 // Each question is a discriminated union by `skill` so the renderer (online
 // play, PDF) can switch on shape without re-parsing.
 
+import { CURRENCIES, type CurrencyConfig } from '@/lib/i18n/currency';
+
 export type MoneySkill =
   | 'add-money'
   | 'subtract-money'
@@ -175,56 +177,81 @@ export interface MoneySettings {
 // ---------------------------------------------------------------------------
 
 /**
- * Format a pence value for display.
- * - `< 100p` and exact pence → "75p"
- * - `>= 100p` → "£3.45" (£X.YY, always two decimals)
+ * Format a minor-unit value (pence by default) for display.
+ * - `< 100` minor units → "75p" (uses `cfg.minorSuffix`)
+ * - `>= 100` minor units → "£3.45" (symbol placement/decimal separator per `cfg`)
  * - 0 → "0p"
  *
+ * Defaults to GBP (`CURRENCIES.GBP`) so existing call sites are unaffected.
  * Uses U+00A3 (£) which is in Helvetica's WinAnsi encoding (safe for PDFs).
  */
-export function formatMoney(pence: number): string {
+export function formatMoney(pence: number, cfg: CurrencyConfig = CURRENCIES.GBP): string {
   const v = Math.round(pence);
-  if (v < 100) return `${v}p`;
-  const pounds = Math.floor(v / 100);
-  const p = v % 100;
-  return `£${pounds}.${p.toString().padStart(2, '0')}`;
+  if (v < 100) return `${v}${cfg.minorSuffix}`;
+  const major = Math.floor(v / 100);
+  const minor = (v % 100).toString().padStart(2, '0');
+  const sep = cfg.decimalComma ? ',' : '.';
+  const amount = `${major}${sep}${minor}`;
+  return cfg.symbolBefore ? `${cfg.symbol}${amount}` : `${amount} ${cfg.symbol}`;
+}
+
+// Escape regex metacharacters in a currency symbol/suffix so it can be
+// embedded literally in a RegExp (e.g. '$' in USD's '$' or BRL's minor units).
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * Parse a user-typed money string into pence. Accepts:
- *   "3.45", "£3.45", "345p", "345", " £3.45 "
- * Returns the pence integer, or `null` if the string is unparseable.
- * - A bare integer (no symbol, no decimal) is treated as **pence**, so kids
- *   who type "345" mean "three hundred and forty-five pence" (= £3.45).
- *   They'd type "£3.45" or "3.45" for the pound form.
+ * Parse a user-typed money string into minor units (pence by default).
+ * Accepts (for GBP, the default): "3.45", "£3.45", "345p", "345", " £3.45 ".
+ * For other currencies (via `cfg`), also accepts the currency's own symbol
+ * (in either position) and comma-decimal input (e.g. "3,45", "R$3,45").
+ * Returns the minor-unit integer, or `null` if the string is unparseable.
+ * - A bare integer (no symbol, no decimal) is treated as **minor units**, so
+ *   kids who type "345" mean "three hundred and forty-five pence" (= £3.45).
+ *   They'd type "£3.45" or "3.45" for the major-unit form.
  */
-export function parseMoney(input: string): number | null {
+export function parseMoney(input: string, cfg: CurrencyConfig = CURRENCIES.GBP): number | null {
   if (typeof input !== 'string') return null;
   const trimmed = input.trim();
   if (!trimmed) return null;
 
-  // Strip a leading £ (or its HTML/text variants) and any whitespace inside.
-  let s = trimmed.replace(/^£/, '').trim();
+  // Strip a leading/trailing currency symbol (whichever side it appears on,
+  // regardless of `cfg.symbolBefore`) and any whitespace around it.
+  const symbolPattern = escapeRegExp(cfg.symbol);
+  let s = trimmed
+    .replace(new RegExp(`^${symbolPattern}\\s*`), '')
+    .replace(new RegExp(`\\s*${symbolPattern}$`), '')
+    .trim();
   if (s === '') return null;
 
-  // Trailing 'p' / 'P' marks pence-only.
-  if (/^[0-9]+p$/i.test(s)) {
-    const n = parseInt(s.slice(0, -1), 10);
+  // Comma-decimal input (e.g. "3,45"): normalize to a dot when unambiguous —
+  // exactly one comma and no dot present. Safe for GBP too (never triggers).
+  const commaCount = (s.match(/,/g) || []).length;
+  if (commaCount === 1 && !s.includes('.')) {
+    s = s.replace(',', '.');
+  }
+
+  // Trailing minor-unit suffix (e.g. 'p', '¢', 'c') marks minor-units-only.
+  const suffixPattern = escapeRegExp(cfg.minorSuffix);
+  const suffixMatch = s.match(new RegExp(`^([0-9]+)${suffixPattern}$`, 'i'));
+  if (suffixMatch) {
+    const n = parseInt(suffixMatch[1], 10);
     return Number.isFinite(n) ? n : null;
   }
 
-  // Decimal form "3.45" or "3.4" → pence. Allow 0, 1, or 2 decimal places.
+  // Decimal form "3.45" or "3.4" → minor units. Allow 1 or 2 decimal places.
   if (/^[0-9]+\.[0-9]{1,2}$/.test(s)) {
-    const [poundsStr, penceStr] = s.split('.');
-    const pounds = parseInt(poundsStr, 10);
-    // Pad single digit (e.g. "3.4" → 40p, not 4p) so "3.4" means £3.40.
-    const padded = penceStr.length === 1 ? penceStr + '0' : penceStr;
-    const p = parseInt(padded, 10);
-    if (!Number.isFinite(pounds) || !Number.isFinite(p)) return null;
-    return pounds * 100 + p;
+    const [majorStr, minorStr] = s.split('.');
+    const major = parseInt(majorStr, 10);
+    // Pad single digit (e.g. "3.4" → 40p, not 4p) so "3.4" means 3.40.
+    const padded = minorStr.length === 1 ? minorStr + '0' : minorStr;
+    const minor = parseInt(padded, 10);
+    if (!Number.isFinite(major) || !Number.isFinite(minor)) return null;
+    return major * 100 + minor;
   }
 
-  // Bare integer with no symbol — treat as pence.
+  // Bare integer with no symbol — treat as minor units.
   if (/^[0-9]+$/.test(s)) {
     const n = parseInt(s, 10);
     return Number.isFinite(n) ? n : null;
