@@ -1,0 +1,11 @@
+{
+  "common.loading": "Loading...",
+  "common.save": "Save",
+  "common.back": "Back",
+  "play.score": "Score: {n}",
+  "play.questionsLeft": "{count} questions left",
+  "play.questionsLeft.one": "{count} question left",
+  "play.questionsLeft.other": "{count} questions left",
+  "parent.language.title": "Language",
+  "parent.language.help": "Applies to everyone on this device."
+}
