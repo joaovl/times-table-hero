@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { pairDevice, ApiError } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -43,9 +44,8 @@ export default function SetupDevice() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-sm p-6 space-y-4 text-center">
           <h1 className="text-2xl font-bold">This device is paired</h1>
-          <p className="text-muted-foreground">
-            You can now use this device to practise. {/* Phase 3 will route to "Who's playing?" */}
-          </p>
+          <p className="text-muted-foreground">Now each child can sign in with their PIN.</p>
+          <Link to="/whos-playing" className="inline-block underline text-primary font-semibold">Who&rsquo;s playing?</Link>
         </Card>
       </div>
     );
