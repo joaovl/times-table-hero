@@ -4,9 +4,11 @@ import { kidsList, rulesList, rulesPut, type Kid, type RulesRow } from '@/lib/ap
 import { DEFAULT_RULES, type RewardRulesConfig } from '@/lib/rewards-types';
 import RewardRulesForm from './RewardRulesForm';
 import { preflightRulesError, saveErrorMessage } from './saveFeedback';
+import { useT } from '@/lib/i18n/react';
 import { Button } from '@/components/ui/button';
 
 export default function BribeArea() {
+  const { t } = useT();
   const [kids, setKids] = useState<Kid[]>([]);
   const [rules, setRules] = useState<RulesRow[]>([]);
   const [scope, setScope] = useState<string>(''); // '' = all kids; else kidId
@@ -29,9 +31,9 @@ export default function BribeArea() {
   useEffect(() => {
     Promise.all([kidsList(), rulesList()])
       .then(([k, r]) => { setKids(k); setRules(r); seed('', r); })
-      .catch(() => setStatus('Could not load.'))
+      .catch(() => setStatus(t('parent.rewards.errorLoad')))
       .finally(() => setLoaded(true));
-  }, []);
+  }, [t]);
 
   const onScope = (v: string) => { setScope(v); seed(v, rules); };
 
@@ -43,7 +45,7 @@ export default function BribeArea() {
     if (preflight) { setStatus(preflight); return; }
     try {
       await rulesPut(scope === '' ? null : scope, config);
-      setStatus('Saved.');
+      setStatus(t('parent.rewards.saved'));
       setRules(await rulesList()); // refresh cache without reseeding the form
     } catch (e) {
       setStatus(saveErrorMessage((e as { status?: number }).status));
@@ -52,23 +54,23 @@ export default function BribeArea() {
 
   return (
     <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto space-y-4">
-      <Link to="/parent" className="inline-block text-sm underline text-primary">← Parent area</Link>
-      <h1 className="text-2xl font-bold">Reward settings</h1>
+      <Link to="/parent" className="inline-block text-sm underline text-primary">{t('parent.rewards.backLink')}</Link>
+      <h1 className="text-2xl font-bold">{t('parent.rewards.title')}</h1>
       {!loaded ? (
-        <p className="text-muted-foreground" role="status" aria-live="polite">Loading…</p>
+        <p className="text-muted-foreground" role="status" aria-live="polite">{t('common.loadingEllipsis')}</p>
       ) : (
         <>
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium" htmlFor="scope">These rules apply to</label>
-            <select id="scope" aria-label="Rules apply to" className="border rounded-md px-2 py-1"
+            <label className="text-sm font-medium" htmlFor="scope">{t('parent.rewards.theseRulesApplyTo')}</label>
+            <select id="scope" aria-label={t('parent.rewards.rulesApplyTo')} className="border rounded-md px-2 py-1"
               value={scope} onChange={e => onScope(e.target.value)}>
-              <option value="">All kids</option>
+              <option value="">{t('parent.rewards.allKids')}</option>
               {kids.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
             </select>
           </div>
           <RewardRulesForm value={config} onChange={setConfig} />
           <div className="flex items-center gap-3">
-            <Button onClick={save}>Save</Button>
+            <Button onClick={save}>{t('common.save')}</Button>
             {status && <span className="text-sm text-muted-foreground">{status}</span>}
           </div>
         </>

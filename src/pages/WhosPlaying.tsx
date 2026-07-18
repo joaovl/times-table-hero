@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { pairKids, kidSignin, pairingTokenStore, type PairKid } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -11,6 +12,7 @@ const PIN_RE = /^\d{6}$/;
 // name and enters their 6-digit PIN. On success their practice logs straight to
 // their cloud record (via the kid session token).
 export default function WhosPlaying() {
+  const { t } = useT();
   const navigate = useNavigate();
   const paired = pairingTokenStore.get() !== null;
   const [kids, setKids] = useState<PairKid[] | null>(null);
@@ -28,22 +30,22 @@ export default function WhosPlaying() {
   if (!paired) {
     return (
       <div className="min-h-screen bg-background p-4 max-w-xl mx-auto space-y-4">
-        <h1 className="text-2xl font-bold">Who&rsquo;s playing?</h1>
-        <p className="text-muted-foreground">This device isn&rsquo;t set up yet.</p>
-        <Link className="underline text-primary" to="/setup-device">Set up this device</Link>
+        <h1 className="text-2xl font-bold">{t('whosPlaying.title')}</h1>
+        <p className="text-muted-foreground">{t('whosPlaying.notSetUp')}</p>
+        <Link className="underline text-primary" to="/setup-device">{t('setupDevice.title')}</Link>
       </div>
     );
   }
 
   const signIn = async () => {
-    if (!selected || !PIN_RE.test(pin)) { setError('Enter your 6-digit PIN.'); return; }
+    if (!selected || !PIN_RE.test(pin)) { setError(t('whosPlaying.enterPin')); return; }
     setBusy(true);
     setError('');
     try {
       await kidSignin(selected, pin);
       navigate('/'); // into the Hub to play
     } catch {
-      setError('That PIN didn’t match. Try again.');
+      setError(t('whosPlaying.pinMismatch'));
       setPin('');
     } finally {
       setBusy(false);
@@ -52,22 +54,22 @@ export default function WhosPlaying() {
 
   return (
     <div className="min-h-screen bg-background p-4 max-w-xl mx-auto space-y-4">
-      <h1 className="text-2xl font-bold">Who&rsquo;s playing?</h1>
+      <h1 className="text-2xl font-bold">{t('whosPlaying.title')}</h1>
 
       {loadError ? (
-        <p className="text-muted-foreground" role="alert">Could not load players. Check your connection and try again.</p>
+        <p className="text-muted-foreground" role="alert">{t('whosPlaying.loadError')}</p>
       ) : kids === null ? (
-        <p className="text-muted-foreground" role="status" aria-live="polite">Loading…</p>
+        <p className="text-muted-foreground" role="status" aria-live="polite">{t('common.loadingEllipsis')}</p>
       ) : selected === null ? (
         kids.length === 0 ? (
-          <p className="text-muted-foreground">No players yet. A grown-up can add kids in the parent area.</p>
+          <p className="text-muted-foreground">{t('whosPlaying.noPlayersYet')}</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {kids.map(k => (
               <button
                 key={k.id}
                 onClick={() => { setSelected(k); setPin(''); setError(''); }}
-                aria-label={`Play as ${k.name}`}
+                aria-label={t('whosPlaying.playAs', { name: k.name })}
                 className="flex flex-col items-center gap-2 rounded-xl border p-4 hover:bg-muted transition-colors"
               >
                 <span
@@ -83,9 +85,9 @@ export default function WhosPlaying() {
         )
       ) : (
         <Card className="p-5 space-y-3">
-          <p className="font-semibold">Hi {selected.name}! Enter your PIN.</p>
+          <p className="font-semibold">{t('whosPlaying.hiEnterPin', { name: selected.name })}</p>
           <Input
-            aria-label="PIN"
+            aria-label={t('whosPlaying.pin')}
             inputMode="numeric"
             maxLength={6}
             autoComplete="off"
@@ -96,9 +98,9 @@ export default function WhosPlaying() {
           />
           {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
           <div className="flex items-center gap-3">
-            <Button onClick={signIn} disabled={busy || !PIN_RE.test(pin)}>Play</Button>
+            <Button onClick={signIn} disabled={busy || !PIN_RE.test(pin)}>{t('whosPlaying.play')}</Button>
             <button className="text-sm underline text-muted-foreground" onClick={() => { setSelected(null); setError(''); }}>
-              Back
+              {t('common.back')}
             </button>
           </div>
         </Card>

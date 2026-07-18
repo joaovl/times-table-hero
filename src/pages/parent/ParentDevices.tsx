@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { pairList, pairRevoke, type PairedDevice } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 export default function ParentDevices() {
+  const { t } = useT();
   const [devices, setDevices] = useState<PairedDevice[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
@@ -11,28 +13,28 @@ export default function ParentDevices() {
   const load = () => {
     pairList()
       .then(list => { setDevices(list); setLoaded(true); })
-      .catch(() => { setError('Could not load paired devices.'); setLoaded(true); });
+      .catch(() => { setError(t('parent.devices.errorLoad')); setLoaded(true); });
   };
 
-  useEffect(load, []);
+  useEffect(load, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const revoke = async (tokenHashPrefix: string) => {
     try {
       await pairRevoke(tokenHashPrefix);
       load();
     } catch {
-      setError('Could not revoke that device.');
+      setError(t('parent.devices.errorRevoke'));
     }
   };
 
   return (
     <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto space-y-4">
-      <h1 className="text-2xl font-bold">Paired devices</h1>
+      <h1 className="text-2xl font-bold">{t('parent.devices.title')}</h1>
       <p className="text-sm text-muted-foreground">
-        These devices can be used to practise without logging in as a parent.
+        {t('parent.devices.help')}
       </p>
       {!loaded ? (
-        <p className="text-muted-foreground" role="status" aria-live="polite">Loading…</p>
+        <p className="text-muted-foreground" role="status" aria-live="polite">{t('common.loadingEllipsis')}</p>
       ) : (
         <Card className="p-5 space-y-3">
           <ul className="space-y-2">
@@ -41,15 +43,15 @@ export default function ParentDevices() {
                 <div>
                   <p className="font-semibold">{d.label}</p>
                   <p className="text-sm text-muted-foreground">
-                    Paired {new Date(d.createdAt).toLocaleDateString()}
+                    {t('parent.devices.paired', { date: new Date(d.createdAt).toLocaleDateString() })}
                   </p>
                 </div>
-                <Button variant="outline" aria-label={`Revoke ${d.label}`} onClick={() => revoke(d.tokenHashPrefix)}>
-                  Revoke
+                <Button variant="outline" aria-label={t('parent.devices.revokeName', { name: d.label })} onClick={() => revoke(d.tokenHashPrefix)}>
+                  {t('parent.devices.revoke')}
                 </Button>
               </li>
             ))}
-            {devices.length === 0 && <li className="text-sm text-muted-foreground">No paired devices yet.</li>}
+            {devices.length === 0 && <li className="text-sm text-muted-foreground">{t('parent.devices.noDevicesYet')}</li>}
           </ul>
         </Card>
       )}
