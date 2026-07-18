@@ -4,7 +4,7 @@ import { createTestDb } from './__testutils__/testdb';
 import { createAccount } from './repo';
 import { createKid } from '../kids/repo';
 import { createKidSession, findKidSession, deleteKidSession } from './kidsession';
-import { requireAccount, requireKid } from './guard';
+import { requireAccount, requireDevicePairing, requireKid } from './guard';
 import { generateSessionToken, hashToken, sessionExpiry } from './tokens';
 import type { Db } from './types';
 
@@ -79,6 +79,11 @@ describe('kid session repo', () => {
     const accountResult = await requireAccount(request, db);
     expect(accountResult).toBeInstanceOf(Response);
     expect((accountResult as Response).status).toBe(401);
+
+    // A kid token is neither a parent session nor a device pairing.
+    const pairingResult = await requireDevicePairing(request, db);
+    expect(pairingResult).toBeInstanceOf(Response);
+    expect((pairingResult as Response).status).toBe(401);
 
     const kidResult = await requireKid(request, db);
     expect(kidResult).toEqual({ kidId: 'kid1', accountId: 'acc1' });
