@@ -7,7 +7,8 @@ import { UserSelector } from '@/components/UserSelector';
 import { NewUserModal } from '@/components/NewUserModal';
 import { UserProfile, getCurrentUser, getUserById } from '@/lib/userStorage';
 import { PRESET_THEMES, DEFAULT_THEME, getTheme, saveTheme, resetTheme } from '@/lib/themeStorage';
-import { t } from '@/lib/i18n';
+import { useT } from '@/lib/i18n/react';
+import type { MessageKey } from '@/lib/i18n/i18n';
 import { useInstallPrompt } from '@/lib/pwa-install';
 
 type YearFilter = 'all' | 3 | 4 | 5 | 6;
@@ -19,29 +20,29 @@ const YEAR_KEY = 'hub-year-filter';
 // shown for any selection.
 type ModuleCard = {
   slug: string;
-  title: string;
-  subtitle: string;
+  nameKey: MessageKey;
+  blurbKey: MessageKey;
   glyph?: string;        // text glyph (preferred when available, monochrome by default)
   iconName?: 'clock' | 'bar-chart-3' | 'hash' | 'pound' | 'percent' | 'sigma' | 'ruler' | 'book-open' | 'scale' | 'variable' | 'line-chart';
   years: Array<3 | 4 | 5 | 6>;
 };
 
 const MODULES: ModuleCard[] = [
-  { slug: 'times-tables', title: 'Times Tables', subtitle: '×  ÷  x²  √ · Tables 1–12', glyph: '×', years: [3, 4, 5] },
-  { slug: 'arithmetic', title: 'Arithmetic', subtitle: '+  −  ×  ÷ · 1–5 digits', glyph: '+', years: [3, 4, 5, 6] },
-  { slug: 'time', title: 'Time', subtitle: 'Read analog clocks · Roman · durations', iconName: 'clock', years: [3, 4, 5] },
-  { slug: 'fractions', title: 'Fractions', subtitle: '+ − × · same and different denominators', glyph: '¾', years: [3, 4, 5, 6] },
-  { slug: 'shapes', title: 'Shapes', subtitle: '2D · 3D · angles · area · coords', glyph: '⬡', years: [3, 4, 5, 6] },
-  { slug: 'charts', title: 'Charts', subtitle: 'Bar · pie · line · timetable', iconName: 'bar-chart-3', years: [3, 4, 5] },
-  { slug: 'number-sense', title: 'Number Sense', subtitle: 'Place value · rounding · Roman · Y3–Y6', iconName: 'hash', years: [3, 4, 5, 6] },
-  { slug: 'money', title: 'Money', subtitle: 'Add · change · totals · compare prices', iconName: 'pound', years: [3, 4, 5] },
-  { slug: 'decimals', title: 'Decimals', subtitle: 'Decimals · percentages · rounding · Y4–Y5', iconName: 'percent', years: [4, 5] },
-  { slug: 'number-theory', title: 'Number Theory', subtitle: 'Factors · multiples · primes · squares', iconName: 'sigma', years: [5] },
-  { slug: 'conversions', title: 'Conversions', subtitle: 'Units · perimeter · area · volume', iconName: 'ruler', years: [4, 5] },
-  { slug: 'word-problems', title: 'Word Problems', subtitle: 'One- and two-step problems · Y3–Y5', iconName: 'book-open', years: [3, 4, 5] },
-  { slug: 'ratio-proportion', title: 'Ratio & Proportion', subtitle: 'Percent · scale · ratio share · Y6', iconName: 'scale', years: [6] },
-  { slug: 'algebra', title: 'Algebra', subtitle: 'Formulae · missing numbers · sequences · Y6', iconName: 'variable', years: [6] },
-  { slug: 'statistics', title: 'Statistics', subtitle: 'Mean · median · mode · range · Y6', iconName: 'line-chart', years: [6] },
+  { slug: 'times-tables', nameKey: 'hub.modules.times-tables.name', blurbKey: 'hub.modules.times-tables.blurb', glyph: '×', years: [3, 4, 5] },
+  { slug: 'arithmetic', nameKey: 'hub.modules.arithmetic.name', blurbKey: 'hub.modules.arithmetic.blurb', glyph: '+', years: [3, 4, 5, 6] },
+  { slug: 'time', nameKey: 'hub.modules.time.name', blurbKey: 'hub.modules.time.blurb', iconName: 'clock', years: [3, 4, 5] },
+  { slug: 'fractions', nameKey: 'hub.modules.fractions.name', blurbKey: 'hub.modules.fractions.blurb', glyph: '¾', years: [3, 4, 5, 6] },
+  { slug: 'shapes', nameKey: 'hub.modules.shapes.name', blurbKey: 'hub.modules.shapes.blurb', glyph: '⬡', years: [3, 4, 5, 6] },
+  { slug: 'charts', nameKey: 'hub.modules.charts.name', blurbKey: 'hub.modules.charts.blurb', iconName: 'bar-chart-3', years: [3, 4, 5] },
+  { slug: 'number-sense', nameKey: 'hub.modules.number-sense.name', blurbKey: 'hub.modules.number-sense.blurb', iconName: 'hash', years: [3, 4, 5, 6] },
+  { slug: 'money', nameKey: 'hub.modules.money.name', blurbKey: 'hub.modules.money.blurb', iconName: 'pound', years: [3, 4, 5] },
+  { slug: 'decimals', nameKey: 'hub.modules.decimals.name', blurbKey: 'hub.modules.decimals.blurb', iconName: 'percent', years: [4, 5] },
+  { slug: 'number-theory', nameKey: 'hub.modules.number-theory.name', blurbKey: 'hub.modules.number-theory.blurb', iconName: 'sigma', years: [5] },
+  { slug: 'conversions', nameKey: 'hub.modules.conversions.name', blurbKey: 'hub.modules.conversions.blurb', iconName: 'ruler', years: [4, 5] },
+  { slug: 'word-problems', nameKey: 'hub.modules.word-problems.name', blurbKey: 'hub.modules.word-problems.blurb', iconName: 'book-open', years: [3, 4, 5] },
+  { slug: 'ratio-proportion', nameKey: 'hub.modules.ratio-proportion.name', blurbKey: 'hub.modules.ratio-proportion.blurb', iconName: 'scale', years: [6] },
+  { slug: 'algebra', nameKey: 'hub.modules.algebra.name', blurbKey: 'hub.modules.algebra.blurb', iconName: 'variable', years: [6] },
+  { slug: 'statistics', nameKey: 'hub.modules.statistics.name', blurbKey: 'hub.modules.statistics.blurb', iconName: 'line-chart', years: [6] },
 ];
 
 function ModuleIcon({ iconName }: { iconName: NonNullable<ModuleCard['iconName']> }) {
@@ -80,6 +81,7 @@ function saveYear(y: YearFilter) {
 }
 
 const Hub = () => {
+  const { t } = useT();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [showNewUserModal, setShowNewUserModal] = useState(false);
@@ -160,11 +162,11 @@ const Hub = () => {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
-              aria-label="Open menu"
+              aria-label={t('hub.menu.openAriaLabel')}
               aria-expanded={showMenu}
               className="text-muted-foreground hover:text-foreground transition-colors text-base flex items-center gap-1.5 min-h-[44px] px-2 -ml-2"
             >
-              <Menu className="w-5 h-5" aria-hidden="true" /> Menu
+              <Menu className="w-5 h-5" aria-hidden="true" /> {t('hub.menu.open')}
             </button>
             {showMenu && (
               <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
@@ -182,7 +184,7 @@ const Hub = () => {
                           : `hsl(${currentTheme.hue}, 85%, 58%)`,
                       }}
                     />
-                    Colors
+                    {t('hub.menu.colors')}
                   </button>
                   {showColorPicker && (
                     <div className="px-2 py-2 space-y-2">
@@ -220,7 +222,7 @@ const Hub = () => {
                         }}
                         className="w-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                       >
-                        Reset to Default
+                        {t('hub.menu.resetDefault')}
                       </button>
                     </div>
                   )}
@@ -233,7 +235,7 @@ const Hub = () => {
                       className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2 min-h-[44px]"
                     >
                       <Download className="w-4 h-4" />
-                      Install app
+                      {t('hub.menu.installApp')}
                     </button>
                   )}
                   <button
@@ -244,11 +246,11 @@ const Hub = () => {
                     className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2 min-h-[44px]"
                   >
                     <Lock className="w-4 h-4" />
-                    Parent area
+                    {t('hub.menu.parentArea')}
                   </button>
                 </div>
                 <div className="border-t mt-1 pt-1.5 px-4 pb-1 text-[10px] text-muted-foreground/60">
-                  v0.1.0-{(globalThis as unknown as { __GIT_HASH__?: string }).__GIT_HASH__ || 'dev'}
+                  {t('hub.version', { hash: (globalThis as unknown as { __GIT_HASH__?: string }).__GIT_HASH__ || 'dev' })}
                 </div>
               </div>
             )}
@@ -270,11 +272,11 @@ const Hub = () => {
 
         <div
           role="radiogroup"
-          aria-label="School year"
+          aria-label={t('hub.year.ariaLabel')}
           className="mb-4 md:mb-6 flex items-center justify-center gap-2"
         >
           {(['all', 3, 4, 5, 6] as YearFilter[]).map(y => {
-            const label = y === 'all' ? 'All' : `Y${y}`;
+            const label = y === 'all' ? t('hub.year.all') : t('hub.year.numbered', { n: y });
             const active = yearFilter === y;
             return (
               <button
@@ -316,9 +318,9 @@ const Hub = () => {
                   <ModuleIcon iconName={m.iconName!} />
                 </div>
               )}
-              <div className="text-lg md:text-xl font-bold text-foreground text-center">{m.title}</div>
+              <div className="text-lg md:text-xl font-bold text-foreground text-center">{t(m.nameKey)}</div>
               <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
-                {m.subtitle}
+                {t(m.blurbKey)}
               </div>
             </Card>
           ))}
@@ -326,7 +328,7 @@ const Hub = () => {
 
         {visibleModules.length === 0 && (
           <p className="text-center text-sm text-muted-foreground mt-4">
-            No modules tagged for this year yet.
+            {t('hub.empty')}
           </p>
         )}
       </div>

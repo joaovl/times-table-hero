@@ -35,6 +35,7 @@
 import { Fragment, type ReactNode } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n/react';
 
 export type VisualQuestionFeedback = 'none' | 'correct' | 'incorrect';
 
@@ -72,6 +73,7 @@ export function VisualQuestion({
   className,
   cardClassName,
 }: VisualQuestionProps) {
+  const { t } = useT();
   const Wrapper = className ? 'div' : Fragment;
   const wrapperProps = className ? { className } : {};
   return (
@@ -97,7 +99,7 @@ export function VisualQuestion({
         )}
         {feedback === 'correct' && (
           <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">
-            Brilliant!
+            {t('play.feedback.brilliant')}
           </div>
         )}
       </Card>

@@ -5,6 +5,7 @@ import { bugReport } from '@/lib/api/client';
 import { getRecentAttempts } from '@/lib/feedback/attemptLog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useT } from '@/lib/i18n/react';
 
 const TAPS_NEEDED = 5;
 const WINDOW_MS = 2000;
@@ -13,6 +14,7 @@ const WINDOW_MS = 2000;
 // 5 times within 2 seconds to open the feedback form; a child tapping it once
 // or twice sees nothing happen.
 export default function FeedbackTrigger() {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const taps = useRef<number[]>([]);
 
@@ -36,7 +38,7 @@ export default function FeedbackTrigger() {
     <>
       <button
         type="button"
-        aria-label="Report a problem (grown-ups: tap 5 times quickly)"
+        aria-label={t('feedback.triggerAriaLabel')}
         onClick={onTap}
         className="fixed top-2 right-2 z-40 h-9 w-9 rounded-full opacity-20 hover:opacity-70 transition-opacity flex items-center justify-center"
       >
@@ -48,6 +50,7 @@ export default function FeedbackTrigger() {
 }
 
 function FeedbackDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useT();
   const { account } = useAuth();
   const location = useLocation();
   const [description, setDescription] = useState('');
@@ -77,42 +80,42 @@ function FeedbackDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Report a problem">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={t('feedback.dialogAriaLabel')}>
       <Card className="w-full max-w-md p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Report a problem</h2>
-          <button type="button" aria-label="Close" onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
+          <h2 className="text-xl font-bold">{t('feedback.title')}</h2>
+          <button type="button" aria-label={t('common.close')} onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
         </div>
 
         {state === 'done' ? (
           <div className="space-y-3">
-            <p className="text-success font-semibold">Thanks — your report was sent.</p>
-            <Button className="w-full" onClick={onClose}>Close</Button>
+            <p className="text-success font-semibold">{t('feedback.success')}</p>
+            <Button className="w-full" onClick={onClose}>{t('common.close')}</Button>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3">
-            <label className="block text-sm font-medium" htmlFor="fb-desc">What went wrong?</label>
+            <label className="block text-sm font-medium" htmlFor="fb-desc">{t('feedback.whatWentWrong')}</label>
             <textarea
               id="fb-desc" value={description} onChange={e => setDescription(e.target.value)}
-              rows={4} placeholder="e.g. On coordinates, typing -2,-3 was marked wrong"
+              rows={4} placeholder={t('feedback.descriptionPlaceholder')}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
-            <label className="block text-sm font-medium" htmlFor="fb-sev">How bad is it?</label>
-            <select id="fb-sev" aria-label="Severity" value={severity} onChange={e => setSeverity(e.target.value as 'low' | 'medium' | 'high')}
+            <label className="block text-sm font-medium" htmlFor="fb-sev">{t('feedback.howBad')}</label>
+            <select id="fb-sev" aria-label={t('feedback.severityAriaLabel')} value={severity} onChange={e => setSeverity(e.target.value as 'low' | 'medium' | 'high')}
               className="w-full border rounded-md px-2 py-1">
-              <option value="low">Minor</option>
-              <option value="medium">Annoying</option>
-              <option value="high">Broken</option>
+              <option value="low">{t('feedback.severity.minor')}</option>
+              <option value="medium">{t('feedback.severity.annoying')}</option>
+              <option value="high">{t('feedback.severity.broken')}</option>
             </select>
             <p className="text-xs text-muted-foreground">
-              We&rsquo;ll include the last {recent.length} question{recent.length === 1 ? '' : 's'} answered on this device to help us reproduce it. No personal details are collected.
+              {t('feedback.recentInfo', { count: recent.length })}
             </p>
-            {state === 'error' && <p role="alert" className="text-sm text-destructive">Could not send. Please try again.</p>}
+            {state === 'error' && <p role="alert" className="text-sm text-destructive">{t('feedback.sendError')}</p>}
             <div className="flex gap-2">
               <Button type="submit" className="flex-1" disabled={state === 'sending' || !description.trim()}>
-                {state === 'sending' ? 'Sending…' : 'Send report'}
+                {state === 'sending' ? t('feedback.sending') : t('feedback.sendReport')}
               </Button>
-              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
             </div>
           </form>
         )}

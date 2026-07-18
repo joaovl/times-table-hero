@@ -1,4 +1,5 @@
 import type { RewardRulesConfig } from '@/lib/rewards-types';
+import { t } from '@/lib/i18n/i18n';
 
 // Client-side pre-flight for the reward-rules save. Returns a human message when
 // the config would be rejected by the server for a reason the parent can't
@@ -6,7 +7,7 @@ import type { RewardRulesConfig } from '@/lib/rewards-types';
 // the server hard-requires but the form lets you clear: the balance unit label.
 export function preflightRulesError(config: RewardRulesConfig): string | null {
   if (config.daily.mode === 'balance' && !(config.daily.balance?.unitLabel ?? '').trim()) {
-    return 'Please enter a reward unit (e.g. "hours of TV") before saving.';
+    return t('parent.rewards.save.unitRequired');
   }
   return null;
 }
@@ -16,12 +17,12 @@ export function preflightRulesError(config: RewardRulesConfig): string | null {
 export function saveErrorMessage(status: number | undefined): string {
   switch (status) {
     case 401:
-      return 'Your session expired — please sign in again, then save.';
+      return t('parent.rewards.save.sessionExpired');
     case 404:
-      return 'That child was not found — reload the page and try again.';
+      return t('parent.rewards.save.childNotFound');
     case 400:
-      return 'Some reward settings look incomplete — check the goal, reward unit and reward fields.';
+      return t('parent.rewards.save.incomplete');
     default:
-      return 'Could not save. Please check your connection and try again.';
+      return t('parent.rewards.save.generic');
   }
 }
