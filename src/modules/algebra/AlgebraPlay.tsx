@@ -17,6 +17,7 @@ import {
   isSequenceNextQuestion,
   isSequenceRuleQuestion,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
 
 export interface AlgebraIncorrectEntry {
   question: AlgebraQuestion;
@@ -38,6 +39,7 @@ interface Props {
 }
 
 export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
+  const { t } = useT();
   const [questions, setQuestions] = useState<AlgebraQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -152,7 +154,7 @@ export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -169,11 +171,11 @@ export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
     return `${m}:${r.toString().padStart(2, '0')}`;
   };
 
-  let placeholder = 'Type the answer';
+  let placeholder = t('algebra.play.typeTheAnswer');
   const inputType: 'number' | 'text' = isSequenceNextQuestion(q) || isSequenceRuleQuestion(q) ? 'text' : 'number';
   const inputMode: 'numeric' | 'text' = inputType === 'number' ? 'numeric' : 'text';
-  if (isSequenceNextQuestion(q)) placeholder = 'e.g. 14, 17';
-  else if (isSequenceRuleQuestion(q)) placeholder = 'e.g. add 4';
+  if (isSequenceNextQuestion(q)) placeholder = t('algebra.play.sequenceNextPlaceholder');
+  else if (isSequenceRuleQuestion(q)) placeholder = t('algebra.play.sequenceRulePlaceholder');
 
   return (
     <div className="min-h-screen bg-background py-2 px-3 md:py-[26px] md:px-8">
@@ -181,11 +183,11 @@ export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
             <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">
-              ← Quit
+              {t('algebra.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('algebra.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -214,7 +216,7 @@ export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('algebra.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -227,17 +229,17 @@ export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
-          <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">Work it out</p>
+          <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">{t('algebra.play.workItOut')}</p>
           <div className="font-mono text-2xl md:text-4xl font-extrabold text-foreground break-words">
             {questionPromptText(q)}
           </div>
           {feedback === 'incorrect' && (
             <div className="mt-4 text-xl md:text-2xl font-bold text-destructive break-words">
-              Answer: {answerText(q)}
+              {t('algebra.play.answer', { value: answerText(q) })}
             </div>
           )}
           {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
           )}
         </Card>
 
@@ -253,7 +255,7 @@ export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
               value={typed}
               onChange={e => setTyped(e.target.value)}
               placeholder={placeholder}
-              aria-label="Type the answer"
+              aria-label={t('algebra.play.typeTheAnswer')}
               className="h-12 md:h-[64px] text-center text-xl md:text-3xl font-bold"
               autoFocus
             />
@@ -262,7 +264,7 @@ export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
               disabled={typed.trim() === ''}
             >
-              Check
+              {t('algebra.play.check')}
             </Button>
           </form>
           )

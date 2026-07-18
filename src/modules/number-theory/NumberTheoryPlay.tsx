@@ -16,6 +16,8 @@ import {
   isAnswerCorrect,
   promptFor,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
+import { t } from '@/lib/i18n/i18n';
 
 export interface NumberTheoryGameResult {
   score: number;
@@ -77,6 +79,7 @@ function PromptDisplay({ q }: { q: NumberTheoryQuestion }) {
 }
 
 export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
+  const { t: tt } = useT();
   const [questions, setQuestions] = useState<NumberTheoryQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -163,8 +166,8 @@ export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
         const userDisplay =
           boolValue !== null
             ? boolValue
-              ? 'yes'
-              : 'no'
+              ? t('numberTheory.play.yes')
+              : t('numberTheory.play.no')
             : typedValue.trim() || null;
         setIncorrect(prev => [
           ...prev,
@@ -200,7 +203,7 @@ export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{tt('common.loading')}</div>
       </div>
     );
   }
@@ -222,9 +225,9 @@ export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
   const isNumber = (NUMBER_SKILLS as readonly string[]).includes(q.skill);
 
   const placeholder = isList
-    ? 'e.g. 1, 2, 3, 4'
+    ? tt('numberTheory.play.listPlaceholder')
     : isNumber
-      ? 'Type the answer'
+      ? tt('numberTheory.play.typeTheAnswer')
       : '';
 
   return (
@@ -233,11 +236,11 @@ export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
             <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">
-              ← Quit
+              {tt('numberTheory.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{tt('numberTheory.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -269,7 +272,7 @@ export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {tt('numberTheory.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -286,14 +289,14 @@ export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
                 onClick={() => submit('', true)}
                 className="py-6 text-xl font-bold shadow-button"
               >
-                Yes
+                {tt('numberTheory.play.yesButton')}
               </Button>
               <Button
                 onClick={() => submit('', false)}
                 variant="outline"
                 className="py-6 text-xl font-bold"
               >
-                No
+                {tt('numberTheory.play.noButton')}
               </Button>
             </div>
           )}
@@ -307,7 +310,7 @@ export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
                 value={typed}
                 onChange={e => setTyped(e.target.value)}
                 placeholder={placeholder}
-                aria-label="Type the answer"
+                aria-label={tt('numberTheory.play.typeTheAnswer')}
                 className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
                 autoFocus
               />
@@ -316,7 +319,7 @@ export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
                 className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                 disabled={typed.trim() === ''}
               >
-                Check
+                {tt('numberTheory.play.check')}
               </Button>
             </form>
           )}

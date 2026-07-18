@@ -11,6 +11,8 @@
 // ASCII letters ('a', 'b', 'x', 'p', 'l', 'w', 'n', ...).
 
 import { integerChoices } from '@/lib/game/choices';
+import { t, type MessageKey } from '@/lib/i18n/i18n';
+
 export type AlgebraSkill =
   | 'formula-eval'
   | 'missing-number'
@@ -104,6 +106,8 @@ export const ALL_SKILLS: AlgebraSkill[] = [
   'expression-evaluate',
 ];
 
+// Kept English-only: consumed by printConfig.ts/pdf.ts for the printed
+// worksheet, which is out of scope for this extraction pass.
 export const SKILL_LABELS: Record<AlgebraSkill, string> = {
   'formula-eval': 'Use a formula',
   'missing-number': 'Missing number',
@@ -111,6 +115,18 @@ export const SKILL_LABELS: Record<AlgebraSkill, string> = {
   'sequence-rule': 'Sequence rule',
   'expression-evaluate': 'Evaluate expression',
 };
+
+const SKILL_KEY: Record<AlgebraSkill, MessageKey> = {
+  'formula-eval': 'algebra.skills.formulaEval',
+  'missing-number': 'algebra.skills.missingNumber',
+  'sequence-next': 'algebra.skills.sequenceNext',
+  'sequence-rule': 'algebra.skills.sequenceRule',
+  'expression-evaluate': 'algebra.skills.expressionEvaluate',
+};
+
+export function skillLabel(s: AlgebraSkill): string {
+  return t(SKILL_KEY[s]);
+}
 
 export const CURRICULUM_TAGS: Record<
   AlgebraSkill,
@@ -309,21 +325,25 @@ export function generateAlgebraQuestions(
 export function questionPromptText(q: AlgebraQuestion): string {
   if (q.skill === 'formula-eval') {
     const givens = q.inputs.map(i => `${i.name} = ${i.value}`).join(', ');
-    return `If ${q.formulaText} and ${givens}, what is ${q.resultName}?`;
+    return t('algebra.play.formulaEval', { formula: q.formulaText, givens, result: q.resultName });
   }
   if (q.skill === 'missing-number') {
     // Render coeff*var as "3a" (no explicit ×).
     const constPart = q.constant === 0 ? '' : ` + ${q.constant}`;
-    return `${q.coeff}${q.varName}${constPart} = ${q.rhs}. Find ${q.varName}.`;
+    return t('algebra.play.missingNumber', {
+      expr: `${q.coeff}${q.varName}${constPart}`,
+      rhs: q.rhs,
+      varName: q.varName,
+    });
   }
   if (q.skill === 'sequence-next') {
     return `${q.sequence.join(', ')}, ?, ?`;
   }
   if (q.skill === 'sequence-rule') {
-    return `What is the rule? ${q.sequence.join(', ')}, ...`;
+    return t('algebra.play.whatIsTheRule', { sequence: q.sequence.join(', ') });
   }
   // expression-evaluate
-  return `If ${q.varName} = ${q.varValue}, what is ${q.expression}?`;
+  return t('algebra.play.evaluateExpression', { varName: q.varName, varValue: q.varValue, expression: q.expression });
 }
 
 export function answerText(q: AlgebraQuestion): string {

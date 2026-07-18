@@ -16,6 +16,8 @@
 // either writes "sqrt(49)" or draws a radical primitive. No glyphs from the
 // U+2200..U+22FF Math Operators block are emitted.
 
+import { t, type MessageKey } from '@/lib/i18n/i18n';
+
 export type NumberTheorySkill =
   | 'factors'
   | 'factor-pair'
@@ -43,6 +45,8 @@ export const NUMBER_THEORY_SKILL_OPTIONS: ReadonlyArray<NumberTheorySkill> = [
   'square-root',
 ];
 
+// Kept English-only: consumed by printConfig.ts/pdf.ts for the printed
+// worksheet, which is out of scope for this extraction pass.
 export const NUMBER_THEORY_SKILL_LABEL: Record<NumberTheorySkill, string> = {
   factors: 'Factors',
   'factor-pair': 'Factor pair (y/n)',
@@ -55,6 +59,23 @@ export const NUMBER_THEORY_SKILL_LABEL: Record<NumberTheorySkill, string> = {
   'common-factor': 'Common factors',
   'square-root': 'Square root',
 };
+
+const SKILL_KEY: Record<NumberTheorySkill, MessageKey> = {
+  factors: 'numberTheory.skills.factors',
+  'factor-pair': 'numberTheory.skills.factorPair',
+  multiples: 'numberTheory.skills.multiples',
+  'is-multiple': 'numberTheory.skills.isMultiple',
+  'prime-recognize': 'numberTheory.skills.primeRecognize',
+  'prime-list-19': 'numberTheory.skills.primeList19',
+  square: 'numberTheory.skills.square',
+  cube: 'numberTheory.skills.cube',
+  'common-factor': 'numberTheory.skills.commonFactor',
+  'square-root': 'numberTheory.skills.squareRoot',
+};
+
+export function skillLabel(s: NumberTheorySkill): string {
+  return t(SKILL_KEY[s]);
+}
 
 export const NUMBER_THEORY_DIFFICULTY_OPTIONS: ReadonlyArray<NumberTheoryDifficulty> = [
   'easy',
@@ -485,19 +506,19 @@ export function generateNumberTheoryQuestions(
 export function promptFor(q: NumberTheoryQuestion): string {
   switch (q.skill) {
     case 'factors':
-      return `Factors of ${q.n}?`;
+      return t('numberTheory.play.factorsOf', { n: q.n });
     case 'common-factor':
-      return `Common factors of ${q.n} and ${q.m}?`;
+      return t('numberTheory.play.commonFactorsOf', { n: q.n, m: q.m });
     case 'multiples':
-      return `First ${q.count} multiples of ${q.base}?`;
+      return t('numberTheory.play.firstMultiplesOf', { count: q.count, base: q.base });
     case 'factor-pair':
-      return `Is ${q.m} a factor of ${q.n}?`;
+      return t('numberTheory.play.isFactorOf', { m: q.m, n: q.n });
     case 'is-multiple':
-      return `Is ${q.n} a multiple of ${q.m}?`;
+      return t('numberTheory.play.isMultipleOf', { n: q.n, m: q.m });
     case 'prime-recognize':
-      return `Is ${q.n} prime?`;
+      return t('numberTheory.play.isPrime', { n: q.n });
     case 'prime-list-19':
-      return `Which of these are prime: ${q.candidates.join(', ')}?`;
+      return t('numberTheory.play.whichArePrime', { list: q.candidates.join(', ') });
     case 'square':
       return `${q.base}² = ?`;
     case 'cube':
@@ -516,11 +537,11 @@ export function answerString(q: NumberTheoryQuestion): string {
     case 'multiples':
       return q.answer.join(', ');
     case 'prime-list-19':
-      return q.answer.length === 0 ? 'none' : q.answer.join(', ');
+      return q.answer.length === 0 ? t('numberTheory.play.none') : q.answer.join(', ');
     case 'factor-pair':
     case 'is-multiple':
     case 'prime-recognize':
-      return q.answer ? 'yes' : 'no';
+      return q.answer ? t('numberTheory.play.yes') : t('numberTheory.play.no');
     case 'square':
     case 'cube':
     case 'square-root':

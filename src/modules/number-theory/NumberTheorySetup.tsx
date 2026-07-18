@@ -13,9 +13,11 @@ import type {
 import {
   generateNumberTheoryQuestions,
   NUMBER_THEORY_DIFFICULTY_OPTIONS,
-  NUMBER_THEORY_SKILL_LABEL,
   NUMBER_THEORY_SKILL_OPTIONS,
+  skillLabel,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
+import type { MessageKey } from '@/lib/i18n/i18n';
 import { generateNumberTheoryPdf } from './pdf';
 import {
   getSavedNumberTheoryPrintConfig,
@@ -45,6 +47,12 @@ const TIME_LIMITS = [
   { label: '5 min', value: 300 },
   { label: '10 min', value: 600 },
 ];
+
+const DIFFICULTY_LABEL_KEY: Record<NumberTheoryDifficulty, MessageKey> = {
+  easy: 'numberTheory.setup.difficultyEasy',
+  medium: 'numberTheory.setup.difficultyMedium',
+  hard: 'numberTheory.setup.difficultyHard',
+};
 
 const buttonClass = (active: boolean) =>
   cn(
@@ -95,7 +103,7 @@ function SkillChipPicker({ selected, onChange }: SkillChipPickerProps) {
           className={buttonClass(isSelected(s))}
         >
           <span className="text-[12px] md:text-[14px]">
-            {NUMBER_THEORY_SKILL_LABEL[s]}
+            {skillLabel(s)}
           </span>
         </button>
       ))}
@@ -111,6 +119,7 @@ export function NumberTheorySetup({
   onNavigateToHub,
   autoOpenPrint = false,
 }: Props) {
+  const { t } = useT();
   const [skills, setSkills] = useState<NumberTheorySkill[]>(['factors']);
   const [difficulty, setDifficulty] = useState<NumberTheoryDifficulty>('easy');
   const [gameMode, setGameMode] = useState<'questions' | 'time'>('questions');
@@ -184,14 +193,14 @@ export function NumberTheorySetup({
           onClick={onNavigateToHub}
           className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base mb-2"
         >
-          ← Hub
+          {t('common.backToHub')}
         </button>
 
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary text-center mb-1 md:mb-2">
-          Number Theory
+          {t('numberTheory.setup.title')}
         </h1>
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Factors, multiples, primes, squares and cubes
+          {currentUser ? t('numberTheory.setup.hiName', { name: currentUser.name }) : ''}{t('numberTheory.setup.subtitle')}
         </p>
 
         <div className="mb-3 md:mb-6 flex items-center justify-end">
@@ -204,14 +213,14 @@ export function NumberTheorySetup({
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Skills
+            {t('numberTheory.setup.skills')}
           </h2>
           <SkillChipPicker selected={skills} onChange={setSkills} />
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Difficulty
+            {t('numberTheory.setup.difficulty')}
           </h2>
           <div className="grid grid-cols-3 gap-2">
             {NUMBER_THEORY_DIFFICULTY_OPTIONS.map(d => (
@@ -220,7 +229,7 @@ export function NumberTheorySetup({
                 onClick={() => setDifficulty(d)}
                 className={buttonClass(difficulty === d)}
               >
-                <span className="text-[13px] md:text-[16px]">{d}</span>
+                <span className="text-[13px] md:text-[16px]">{t(DIFFICULTY_LABEL_KEY[d])}</span>
               </button>
             ))}
           </div>
@@ -228,20 +237,20 @@ export function NumberTheorySetup({
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Game Mode
+            {t('numberTheory.setup.gameMode')}
           </h2>
           <div className="flex gap-2 mb-3">
             <button
               onClick={() => setGameMode('questions')}
               className={cn('flex-1', buttonClass(gameMode === 'questions'))}
             >
-              <span className="text-[13px] md:text-[16px]">Questions</span>
+              <span className="text-[13px] md:text-[16px]">{t('numberTheory.setup.questions')}</span>
             </button>
             <button
               onClick={() => setGameMode('time')}
               className={cn('flex-1', buttonClass(gameMode === 'time'))}
             >
-              <span className="text-[13px] md:text-[16px]">Timed</span>
+              <span className="text-[13px] md:text-[16px]">{t('numberTheory.setup.timed')}</span>
             </button>
           </div>
           {gameMode === 'questions' ? (
@@ -277,14 +286,14 @@ export function NumberTheorySetup({
             onClick={() => setPrintOpen(true)}
             className="py-3 font-bold"
           >
-            Print Worksheet
+            {t('numberTheory.setup.printWorksheet')}
           </Button>
           <Button
             onClick={start}
             className="py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px]"
             size="lg"
           >
-            Let's Go!
+            {t('game.setup.start')}
           </Button>
         </div>
       </div>

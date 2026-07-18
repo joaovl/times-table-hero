@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 import type { NumberTheoryGameResult } from './NumberTheoryPlay';
 import { saveNumberTheorySession } from './storage';
+import { useT } from '@/lib/i18n/react';
 
 interface Props {
   result: NumberTheoryGameResult;
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function NumberTheoryResults({ result, onPlayAgain, onNewGame, userId }: Props) {
+  const { t } = useT();
   const percentage =
     result.total > 0 ? Math.round((result.score / result.total) * 100) : 0;
   const stars =
@@ -49,17 +51,17 @@ export function NumberTheoryResults({ result, onPlayAgain, onNewGame, userId }: 
   }, [result, userId, percentage]);
 
   const message =
-    percentage === 100 ? "Perfect score! You're a maths superstar!"
-      : percentage >= 80 ? 'Brilliant work! Keep it up!'
-      : percentage >= 60 ? 'Good effort! Practice makes perfect!'
-      : percentage >= 40 ? "Nice try! You'll get better!"
-      : "Keep practising, you've got this!";
+    percentage === 100 ? t('numberTheory.results.perfectScore')
+      : percentage >= 80 ? t('numberTheory.results.brilliantWork')
+      : percentage >= 60 ? t('numberTheory.results.goodEffort')
+      : percentage >= 40 ? t('numberTheory.results.niceTry')
+      : t('numberTheory.results.keepPractising');
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto max-w-xl">
         <div className="mb-8 text-center">
-          <div className="mb-3 flex justify-center gap-1" aria-label={`${stars} out of 5 stars`}>
+          <div className="mb-3 flex justify-center gap-1" aria-label={t('numberTheory.results.starsAriaLabel', { stars })}>
             {[1, 2, 3, 4, 5].map(n => (
               <Star
                 key={n}
@@ -85,18 +87,18 @@ export function NumberTheoryResults({ result, onPlayAgain, onNewGame, userId }: 
             </div>
           </div>
           <p className="text-2xl font-bold text-foreground">{message}</p>
-          <p className="mt-2 text-muted-foreground">{percentage}% correct</p>
+          <p className="mt-2 text-muted-foreground">{t('numberTheory.results.percentCorrect', { percent: percentage })}</p>
           {result.bestStreak >= 3 && (
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg">
               <Flame className="w-4 h-4" />
-              Best streak: {result.bestStreak}
+              {t('numberTheory.results.bestStreak', { count: result.bestStreak })}
             </div>
           )}
         </div>
 
         {result.incorrectQuestions.length > 0 && (
           <Card className="mb-4 p-4">
-            <h3 className="mb-3 font-bold text-foreground">Questions to practise:</h3>
+            <h3 className="mb-3 font-bold text-foreground">{t('numberTheory.results.questionsToPractise')}</h3>
             <div className="space-y-2">
               {result.incorrectQuestions.map((q, idx) => (
                 <div
@@ -108,7 +110,7 @@ export function NumberTheoryResults({ result, onPlayAgain, onNewGame, userId }: 
                     {q.correctAnswer}
                   </span>
                   {q.userAnswer !== null && (
-                    <span className="text-sm text-destructive">You said: {q.userAnswer}</span>
+                    <span className="text-sm text-destructive">{t('numberTheory.results.youSaid', { answer: q.userAnswer })}</span>
                   )}
                 </div>
               ))}
@@ -118,10 +120,10 @@ export function NumberTheoryResults({ result, onPlayAgain, onNewGame, userId }: 
 
         <div className="space-y-3">
           <Button onClick={onPlayAgain} className="w-full py-6 text-xl font-bold shadow-button">
-            Play Again
+            {t('numberTheory.results.playAgain')}
           </Button>
           <Button onClick={onNewGame} variant="outline" className="w-full py-4 font-bold">
-            Change Settings
+            {t('numberTheory.results.changeSettings')}
           </Button>
         </div>
       </div>
