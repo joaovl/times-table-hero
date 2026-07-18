@@ -12,6 +12,8 @@
 // construct so it stays integer).
 
 import { integerChoices } from '@/lib/game/choices';
+import { t, type MessageKey } from '@/lib/i18n/i18n';
+
 export type StatsSkill =
   | 'mean-calc'
   | 'mean-find-missing'
@@ -76,6 +78,8 @@ export const ALL_SKILLS: StatsSkill[] = [
   'range',
 ];
 
+// Kept English-only: consumed by printConfig.ts/pdf.ts for the printed
+// worksheet, which is out of scope for this extraction pass.
 export const SKILL_LABELS: Record<StatsSkill, string> = {
   'mean-calc': 'Mean',
   'mean-find-missing': 'Find missing (mean)',
@@ -83,6 +87,18 @@ export const SKILL_LABELS: Record<StatsSkill, string> = {
   mode: 'Mode',
   range: 'Range',
 };
+
+const SKILL_KEY: Record<StatsSkill, MessageKey> = {
+  'mean-calc': 'statistics.skills.meanCalc',
+  'mean-find-missing': 'statistics.skills.meanFindMissing',
+  median: 'statistics.skills.median',
+  mode: 'statistics.skills.mode',
+  range: 'statistics.skills.range',
+};
+
+export function skillLabel(s: StatsSkill): string {
+  return t(SKILL_KEY[s]);
+}
 
 export const CURRICULUM_TAGS: Record<
   StatsSkill,
@@ -293,22 +309,22 @@ function listText(values: number[]): string {
 
 export function questionPromptText(q: StatsQuestion): string {
   if (q.skill === 'mean-calc') {
-    return `Mean of ${listText(q.values)}?`;
+    return t('statistics.play.meanOf', { list: listText(q.values) });
   }
   if (q.skill === 'mean-find-missing') {
     const masked = q.values
       .map((v, i) => (i === q.missingIndex ? '?' : String(v)))
       .join(', ');
-    return `Mean of ${masked} is ${q.givenMean}. Find ?`;
+    return t('statistics.play.meanOfIsFindMissing', { masked, mean: q.givenMean });
   }
   if (q.skill === 'median') {
-    return `Median of ${listText(q.values)}?`;
+    return t('statistics.play.medianOf', { list: listText(q.values) });
   }
   if (q.skill === 'mode') {
-    return `Mode of ${listText(q.values)}?`;
+    return t('statistics.play.modeOf', { list: listText(q.values) });
   }
   // range
-  return `Range of ${listText(q.values)}?`;
+  return t('statistics.play.rangeOf', { list: listText(q.values) });
 }
 
 export function answerText(q: StatsQuestion): string {

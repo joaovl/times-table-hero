@@ -15,6 +15,7 @@ import {
   answerText,
   questionPromptText,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
 
 export interface StatsIncorrectEntry {
   question: StatsQuestion;
@@ -36,6 +37,7 @@ interface Props {
 }
 
 export function StatisticsPlay({ settings, onComplete, onQuit }: Props) {
+  const { t } = useT();
   const [questions, setQuestions] = useState<StatsQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -150,7 +152,7 @@ export function StatisticsPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -173,11 +175,11 @@ export function StatisticsPlay({ settings, onComplete, onQuit }: Props) {
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
             <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">
-              ← Quit
+              {t('statistics.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('statistics.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -206,7 +208,7 @@ export function StatisticsPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('statistics.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -219,17 +221,17 @@ export function StatisticsPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
-          <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">Work it out</p>
+          <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">{t('statistics.play.workItOut')}</p>
           <div className="font-mono text-2xl md:text-4xl font-extrabold text-foreground break-words">
             {questionPromptText(q)}
           </div>
           {feedback === 'incorrect' && (
             <div className="mt-4 text-xl md:text-2xl font-bold text-destructive break-words">
-              Answer: {answerText(q)}
+              {t('statistics.play.answer', { value: answerText(q) })}
             </div>
           )}
           {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
           )}
         </Card>
 
@@ -244,8 +246,8 @@ export function StatisticsPlay({ settings, onComplete, onQuit }: Props) {
               inputMode="numeric"
               value={typed}
               onChange={e => setTyped(e.target.value)}
-              placeholder="Type a number"
-              aria-label="Type the answer"
+              placeholder={t('statistics.play.typeANumber')}
+              aria-label={t('statistics.play.typeTheAnswer')}
               className="h-12 md:h-[64px] text-center text-xl md:text-3xl font-bold"
               autoFocus
             />
@@ -254,7 +256,7 @@ export function StatisticsPlay({ settings, onComplete, onQuit }: Props) {
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
               disabled={typed.trim() === ''}
             >
-              Check
+              {t('statistics.play.check')}
             </Button>
           </form>
           )
