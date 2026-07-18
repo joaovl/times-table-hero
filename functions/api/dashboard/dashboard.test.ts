@@ -10,11 +10,14 @@ import type { Db } from '../../_lib/auth/types';
 
 const MIGRATION = resolve(__dirname, '../../../migrations/0001_init.sql');
 const MIGRATION_0004 = resolve(__dirname, '../../../migrations/0004_kid_pins.sql');
+// /api/sessions now also checks for a kid session (Phase 3), which queries the
+// kid_sessions table, so the dashboard test DB must include migration 0006.
+const MIGRATION_0006 = resolve(__dirname, '../../../migrations/0006_kid_sessions.sql');
 let db: Db;
 let token: string;
 
 beforeEach(async () => {
-  db = createTestDb([MIGRATION, MIGRATION_0004]);
+  db = createTestDb([MIGRATION, MIGRATION_0004, MIGRATION_0006]);
   const res = await signup({ request: new Request('https://x/', { method: 'POST', body: JSON.stringify({ email: 'p@x.com', password: 'longenough' }) }), env: { DB: db } });
   token = (await res.json() as { token: string }).token;
 });
