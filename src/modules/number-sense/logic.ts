@@ -7,6 +7,7 @@
 
 import { integerChoices } from '@/lib/game/choices';
 import { t, type MessageKey } from '@/lib/i18n/i18n';
+import { formatNumber } from '@/lib/i18n/number';
 
 export type NumberSenseSkill =
   | 'place-value-3d'
@@ -699,7 +700,7 @@ export function questionPromptText(q: NumberSenseQuestion): string {
   }
   if (isRoundQuestion(q)) {
     const label = t(ROUND_NEAREST_KEY[q.nearest] ?? 'numberSense.nearest.1000000');
-    return t('numberSense.prompt.round', { number: q.number.toLocaleString('en-GB'), nearest: label });
+    return t('numberSense.prompt.round', { number: formatNumber(q.number, { useGrouping: true }), nearest: label });
   }
   if (isSequenceQuestion(q)) {
     const cells = q.sequence.map((n, i) => (q.missingIndices.includes(i) ? '?' : String(n)));

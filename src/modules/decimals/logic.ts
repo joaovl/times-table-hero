@@ -13,6 +13,7 @@
 // to either the screen or the PDF answer key.
 
 import { t, type MessageKey } from '@/lib/i18n/i18n';
+import { formatNumber } from '@/lib/i18n/number';
 
 export type DecimalsSkill =
   | 'identify-tenths'
@@ -222,11 +223,14 @@ function pickFrom<T>(arr: readonly T[]): T {
 
 // Format `n` to exactly `dp` decimal places. Uses string truncation so we
 // don't leak floating-point dust (e.g. 0.1 + 0.2 → "0.3", not "0.30000...").
+// Locale-aware: the decimal separator follows the app language ("0,3" in fr);
+// this is the single display choke point, so prompts, choices and canonical
+// answers stay mutually consistent per locale.
 export function formatDecimal(n: number, dp: number): string {
   if (!isFinite(n)) return String(n);
   const rounded = roundTo(n, dp);
-  if (dp <= 0) return String(Math.round(rounded));
-  return rounded.toFixed(dp);
+  if (dp <= 0) return formatNumber(Math.round(rounded));
+  return formatNumber(rounded, { minimumFractionDigits: dp, maximumFractionDigits: dp });
 }
 
 // Round to a given number of decimal places using string-based rounding so

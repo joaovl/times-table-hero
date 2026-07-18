@@ -23,6 +23,7 @@ import {
 } from './logic';
 import { useT } from '@/lib/i18n/react';
 import type { MessageKey } from '@/lib/i18n/i18n';
+import { formatNumber } from '@/lib/i18n/number';
 
 export interface NumberSenseIncorrectEntry {
   question: NumberSenseQuestion;
@@ -43,9 +44,9 @@ interface Props {
   onQuit: () => void;
 }
 
-// Format a number with thousands separators for screen display.
+// Format a number with thousands separators for screen display (app locale).
 function fmt(n: number): string {
-  return n.toLocaleString('en-GB');
+  return formatNumber(n, { useGrouping: true });
 }
 
 // Highlight the targeted digit inside the place-value prompt. We render the

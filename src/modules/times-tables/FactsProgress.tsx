@@ -3,6 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { loadFactStore } from '@/lib/practice/factStore';
 import { stageOf, type FactStage, type FactStat } from '@/lib/practice/factModel';
+import { formatNumber } from '@/lib/i18n/number';
+
+// Average answer time in seconds, 1 decimal place, locale decimal separator.
+function fmtSeconds(ms: number): string {
+  return formatNumber(ms / 1000, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
 
 // A Times Tables Rock Stars–style heatmap: the 12×12 multiplication grid, each
 // cell coloured by how well this player knows that fact, plus a per-table speed
@@ -106,9 +112,9 @@ export function FactsProgress({ userId, onBack }: { userId?: string; onBack: () 
             <h2 className="font-bold">Speed</h2>
             {fastest && (
               <p className="text-sm">
-                🔥 Fastest: your <strong>{fastest.table}× table</strong> ({(fastest.avgMs / 1000).toFixed(1)}s each)
+                🔥 Fastest: your <strong>{fastest.table}× table</strong> ({fmtSeconds(fastest.avgMs)}s each)
                 {slowest && slowest.table !== fastest.table && (
-                  <> · Work on your <strong>{slowest.table}× table</strong> ({(slowest.avgMs / 1000).toFixed(1)}s)</>
+                  <> · Work on your <strong>{slowest.table}× table</strong> ({fmtSeconds(slowest.avgMs)}s)</>
                 )}
               </p>
             )}
@@ -116,7 +122,7 @@ export function FactsProgress({ userId, onBack }: { userId?: string; onBack: () 
               {tableSpeeds.map(t => (
                 <div key={t.table} className="rounded-md bg-muted/60 p-1">
                   <div className="text-xs font-bold">{t.table}×</div>
-                  <div className="text-[10px] text-muted-foreground">{t.avgMs === null ? '—' : `${(t.avgMs / 1000).toFixed(1)}s`}</div>
+                  <div className="text-[10px] text-muted-foreground">{t.avgMs === null ? '—' : `${fmtSeconds(t.avgMs)}s`}</div>
                 </div>
               ))}
             </div>
