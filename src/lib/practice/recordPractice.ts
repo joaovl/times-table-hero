@@ -1,4 +1,4 @@
-import { tokenStore } from '@/lib/api/client';
+import { tokenStore, kidTokenStore, currentKid } from '@/lib/api/client';
 import { getLink } from './kidLink';
 import { enqueue, flush } from './outbox';
 
@@ -18,6 +18,16 @@ export interface PracticeRecord {
  * device. Otherwise it's a no-op, preserving the account-free experience.
  */
 export function recordPractice(localProfileId: string | undefined, r: PracticeRecord): void {
+  // Preferred (Phase 3): a kid signed in on a paired device logs straight to
+  // their own cloud record via the kid session token — no manual link needed.
+  const kid = currentKid();
+  if (kid && kidTokenStore.get()) {
+    enqueue({ id: crypto.randomUUID(), kidId: kid.id, ...r });
+    void flush();
+    return;
+  }
+  // Legacy: a device-local profile manually linked to a cloud kid, with a parent
+  // signed in on the device. Otherwise a no-op (account-free play).
   if (!localProfileId) return;
   const kidId = getLink(localProfileId);
   if (!kidId || !tokenStore.get()) return;

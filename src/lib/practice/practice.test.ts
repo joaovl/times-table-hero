@@ -3,9 +3,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const sessionsLog = vi.fn();
 const tokenGet = vi.fn(() => 'tok' as string | null);
+const kidTokenGet = vi.fn(() => null as string | null);
+const currentKidGet = vi.fn(() => null as { id: string; name: string; color: string; icon: string } | null);
 vi.mock('@/lib/api/client', () => ({
   sessionsLog: (...a: unknown[]) => sessionsLog(...a),
   tokenStore: { get: () => tokenGet(), set: vi.fn(), clear: vi.fn() },
+  kidTokenStore: { get: () => kidTokenGet(), set: vi.fn(), clear: vi.fn() },
+  currentKid: () => currentKidGet(),
 }));
 
 import { getLink, setLink, clearLink } from './kidLink';
@@ -19,6 +23,8 @@ beforeEach(() => {
   localStorage.clear();
   sessionsLog.mockReset().mockResolvedValue(undefined);
   tokenGet.mockReturnValue('tok');
+  kidTokenGet.mockReturnValue(null);
+  currentKidGet.mockReturnValue(null);
 });
 
 describe('kidLink', () => {
@@ -74,5 +80,16 @@ describe('recordPractice (gating)', () => {
   it('is a no-op with no profile id', () => {
     recordPractice(undefined, rec());
     expect(outbox()).toHaveLength(0);
+  });
+
+  it('logs to the signed-in kid (kid session) regardless of local link or profile id', () => {
+    // Phase 3: a kid signed in on a paired device logs straight to their cloud
+    // record — no manual link, no parent session, no local profile id needed.
+    kidTokenGet.mockReturnValue('kid-tok');
+    currentKidGet.mockReturnValue({ id: 'kid9', name: 'Ada', color: 'red', icon: 'star' });
+    tokenGet.mockReturnValue(null);
+    recordPractice(undefined, rec());
+    expect(outbox()).toHaveLength(1);
+    expect(outbox()[0].kidId).toBe('kid9');
   });
 });

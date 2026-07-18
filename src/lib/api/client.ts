@@ -2,6 +2,8 @@ import type { RewardRulesConfig } from '@/lib/rewards-types';
 
 const TOKEN_KEY = 'tth_token';
 const PAIRING_TOKEN_KEY = 'tth_pairing_token';
+const KID_TOKEN_KEY = 'tth_kid_token';
+const CURRENT_KID_KEY = 'tth_current_kid';
 
 export const tokenStore = {
   get: (): string | null => localStorage.getItem(TOKEN_KEY),
@@ -14,6 +16,24 @@ export const pairingTokenStore = {
   set: (t: string): void => localStorage.setItem(PAIRING_TOKEN_KEY, t),
   clear: (): void => localStorage.removeItem(PAIRING_TOKEN_KEY),
 };
+
+// The kid session token + the currently signed-in kid, on a paired device.
+export const kidTokenStore = {
+  get: (): string | null => localStorage.getItem(KID_TOKEN_KEY),
+  set: (t: string): void => localStorage.setItem(KID_TOKEN_KEY, t),
+  clear: (): void => localStorage.removeItem(KID_TOKEN_KEY),
+};
+
+export interface PairKid { id: string; name: string; color: string; icon: string }
+
+export function currentKid(): PairKid | null {
+  try {
+    const raw = localStorage.getItem(CURRENT_KID_KEY);
+    return raw ? (JSON.parse(raw) as PairKid) : null;
+  } catch {
+    return null;
+  }
+}
 
 export class ApiError extends Error {
   code: string;
@@ -38,10 +58,12 @@ interface ApiResult<T> {
 
 async function apiFetch<T>(
   path: string,
-  opts: { method?: string; body?: unknown } = {},
+  opts: { method?: string; body?: unknown; token?: string | null } = {},
 ): Promise<ApiResult<T>> {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
-  const token = tokenStore.get();
+  // `token` overrides the default parent-session token when provided (even null)
+  // — used to send a device-pairing token or a kid session token instead.
+  const token = opts.token !== undefined ? opts.token : tokenStore.get();
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(path, {
     method: opts.method ?? 'GET',
@@ -146,7 +168,13 @@ export interface SessionInput {
 }
 
 export async function sessionsLog(kidId: string, sessions: SessionInput[]): Promise<void> {
-  const { status, data } = await apiFetch<{ inserted: number }>('/api/sessions', { method: 'POST', body: { kidId, sessions } });
+  // Prefer the kid session token when a kid is signed in (practice logs directly
+  // to that kid); otherwise fall back to the parent-session token (legacy path).
+  const kidTok = kidTokenStore.get();
+  const { status, data } = await apiFetch<{ inserted: number }>(
+    '/api/sessions',
+    { method: 'POST', body: { kidId, sessions }, token: kidTok ?? undefined },
+  );
   if (status >= 400) throw new ApiError(codeOf(data), status);
 }
 
@@ -207,4 +235,29 @@ export async function pairList(): Promise<PairedDevice[]> {
 export async function pairRevoke(tokenHashPrefix: string): Promise<void> {
   const { status, data } = await apiFetch<{ ok: true }>('/api/pair/revoke', { method: 'POST', body: { tokenHashPrefix } });
   if (status >= 400) throw new ApiError(codeOf(data), status);
+}
+
+// List the paired account's kids for the "Who's playing?" screen — authenticated
+// by the device-pairing token, not a parent session.
+export async function pairKids(): Promise<PairKid[]> {
+  const { status, data } = await apiFetch<{ kids: PairKid[] }>('/api/pair/kids', { token: pairingTokenStore.get() });
+  if (status !== 200 || !data) throw new ApiError(codeOf(data), status);
+  return data.kids;
+}
+
+// Sign a kid in with their PIN on a paired device; stores the kid session token
+// and the current kid so practice logs straight to that kid's cloud record.
+export async function kidSignin(kid: PairKid, pin: string): Promise<void> {
+  const { status, data } = await apiFetch<{ token: string }>(
+    '/api/kid/signin',
+    { method: 'POST', body: { kidId: kid.id, pin }, token: pairingTokenStore.get() },
+  );
+  if (status >= 400 || !data) throw new ApiError(codeOf(data), status);
+  kidTokenStore.set(data.token);
+  localStorage.setItem(CURRENT_KID_KEY, JSON.stringify(kid));
+}
+
+export function kidSignout(): void {
+  kidTokenStore.clear();
+  localStorage.removeItem(CURRENT_KID_KEY);
 }
