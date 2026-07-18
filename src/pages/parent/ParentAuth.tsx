@@ -65,7 +65,7 @@ export default function ParentAuth() {
           {mode === 'signup' && (
             <>
               <label className="block text-sm font-medium" htmlFor="family-pin">{t('auth.familyPin')}</label>
-              <Input id="family-pin" aria-label="Family PIN" inputMode="numeric" maxLength={6} autoComplete="off"
+              <Input id="family-pin" aria-label={t('auth.familyPin')} inputMode="numeric" maxLength={6} autoComplete="off"
                 value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} />
               <p className="text-xs text-muted-foreground">
                 {t('auth.familyPinHelp')}
