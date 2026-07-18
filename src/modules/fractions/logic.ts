@@ -24,6 +24,8 @@
 // thousandths and relate them to tenths, hundredths and decimal
 // equivalents", Y5 Fractions) and not double-count coverage.
 
+import { t, type MessageKey } from '@/lib/i18n/i18n';
+
 export type FractionSkill =
   | 'add-same'
   | 'sub-same'
@@ -227,6 +229,8 @@ export const ALL_SKILLS: FractionSkill[] = [
 
 export const DENOMINATOR_OPTIONS: number[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
+// English-only labels: used by the PDF worksheets (WinAnsi font, printed in
+// English) and as the source wording for the translated skillLabel() below.
 export const SKILL_LABELS: Record<FractionSkill, string> = {
   'add-same': 'Add (same denom)',
   'sub-same': 'Subtract (same denom)',
@@ -245,6 +249,30 @@ export const SKILL_LABELS: Record<FractionSkill, string> = {
   'sub-mixed': 'Subtract mixed numbers',
   'div-frac-whole': 'Fraction ÷ whole',
 };
+
+const SKILL_KEY: Record<FractionSkill, MessageKey> = {
+  'add-same': 'fractions.skills.addSame',
+  'sub-same': 'fractions.skills.subSame',
+  'add-diff': 'fractions.skills.addDiff',
+  'sub-diff': 'fractions.skills.subDiff',
+  id: 'fractions.skills.id',
+  eq: 'fractions.skills.eq',
+  cmp: 'fractions.skills.cmp',
+  mixed: 'fractions.skills.mixed',
+  'mul-by-whole': 'fractions.skills.mulByWhole',
+  'mixed-mul-whole': 'fractions.skills.mixedMulWhole',
+  'mul-frac': 'fractions.skills.mulFrac',
+  'to-decimal': 'fractions.skills.toDecimal',
+  'from-decimal': 'fractions.skills.fromDecimal',
+  'add-mixed': 'fractions.skills.addMixed',
+  'sub-mixed': 'fractions.skills.subMixed',
+  'div-frac-whole': 'fractions.skills.divFracWhole',
+};
+
+/** Translated on-screen label for a fraction skill (PDFs keep SKILL_LABELS). */
+export function skillLabel(s: FractionSkill): string {
+  return t(SKILL_KEY[s]);
+}
 
 export const SKILL_SHORT: Record<FractionSkill, string> = {
   'add-same': 'add-same',

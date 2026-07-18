@@ -39,6 +39,8 @@ import { FractionDisplay } from './FractionDisplay';
 import { E2EOracle } from '@/lib/e2e/oracle';
 import { E2E_ENABLED, feedbackDelay } from '@/lib/e2e/env';
 import { fractionOpOracle } from './oracle';
+import { useT } from '@/lib/i18n/react';
+import { formatNumber, parseAnswer } from '@/lib/i18n/number';
 
 // Generic user-answer payload — different skills have different shapes.
 // Stored in incorrectQuestions so the results screen can render whatever the
@@ -205,6 +207,7 @@ function parseMixedAnswer(
 }
 
 export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
+  const { t } = useT();
   const [questions, setQuestions] = useState<FractionQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -367,7 +370,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
           recordWrong();
           advance(false);
         } else if (grade === 'equivalent') {
-          advance(true, `${q.answer.num}/${q.answer.den} is the simplest form`);
+          advance(true, t('fractions.play.simplestForm', { frac: `${q.answer.num}/${q.answer.den}` }));
         } else {
           advance(true);
         }
@@ -698,12 +701,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
 
   const handleDecimalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const v = parseFloat(decimalInput);
-    if (isNaN(v)) {
-      submitDecimal(null);
-      return;
-    }
-    submitDecimal(v);
+    // Locale-tolerant: accepts "0.25" and "0,25" alike.
+    submitDecimal(parseAnswer(decimalInput));
   };
 
   // Build the correct-answer display string for the new skills.
@@ -719,8 +718,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
     }
     if (isMulFracQuestion(q)) return `${q.answer.num}/${q.answer.den}`;
     if (isToDecimalQuestion(q)) {
-      // Strip trailing zero(s) for clean display.
-      return q.answer.toFixed(2).replace(/\.?0+$/, '');
+      // Up to 2 dp, trailing zeros dropped, locale decimal separator.
+      return formatNumber(q.answer, { maximumFractionDigits: 2 });
     }
     if (isFromDecimalQuestion(q)) return `${q.num}/${q.den}`;
     if (isMixedAddSubQuestion(q)) {
@@ -748,7 +747,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -771,11 +770,11 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
             <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">
-              ← Quit
+              {t('fractions.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('fractions.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -804,7 +803,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('fractions.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -834,7 +833,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
               )}
               {feedback === 'correct' && (
                 <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">
-                  {feedbackNote ? 'Correct!' : 'Brilliant!'}
+                  {feedbackNote ? t('play.feedback.correct') : t('play.feedback.brilliant')}
                 </div>
               )}
               {feedback === 'correct' && feedbackNote && (
@@ -847,7 +846,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
             <>
               <div className="flex flex-col items-center gap-3 text-foreground">
                 <div className="text-base md:text-lg font-semibold text-muted-foreground">
-                  What fraction is shaded?
+                  {t('fractions.play.whatShaded')}
                 </div>
                 {q.figure === 'circle' ? (
                   <CircleFigure total={q.total} shaded={q.shaded} />
@@ -867,7 +866,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -898,7 +897,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -912,11 +911,11 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
               </div>
               {feedback === 'incorrect' && (
                 <div className="mt-3 text-destructive text-2xl md:text-3xl font-bold">
-                  Answer: {q.answer}
+                  {t('fractions.play.answer', { value: q.answer })}
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -949,7 +948,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -968,7 +967,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -987,7 +986,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -1007,7 +1006,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -1016,7 +1015,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
             <>
               <div className="flex flex-col items-center gap-2 text-foreground">
                 <div className="text-base md:text-lg font-semibold text-muted-foreground">
-                  Write this fraction as a decimal:
+                  {t('fractions.play.writeAsDecimal')}
                 </div>
                 <FractionDisplay frac={{ num: q.num, den: q.den }} size="md" />
               </div>
@@ -1026,7 +1025,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -1035,10 +1034,10 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
             <>
               <div className="flex flex-col items-center gap-2 text-foreground">
                 <div className="text-base md:text-lg font-semibold text-muted-foreground">
-                  Write this decimal as a fraction:
+                  {t('fractions.play.writeAsFraction')}
                 </div>
                 <span className="text-4xl md:text-5xl font-extrabold">
-                  {q.decimal.toFixed(2).replace(/\.?0+$/, '')}
+                  {formatNumber(q.decimal, { maximumFractionDigits: 2 })}
                 </span>
               </div>
               {feedback === 'incorrect' && (
@@ -1048,7 +1047,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -1069,7 +1068,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -1089,7 +1088,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                 </div>
               )}
               {feedback === 'correct' && (
-                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+                <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
               )}
             </>
           )}
@@ -1107,8 +1106,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={numInput}
                     onChange={e => setNumInput(e.target.value)}
-                    placeholder="num"
-                    aria-label="Numerator"
+                    placeholder={t('fractions.play.numPlaceholder')}
+                    aria-label={t('fractions.play.numerator')}
                     className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
                     autoFocus
                   />
@@ -1118,8 +1117,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={denInput}
                     onChange={e => setDenInput(e.target.value)}
-                    placeholder="den"
-                    aria-label="Denominator"
+                    placeholder={t('fractions.play.denPlaceholder')}
+                    aria-label={t('fractions.play.denominator')}
                     className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
                   />
                 </div>
@@ -1128,7 +1127,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                   className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                   disabled={numInput === '' || denInput === ''}
                 >
-                  Check
+                  {t('fractions.play.check')}
                 </Button>
               </form>
             )}
@@ -1142,8 +1141,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={eqInput}
                     onChange={e => setEqInput(e.target.value)}
-                    placeholder={q.missing === 'num' ? 'numerator' : 'denominator'}
-                    aria-label={q.missing === 'num' ? 'Missing numerator' : 'Missing denominator'}
+                    placeholder={q.missing === 'num' ? t('fractions.play.numeratorPlaceholder') : t('fractions.play.denominatorPlaceholder')}
+                    aria-label={q.missing === 'num' ? t('fractions.play.missingNumerator') : t('fractions.play.missingDenominator')}
                     className="h-12 md:h-[64px] w-32 md:w-40 text-center text-2xl md:text-3xl font-bold"
                     autoFocus
                   />
@@ -1153,7 +1152,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                   className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                   disabled={eqInput === ''}
                 >
-                  Check
+                  {t('fractions.play.check')}
                 </Button>
               </form>
             )}
@@ -1181,8 +1180,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="text"
                     value={mixedInput}
                     onChange={e => setMixedInput(e.target.value)}
-                    placeholder={q.direction === 'to-mixed' ? 'e.g. 2 1/3' : 'e.g. 7/3'}
-                    aria-label="Answer"
+                    placeholder={q.direction === 'to-mixed' ? t('fractions.play.mixedPlaceholder') : t('fractions.play.improperPlaceholder')}
+                    aria-label={t('fractions.play.answerAria')}
                     className="h-12 md:h-[64px] w-48 md:w-60 text-center text-2xl md:text-3xl font-bold"
                     autoFocus
                   />
@@ -1192,7 +1191,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                   className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                   disabled={mixedInput.trim() === ''}
                 >
-                  Check
+                  {t('fractions.play.check')}
                 </Button>
               </form>
             )}
@@ -1207,8 +1206,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={wholeInput}
                     onChange={e => setWholeInput(e.target.value)}
-                    placeholder="whole"
-                    aria-label="Whole part (optional)"
+                    placeholder={t('fractions.play.wholePlaceholder')}
+                    aria-label={t('fractions.play.wholePartOptional')}
                     className="h-12 md:h-[64px] w-20 md:w-24 text-center text-2xl md:text-3xl font-bold"
                   />
                   <Input
@@ -1217,8 +1216,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={numInput}
                     onChange={e => setNumInput(e.target.value)}
-                    placeholder="num"
-                    aria-label="Numerator"
+                    placeholder={t('fractions.play.numPlaceholder')}
+                    aria-label={t('fractions.play.numerator')}
                     className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
                     autoFocus
                   />
@@ -1228,8 +1227,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={denInput}
                     onChange={e => setDenInput(e.target.value)}
-                    placeholder="den"
-                    aria-label="Denominator"
+                    placeholder={t('fractions.play.denPlaceholder')}
+                    aria-label={t('fractions.play.denominator')}
                     className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
                   />
                 </div>
@@ -1238,7 +1237,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                   className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                   disabled={numInput === '' || denInput === ''}
                 >
-                  Check
+                  {t('fractions.play.check')}
                 </Button>
               </form>
             )}
@@ -1253,8 +1252,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={mmwWholeInput}
                     onChange={e => setMmwWholeInput(e.target.value)}
-                    placeholder="whole"
-                    aria-label="Whole part"
+                    placeholder={t('fractions.play.wholePlaceholder')}
+                    aria-label={t('fractions.play.wholePart')}
                     className="h-12 md:h-[64px] w-20 md:w-24 text-center text-2xl md:text-3xl font-bold"
                     autoFocus
                   />
@@ -1263,8 +1262,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={mmwNumInput}
                     onChange={e => setMmwNumInput(e.target.value)}
-                    placeholder="num"
-                    aria-label="Numerator"
+                    placeholder={t('fractions.play.numPlaceholder')}
+                    aria-label={t('fractions.play.numerator')}
                     className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
                   />
                   <span className="text-3xl md:text-4xl font-extrabold text-foreground">/</span>
@@ -1273,8 +1272,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={mmwDenInput}
                     onChange={e => setMmwDenInput(e.target.value)}
-                    placeholder="den"
-                    aria-label="Denominator"
+                    placeholder={t('fractions.play.denPlaceholder')}
+                    aria-label={t('fractions.play.denominator')}
                     className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
                   />
                 </div>
@@ -1285,7 +1284,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     mmwWholeInput === '' || mmwNumInput === '' || mmwDenInput === ''
                   }
                 >
-                  Check
+                  {t('fractions.play.check')}
                 </Button>
               </form>
             )}
@@ -1300,8 +1299,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={mmwWholeInput}
                     onChange={e => setMmwWholeInput(e.target.value)}
-                    placeholder="whole"
-                    aria-label="Whole part"
+                    placeholder={t('fractions.play.wholePlaceholder')}
+                    aria-label={t('fractions.play.wholePart')}
                     className="h-12 md:h-[64px] w-20 md:w-24 text-center text-2xl md:text-3xl font-bold"
                     autoFocus
                   />
@@ -1310,8 +1309,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={mmwNumInput}
                     onChange={e => setMmwNumInput(e.target.value)}
-                    placeholder="num"
-                    aria-label="Numerator"
+                    placeholder={t('fractions.play.numPlaceholder')}
+                    aria-label={t('fractions.play.numerator')}
                     className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
                   />
                   <span className="text-3xl md:text-4xl font-extrabold text-foreground">/</span>
@@ -1320,8 +1319,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={mmwDenInput}
                     onChange={e => setMmwDenInput(e.target.value)}
-                    placeholder="den"
-                    aria-label="Denominator"
+                    placeholder={t('fractions.play.denPlaceholder')}
+                    aria-label={t('fractions.play.denominator')}
                     className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
                   />
                 </div>
@@ -1332,7 +1331,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     mmwWholeInput === '' || mmwNumInput === '' || mmwDenInput === ''
                   }
                 >
-                  Check
+                  {t('fractions.play.check')}
                 </Button>
               </form>
             )}
@@ -1347,8 +1346,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={numInput}
                     onChange={e => setNumInput(e.target.value)}
-                    placeholder="num"
-                    aria-label="Numerator"
+                    placeholder={t('fractions.play.numPlaceholder')}
+                    aria-label={t('fractions.play.numerator')}
                     className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
                     autoFocus
                   />
@@ -1358,8 +1357,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="numeric"
                     value={denInput}
                     onChange={e => setDenInput(e.target.value)}
-                    placeholder="den"
-                    aria-label="Denominator"
+                    placeholder={t('fractions.play.denPlaceholder')}
+                    aria-label={t('fractions.play.denominator')}
                     className="h-12 md:h-[64px] w-24 md:w-28 text-center text-2xl md:text-3xl font-bold"
                   />
                 </div>
@@ -1368,7 +1367,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                   className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                   disabled={numInput === '' || denInput === ''}
                 >
-                  Check
+                  {t('fractions.play.check')}
                 </Button>
               </form>
             )}
@@ -1383,8 +1382,8 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="decimal"
                     value={decimalInput}
                     onChange={e => setDecimalInput(e.target.value)}
-                    placeholder="e.g. 0.25"
-                    aria-label="Decimal answer"
+                    placeholder={t('fractions.play.decimalPlaceholder')}
+                    aria-label={t('fractions.play.decimalAnswer')}
                     className="h-12 md:h-[64px] w-40 md:w-48 text-center text-2xl md:text-3xl font-bold"
                     autoFocus
                   />
@@ -1394,7 +1393,7 @@ export function FractionsPlay({ settings, onComplete, onQuit }: Props) {
                   className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                   disabled={decimalInput.trim() === ''}
                 >
-                  Check
+                  {t('fractions.play.check')}
                 </Button>
               </form>
             )}

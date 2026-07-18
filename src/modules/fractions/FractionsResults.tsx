@@ -21,6 +21,9 @@ import {
   isFromDecimalQuestion,
 } from './logic';
 import { FractionDisplay } from './FractionDisplay';
+import { useT } from '@/lib/i18n/react';
+import { t as tGlobal } from '@/lib/i18n/i18n';
+import { formatNumber } from '@/lib/i18n/number';
 
 interface Props {
   result: FractionGameResult;
@@ -72,7 +75,7 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
           <FractionDisplay frac={q.answer} size="sm" />
         </div>
         {youSaid && (
-          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+          <span className="text-sm text-destructive whitespace-nowrap">{tGlobal('fractions.results.youSaid', { answer: youSaid })}</span>
         )}
       </div>
     );
@@ -83,13 +86,13 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
       <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-4 py-2">
         <div className="flex items-center gap-2 text-foreground">
           <span className="font-semibold text-sm">
-            {q.shaded} of {q.total} {q.figure === 'circle' ? 'sectors' : 'cells'} shaded
+            {tGlobal(q.figure === 'circle' ? 'fractions.results.sectorsShaded' : 'fractions.results.cellsShaded', { shaded: q.shaded, total: q.total })}
           </span>
           <span className="font-bold text-base">=</span>
           <FractionDisplay frac={q.answer} size="sm" />
         </div>
         {youSaid && (
-          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+          <span className="text-sm text-destructive whitespace-nowrap">{tGlobal('fractions.results.youSaid', { answer: youSaid })}</span>
         )}
       </div>
     );
@@ -104,7 +107,7 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
           <FractionDisplay frac={q.target} size="sm" />
         </div>
         {youSaid && (
-          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+          <span className="text-sm text-destructive whitespace-nowrap">{tGlobal('fractions.results.youSaid', { answer: youSaid })}</span>
         )}
       </div>
     );
@@ -119,7 +122,7 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
           <FractionDisplay frac={q.b} size="sm" />
         </div>
         {youSaid && (
-          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+          <span className="text-sm text-destructive whitespace-nowrap">{tGlobal('fractions.results.youSaid', { answer: youSaid })}</span>
         )}
       </div>
     );
@@ -143,7 +146,7 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
           <span className="font-bold text-sm">{canonical}</span>
         </div>
         {youSaid && (
-          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+          <span className="text-sm text-destructive whitespace-nowrap">{tGlobal('fractions.results.youSaid', { answer: youSaid })}</span>
         )}
       </div>
     );
@@ -173,7 +176,7 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
           <span className="font-bold">{canonical}</span>
         </div>
         {youSaid && (
-          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+          <span className="text-sm text-destructive whitespace-nowrap">{tGlobal('fractions.results.youSaid', { answer: youSaid })}</span>
         )}
       </div>
     );
@@ -190,14 +193,14 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
           <FractionDisplay frac={q.answer} size="sm" />
         </div>
         {youSaid && (
-          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+          <span className="text-sm text-destructive whitespace-nowrap">{tGlobal('fractions.results.youSaid', { answer: youSaid })}</span>
         )}
       </div>
     );
   }
 
   if (isToDecimalQuestion(q)) {
-    const decStr = q.answer.toFixed(2).replace(/\.?0+$/, '');
+    const decStr = formatNumber(q.answer, { maximumFractionDigits: 2 });
     return (
       <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-4 py-2">
         <div className="flex items-center gap-2 text-foreground">
@@ -206,14 +209,14 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
           <span className="font-bold text-base">{decStr}</span>
         </div>
         {youSaid && (
-          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+          <span className="text-sm text-destructive whitespace-nowrap">{tGlobal('fractions.results.youSaid', { answer: youSaid })}</span>
         )}
       </div>
     );
   }
 
   if (isFromDecimalQuestion(q)) {
-    const decStr = q.decimal.toFixed(2).replace(/\.?0+$/, '');
+    const decStr = formatNumber(q.decimal, { maximumFractionDigits: 2 });
     return (
       <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-4 py-2">
         <div className="flex items-center gap-2 text-foreground">
@@ -222,7 +225,7 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
           <FractionDisplay frac={{ num: q.num, den: q.den }} size="sm" />
         </div>
         {youSaid && (
-          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+          <span className="text-sm text-destructive whitespace-nowrap">{tGlobal('fractions.results.youSaid', { answer: youSaid })}</span>
         )}
       </div>
     );
@@ -260,7 +263,7 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
           )}
         </div>
         {youSaid && (
-          <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+          <span className="text-sm text-destructive whitespace-nowrap">{tGlobal('fractions.results.youSaid', { answer: youSaid })}</span>
         )}
       </div>
     );
@@ -270,6 +273,7 @@ function IncorrectRow({ entry }: { entry: FractionIncorrectEntry }) {
 }
 
 export function FractionsResults({ result, onPlayAgain, onNewGame, userId }: Props) {
+  const { t } = useT();
   const percentage = result.total > 0 ? Math.round((result.score / result.total) * 100) : 0;
   const stars =
     percentage === 100 ? 5
@@ -303,17 +307,17 @@ export function FractionsResults({ result, onPlayAgain, onNewGame, userId }: Pro
   }, [result, userId, percentage]);
 
   const message =
-    percentage === 100 ? "Perfect score! You're a maths superstar!"
-      : percentage >= 80 ? 'Brilliant work! Keep it up!'
-      : percentage >= 60 ? 'Good effort! Practice makes perfect!'
-      : percentage >= 40 ? "Nice try! You'll get better!"
-      : "Keep practising, you've got this!";
+    percentage === 100 ? t('fractions.results.perfectScore')
+      : percentage >= 80 ? t('fractions.results.brilliantWork')
+      : percentage >= 60 ? t('fractions.results.goodEffort')
+      : percentage >= 40 ? t('fractions.results.niceTry')
+      : t('fractions.results.keepPractising');
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto max-w-xl">
         <div className="mb-8 text-center">
-          <div className="mb-3 flex justify-center gap-1" aria-label={`${stars} out of 5 stars`}>
+          <div className="mb-3 flex justify-center gap-1" aria-label={t('fractions.results.starsAriaLabel', { stars })}>
             {[1, 2, 3, 4, 5].map(n => (
               <Star
                 key={n}
@@ -335,18 +339,18 @@ export function FractionsResults({ result, onPlayAgain, onNewGame, userId }: Pro
             </div>
           </div>
           <p className="text-2xl font-bold text-foreground">{message}</p>
-          <p className="mt-2 text-muted-foreground">{percentage}% correct</p>
+          <p className="mt-2 text-muted-foreground">{t('fractions.results.percentCorrect', { percent: percentage })}</p>
           {result.bestStreak >= 3 && (
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg">
               <Flame className="w-4 h-4" />
-              Best streak: {result.bestStreak}
+              {t('fractions.results.bestStreak', { count: result.bestStreak })}
             </div>
           )}
         </div>
 
         {result.incorrectQuestions.length > 0 && (
           <Card className="mb-4 p-4">
-            <h3 className="mb-3 font-bold text-foreground">Questions to practise:</h3>
+            <h3 className="mb-3 font-bold text-foreground">{t('fractions.results.questionsToPractise')}</h3>
             <div className="space-y-2">
               {result.incorrectQuestions.map((entry, idx) => (
                 <IncorrectRow key={idx} entry={entry} />
@@ -357,10 +361,10 @@ export function FractionsResults({ result, onPlayAgain, onNewGame, userId }: Pro
 
         <div className="space-y-3">
           <Button onClick={onPlayAgain} className="w-full py-6 text-xl font-bold shadow-button">
-            Play Again
+            {t('fractions.results.playAgain')}
           </Button>
           <Button onClick={onNewGame} variant="outline" className="w-full py-4 font-bold">
-            Change Settings
+            {t('fractions.results.changeSettings')}
           </Button>
         </div>
       </div>

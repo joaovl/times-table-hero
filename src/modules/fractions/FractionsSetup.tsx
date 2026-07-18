@@ -9,9 +9,10 @@ import type { FractionSettings, FractionSkill } from './logic';
 import {
   ALL_SKILLS,
   DENOMINATOR_OPTIONS,
-  SKILL_LABELS,
+  skillLabel,
   generateFractionQuestions,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
 import { generateFractionsPdf } from './pdf';
 import {
   getSavedFractionSettings,
@@ -59,6 +60,7 @@ export function FractionsSetup({
   onNavigateToHub,
   autoOpenPrint = false,
 }: Props) {
+  const { t } = useT();
   const [skills, setSkills] = useState<FractionSkill[]>(['add-same']);
   const [denominators, setDenominators] = useState<number[]>([2, 3, 4]);
   const [simplify, setSimplify] = useState(true);
@@ -165,14 +167,14 @@ export function FractionsSetup({
           onClick={onNavigateToHub}
           className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base mb-2"
         >
-          ← Hub
+          {t('common.backToHub')}
         </button>
 
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary text-center mb-1 md:mb-2">
-          Fractions Practice
+          {t('fractions.setup.title')}
         </h1>
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick what to work on
+          {currentUser ? t('fractions.setup.hiName', { name: currentUser.name }) : ''}{t('fractions.setup.subtitle')}
         </p>
 
         <div className="mb-3 md:mb-6 flex items-center justify-end">
@@ -181,7 +183,7 @@ export function FractionsSetup({
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Skills
+            {t('fractions.setup.skills')}
           </h2>
           <div className="grid grid-cols-2 gap-1 md:gap-2">
             {ALL_SKILLS.map(s => (
@@ -191,7 +193,7 @@ export function FractionsSetup({
                 aria-pressed={skills.includes(s)}
                 className={buttonClass(skills.includes(s))}
               >
-                <span className="text-[12px] md:text-[14px] px-2 text-center">{SKILL_LABELS[s]}</span>
+                <span className="text-[12px] md:text-[14px] px-2 text-center">{skillLabel(s)}</span>
               </button>
             ))}
           </div>
@@ -199,7 +201,7 @@ export function FractionsSetup({
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Denominators
+            {t('fractions.setup.denominators')}
           </h2>
           <div className="grid grid-cols-6 gap-1 md:gap-2">
             {DENOMINATOR_OPTIONS.map(d => (
@@ -215,44 +217,42 @@ export function FractionsSetup({
           </div>
           {denomWarning && (
             <p className="text-[11px] md:text-[13px] text-destructive mt-2 text-center">
-              Different-denominator skills need at least 2 denominators selected.
+              {t('fractions.setup.denomWarning')}
             </p>
           )}
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Simplify answers
+            {t('fractions.setup.simplifyAnswers')}
           </h2>
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => setSimplify(true)} className={buttonClass(simplify)}>
-              <span className="text-[13px] md:text-[16px]">On</span>
+              <span className="text-[13px] md:text-[16px]">{t('fractions.setup.on')}</span>
             </button>
             <button onClick={() => setSimplify(false)} className={buttonClass(!simplify)}>
-              <span className="text-[13px] md:text-[16px]">Off</span>
+              <span className="text-[13px] md:text-[16px]">{t('fractions.setup.off')}</span>
             </button>
           </div>
           <p className="text-[10px] md:text-[12px] text-foreground/70 text-center mt-2">
-            {simplify
-              ? 'Answers must be in simplest form (e.g. 2/4 → 1/2).'
-              : 'Any equivalent form is accepted.'}
+            {simplify ? t('fractions.setup.simplifyOnHelp') : t('fractions.setup.simplifyOffHelp')}
           </p>
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Game Mode</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('fractions.setup.gameMode')}</h2>
           <div className="flex gap-2 mb-3">
             <button
               onClick={() => setGameMode('questions')}
               className={cn('flex-1', buttonClass(gameMode === 'questions'))}
             >
-              <span className="text-[13px] md:text-[16px]">Questions</span>
+              <span className="text-[13px] md:text-[16px]">{t('fractions.setup.questions')}</span>
             </button>
             <button
               onClick={() => setGameMode('time')}
               className={cn('flex-1', buttonClass(gameMode === 'time'))}
             >
-              <span className="text-[13px] md:text-[16px]">Timed</span>
+              <span className="text-[13px] md:text-[16px]">{t('fractions.setup.timed')}</span>
             </button>
           </div>
           {gameMode === 'questions' ? (
@@ -276,7 +276,7 @@ export function FractionsSetup({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
           <Button variant="outline" onClick={() => setPrintOpen(true)} className="py-3 font-bold">
-            Print Worksheet
+            {t('fractions.setup.printWorksheet')}
           </Button>
           <Button
             onClick={start}
@@ -284,7 +284,7 @@ export function FractionsSetup({
             size="lg"
             disabled={denomWarning}
           >
-            Let's Go!
+            {t('game.setup.start')}
           </Button>
         </div>
       </div>
