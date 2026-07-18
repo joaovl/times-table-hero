@@ -20,6 +20,8 @@ import { loadFactStore, saveFactStore } from '@/lib/practice/factStore';
 import { QuestionDisplay } from './QuestionDisplay';
 import { FactArray } from './FactArray';
 import { strategyFor } from './strategy';
+import { useT } from '@/lib/i18n/react';
+import { parseAnswer } from '@/lib/i18n/number';
 
 interface TimesTablesPlayProps {
   settings: GameSettings;
@@ -56,6 +58,7 @@ export interface GameResults {
 type FeedbackState = 'none' | 'correct' | 'incorrect';
 
 export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesTablesPlayProps) {
+  const { t } = useT();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -235,8 +238,7 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
 
   const handleSubmitTyped = (e: React.FormEvent) => {
     e.preventDefault();
-    const parsed = parseInt(typedAnswer, 10);
-    const userAnswer = isNaN(parsed) ? null : parsed;
+    const userAnswer = parseAnswer(typedAnswer);
     submitAnswer(userAnswer === questions[currentIndex].answer, userAnswer);
   };
 
@@ -252,7 +254,7 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -275,11 +277,11 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
             <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">
-              ← Quit
+              {t('timesTables.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('timesTables.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -313,7 +315,7 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" aria-hidden="true" />
-                {streak} in a row!
+                {t('timesTables.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -338,7 +340,7 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
                 'mb-2 md:mb-4 text-2xl md:text-3xl font-extrabold animate-bounce-in',
                 feedback === 'correct' ? 'text-success' : 'text-destructive'
               )}>
-                {feedback === 'correct' ? feedbackMessage : 'Not quite!'}
+                {feedback === 'correct' ? feedbackMessage : t('timesTables.play.notQuite')}
               </div>
               <div className="text-3xl md:text-4xl font-bold text-foreground">
                 <QuestionDisplay q={currentQuestion} /> = {currentQuestion.answer}
@@ -366,8 +368,8 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
                   inputMode="numeric"
                   value={typedAnswer}
                   onChange={(e) => setTypedAnswer(e.target.value)}
-                  placeholder="Type your answer"
-                  aria-label="Type the answer"
+                  placeholder={t('timesTables.play.typeYourAnswer')}
+                  aria-label={t('timesTables.play.typeTheAnswer')}
                   className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
                   autoFocus
                 />
@@ -376,7 +378,7 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
                   className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                   disabled={typedAnswer === ''}
                 >
-                  Check
+                  {t('timesTables.play.check')}
                 </Button>
               </form>
             ) : (

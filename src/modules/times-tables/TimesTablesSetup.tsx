@@ -24,6 +24,7 @@ import type { UserProfile } from '@/lib/userStorage';
 import { UserSelector } from '@/components/UserSelector';
 import { PrintWorksheetModal } from '@/components/PrintWorksheetModal';
 import { PRESET_THEMES, DEFAULT_THEME, getTheme, saveTheme, resetTheme } from '@/lib/themeStorage';
+import { useT } from '@/lib/i18n/react';
 
 interface TimesTablesSetupProps {
   onStart: (settings: GameSettings) => void;
@@ -49,6 +50,7 @@ const TIME_LIMITS = [
 ];
 
 export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser, onNavigateToHub, onViewProgress, autoOpenPrint = false }: TimesTablesSetupProps) {
+  const { t } = useT();
   const [selectedTables, setSelectedTables] = useState<number[]>(TABLES);
   const [printOpen, setPrintOpen] = useState(false);
   const [printConfig, setPrintConfig] = useState({ pageCount: 1, questionsPerPage: 40 });
@@ -176,7 +178,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
   if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -189,24 +191,24 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
             onClick={onNavigateToHub}
             className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base mb-2"
           >
-            ← Hub
+            {t('common.backToHub')}
           </button>
         )}
         {/* Title */}
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary flex items-center justify-center gap-2 mb-1 md:mb-2">
-          <img src="/favicon.png" alt="Maths Challenge" className="w-6 h-6 md:w-10 md:h-10" />
-          Maths Challenge
+          <img src="/favicon.png" alt={t('hub.title')} className="w-6 h-6 md:w-10 md:h-10" />
+          {t('hub.title')}
         </h1>
 
         {/* Subtitle */}
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-1">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick your tables and let's practise!
+          {currentUser ? t('timesTables.setup.hiName', { name: currentUser.name }) : ''}{t('timesTables.setup.subtitle')}
         </p>
 
         {/* Stats */}
         {stats.totalGames > 0 && (
           <p className="text-center text-[11px] md:text-sm text-muted-foreground mb-2 md:mb-4">
-            {stats.totalGames} games, {stats.totalCorrect} correct!
+            {t('timesTables.setup.statsGames', { games: stats.totalGames, correct: stats.totalCorrect })}
           </p>
         )}
 
@@ -217,7 +219,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
               onClick={onViewProgress}
               className="text-primary hover:underline text-sm md:text-base font-semibold min-h-[44px]"
             >
-              📊 My facts — see what&rsquo;s getting stronger
+              {t('timesTables.setup.myFacts')}
             </button>
           </div>
         )}
@@ -227,11 +229,11 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
           <div className="relative" ref={desktopMenuRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
-              aria-label="Open menu"
+              aria-label={t('hub.menu.openAriaLabel')}
               aria-expanded={showMenu}
               className="text-muted-foreground hover:text-foreground transition-colors text-base flex items-center gap-1.5 min-h-[44px] px-2 -ml-2"
             >
-              <Menu className="w-5 h-5" aria-hidden="true" /> Menu
+              <Menu className="w-5 h-5" aria-hidden="true" /> {t('hub.menu.open')}
             </button>
             {showMenu && (
               <div className="absolute top-full left-0 mt-1 bg-card border rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
@@ -251,7 +253,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
                           : `hsl(${currentTheme.hue}, 85%, 58%)`
                       }}
                     />
-                    Colors
+                    {t('hub.menu.colors')}
                   </button>
                   {showColorPicker && (
                     <div className="px-2 py-2 space-y-2">
@@ -289,7 +291,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
                         }}
                         className="w-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                       >
-                        Reset to Default
+                        {t('hub.menu.resetDefault')}
                       </button>
                     </div>
                   )}
@@ -297,7 +299,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
 
                 {/* Version */}
                 <div className="border-t mt-1 pt-1.5 px-4 pb-1 text-[10px] text-muted-foreground/60">
-                  v0.1.0-{(globalThis as any).__GIT_HASH__ || 'dev'}
+                  {t('hub.version', { hash: (globalThis as unknown as { __GIT_HASH__?: string }).__GIT_HASH__ || 'dev' })}
                 </div>
               </div>
             )}
@@ -317,7 +319,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
         {/* Table Selection */}
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[20px] font-semibold text-foreground">Choose Your Tables</h2>
+            <h2 className="text-[20px] font-semibold text-foreground">{t('timesTables.setup.chooseYourTables')}</h2>
             <div className="flex gap-1 md:gap-2">
               <Button
                 variant="outline"
@@ -325,7 +327,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
                 onClick={selectAll}
                 className="text-xs md:text-sm h-11 md:h-9 px-3"
               >
-                All
+                {t('timesTables.setup.all')}
               </Button>
               <Button
                 variant="outline"
@@ -333,7 +335,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
                 onClick={clearAll}
                 className="text-xs md:text-sm h-11 md:h-9 px-3"
               >
-                Clear
+                {t('timesTables.setup.clear')}
               </Button>
             </div>
           </div>
@@ -377,14 +379,14 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
 
         {/* Operation */}
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Operation</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('timesTables.setup.operation')}</h2>
           <div className="grid grid-cols-5 gap-1 md:gap-2">
             {([
               { id: 'multiply', label: '×' },
               { id: 'divide',   label: '÷' },
               { id: 'square',   label: 'x²' },
               { id: 'sqrt',     label: '√' },
-              { id: 'all',      label: 'All' },
+              { id: 'all',      label: t('timesTables.setup.opAll') },
             ] as const).map(op => (
               <button
                 key={op.id}
@@ -405,12 +407,12 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
 
         {/* Difficulty */}
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Difficulty</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('timesTables.setup.difficulty')}</h2>
           <div className="grid grid-cols-3 gap-2">
             {([
-              { id: 'easy', label: 'Easy', desc: '3 very different choices' },
-              { id: 'medium', label: 'Medium', desc: '3 close choices' },
-              { id: 'hard', label: 'Hard', desc: 'type the answer' },
+              { id: 'easy', label: t('timesTables.setup.difficultyEasy'), desc: t('timesTables.setup.difficultyEasyDesc') },
+              { id: 'medium', label: t('timesTables.setup.difficultyMedium'), desc: t('timesTables.setup.difficultyMediumDesc') },
+              { id: 'hard', label: t('timesTables.setup.difficultyHard'), desc: t('timesTables.setup.difficultyHardDesc') },
             ] as const).map(diff => (
               <div key={diff.id} className="flex flex-col gap-1 md:gap-1.5">
                 <button
@@ -433,7 +435,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
 
         {/* Game Mode */}
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Game Mode</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('timesTables.setup.gameMode')}</h2>
           <div className="flex gap-2 mb-3">
             <button
               onClick={() => setGameMode('questions')}
@@ -445,7 +447,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
                   : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
               )}
             >
-              <span className="text-[13px] md:text-[16px]">Questions</span>
+              <span className="text-[13px] md:text-[16px]">{t('timesTables.setup.questions')}</span>
             </button>
             <button
               onClick={() => setGameMode('time')}
@@ -457,7 +459,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
                   : 'bg-gradient-to-b from-secondary via-secondary/85 to-secondary/65 text-muted-foreground hover:from-secondary/80 hover:to-secondary/60 border border-card-border shadow-lg'
               )}
             >
-              <span className="text-[13px] md:text-[16px]">Timed</span>
+              <span className="text-[13px] md:text-[16px]">{t('timesTables.setup.timed')}</span>
             </button>
           </div>
 
@@ -507,7 +509,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
             disabled={selectedTables.length === 0}
             className="py-3 font-bold disabled:opacity-50"
           >
-            Print Worksheet
+            {t('timesTables.setup.printWorksheet')}
           </Button>
           <Button
             onClick={handleStart}
@@ -515,7 +517,7 @@ export function TimesTablesSetup({ onStart, currentUser, onUserChange, onNewUser
             className="py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px] hover:shadow-xl active:translate-y-0 active:shadow-md disabled:opacity-50 disabled:from-muted disabled:to-muted"
             size="lg"
           >
-            {selectedTables.length === 0 ? 'Select at least one table' : "Let's Go!"}
+            {selectedTables.length === 0 ? t('timesTables.setup.selectAtLeastOneTable') : t('game.setup.start')}
           </Button>
         </div>
 

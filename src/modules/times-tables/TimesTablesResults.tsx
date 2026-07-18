@@ -8,6 +8,7 @@ import { QuestionDisplay } from './QuestionDisplay';
 import { useEffect, useState } from 'react';
 import { Star, Flame } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { useT } from '@/lib/i18n/react';
 
 interface TimesTablesResultsProps {
   results: GameResultsType;
@@ -17,6 +18,7 @@ interface TimesTablesResultsProps {
 }
 
 export function TimesTablesResults({ results, onPlayAgain, onNewGame, userId }: TimesTablesResultsProps) {
+  const { t } = useT();
   const [improved, setImproved] = useState<string[]>([]);
   const [stillChallenging, setStillChallenging] = useState<string[]>([]);
 
@@ -29,11 +31,11 @@ export function TimesTablesResults({ results, onPlayAgain, onNewGame, userId }: 
     : 0;
 
   const getScoreMessage = () => {
-    if (percentage === 100) return "Perfect score! You're a maths superstar!";
-    if (percentage >= 80) return "Brilliant work! Keep it up!";
-    if (percentage >= 60) return "Good effort! Practice makes perfect!";
-    if (percentage >= 40) return "Nice try! You'll get better!";
-    return "Keep practising, you've got this!";
+    if (percentage === 100) return t('timesTables.results.perfectScore');
+    if (percentage >= 80) return t('timesTables.results.brilliantWork');
+    if (percentage >= 60) return t('timesTables.results.goodEffort');
+    if (percentage >= 40) return t('timesTables.results.niceTry');
+    return t('timesTables.results.keepPractising');
   };
 
   // Celebration confetti for high scores
@@ -122,7 +124,7 @@ export function TimesTablesResults({ results, onPlayAgain, onNewGame, userId }: 
         {/* Score Header */}
         <div className="mb-8 text-center">
           {/* Stars */}
-          <div className="mb-3 flex justify-center gap-1" aria-label={`${stars} out of 5 stars`}>
+          <div className="mb-3 flex justify-center gap-1" aria-label={t('timesTables.results.starsAriaLabel', { stars })}>
             {[1, 2, 3, 4, 5].map(n => (
               <Star
                 key={n}
@@ -144,12 +146,12 @@ export function TimesTablesResults({ results, onPlayAgain, onNewGame, userId }: 
           </div>
           <p className="text-2xl font-bold text-foreground">{getScoreMessage()}</p>
           <p className="mt-2 text-muted-foreground">
-            {percentage}% correct
+            {t('timesTables.results.percentCorrect', { percent: percentage })}
           </p>
           {results.bestStreak >= 3 && (
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg">
               <Flame className="w-4 h-4" aria-hidden="true" />
-              Best streak: {results.bestStreak}
+              {t('timesTables.results.bestStreak', { count: results.bestStreak })}
             </div>
           )}
         </div>
@@ -157,9 +159,9 @@ export function TimesTablesResults({ results, onPlayAgain, onNewGame, userId }: 
         {/* Improvements */}
         {improved.length > 0 && (
           <Card className="mb-4 border-success/30 bg-success/10 p-4">
-            <h3 className="mb-2 font-bold text-success">You've improved!</h3>
+            <h3 className="mb-2 font-bold text-success">{t('timesTables.results.youveImproved')}</h3>
             <p className="text-sm text-foreground">
-              These were tricky before, but you got them right this time:
+              {t('timesTables.results.trickyBefore')}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {improved.map(q => (
@@ -174,7 +176,7 @@ export function TimesTablesResults({ results, onPlayAgain, onNewGame, userId }: 
         {/* Incorrect Questions */}
         {results.incorrectQuestions.length > 0 && (
           <Card className="mb-4 p-4">
-            <h3 className="mb-3 font-bold text-foreground">Questions to practise:</h3>
+            <h3 className="mb-3 font-bold text-foreground">{t('timesTables.results.questionsToPractise')}</h3>
             <div className="space-y-2">
               {results.incorrectQuestions.map((q, idx) => {
                 const asQuestion: Question =
@@ -191,7 +193,7 @@ export function TimesTablesResults({ results, onPlayAgain, onNewGame, userId }: 
                     </span>
                     {q.userAnswer !== null && (
                       <span className="text-sm text-destructive">
-                        You said: {q.userAnswer}
+                        {t('timesTables.results.youSaid', { answer: q.userAnswer })}
                       </span>
                     )}
                   </div>
@@ -204,7 +206,7 @@ export function TimesTablesResults({ results, onPlayAgain, onNewGame, userId }: 
         {/* Still Challenging */}
         {stillChallenging.length > 0 && (
           <Card className="mb-6 border-accent/30 bg-accent/10 p-4">
-            <h3 className="mb-2 font-bold text-accent">Keep working on:</h3>
+            <h3 className="mb-2 font-bold text-accent">{t('timesTables.results.keepWorkingOn')}</h3>
             <div className="flex flex-wrap gap-2">
               {stillChallenging.map(q => (
                 <span key={q} className="rounded-lg bg-accent/20 px-3 py-1 text-sm font-medium">
@@ -221,14 +223,14 @@ export function TimesTablesResults({ results, onPlayAgain, onNewGame, userId }: 
             onClick={onPlayAgain}
             className="w-full py-6 text-xl font-bold shadow-button"
           >
-            Play Again
+            {t('timesTables.results.playAgain')}
           </Button>
           <Button
             onClick={onNewGame}
             variant="outline"
             className="w-full py-4 font-bold"
           >
-            Change Settings
+            {t('timesTables.results.changeSettings')}
           </Button>
         </div>
       </div>

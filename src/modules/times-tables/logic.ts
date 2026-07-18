@@ -2,6 +2,7 @@
 
 import { weightedPick } from '@/lib/practice/factModel';
 import { integerChoices, numericChoicesWithNone } from '@/lib/game/choices';
+import { t, type MessageKey } from '@/lib/i18n/i18n';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type GameMode = 'questions' | 'time';
@@ -145,20 +146,20 @@ export function factChoices(
   return numericChoicesWithNone(answer, isWrong, String, hideCorrect);
 }
 
-export const POSITIVE_MESSAGES = [
-  "Brilliant!",
-  "Well done!",
-  "Fantastic!",
-  "Superb!",
-  "Amazing!",
-  "You're a star!",
-  "Excellent!",
-  "Marvellous!",
-  "Top marks!",
-  "Spot on!",
+const POSITIVE_MESSAGE_KEYS: MessageKey[] = [
+  'play.feedback.brilliant',
+  'timesTables.play.feedback.wellDone',
+  'timesTables.play.feedback.fantastic',
+  'timesTables.play.feedback.superb',
+  'timesTables.play.feedback.amazing',
+  'timesTables.play.feedback.starLike',
+  'timesTables.play.feedback.excellent',
+  'timesTables.play.feedback.marvellous',
+  'timesTables.play.feedback.topMarks',
+  'timesTables.play.feedback.spotOn',
 ];
 
 export function getRandomPositiveMessage(): string {
-  return POSITIVE_MESSAGES[Math.floor(Math.random() * POSITIVE_MESSAGES.length)];
+  return t(POSITIVE_MESSAGE_KEYS[Math.floor(Math.random() * POSITIVE_MESSAGE_KEYS.length)]);
 }
 

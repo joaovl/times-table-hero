@@ -26,6 +26,8 @@ import {
   buildArithSummary,
   formatDigitSet,
 } from './printConfig';
+import { useT } from '@/lib/i18n/react';
+import type { MessageKey } from '@/lib/i18n/i18n';
 
 interface Props {
   onStart: (s: ArithSettings) => void;
@@ -44,12 +46,18 @@ const TIME_LIMITS = [
   { label: '10 min', value: 600 },
 ];
 
-const DIFFICULTY_HINTS: Record<ArithOp, [string, string, string]> = {
-  add: ['No carry', '1 carry', 'Multiple carries'],
-  subtract: ['No borrow', '1 borrow', 'Multiple borrows'],
-  multiply: ['1 × 1 digit', '1 × 2 digit', '2 × 2 / up to 3 digits'],
-  divide: ['Easy', 'Medium', 'Hard'],
-  all: ['Easy', 'Medium', 'Hard'],
+const DIFFICULTY_HINT_KEYS: Record<ArithOp, [MessageKey, MessageKey, MessageKey]> = {
+  add: ['arithmetic.setup.hint.noCarry', 'arithmetic.setup.hint.oneCarry', 'arithmetic.setup.hint.multipleCarries'],
+  subtract: ['arithmetic.setup.hint.noBorrow', 'arithmetic.setup.hint.oneBorrow', 'arithmetic.setup.hint.multipleBorrows'],
+  multiply: ['arithmetic.setup.hint.oneByOneDigit', 'arithmetic.setup.hint.oneByTwoDigit', 'arithmetic.setup.hint.twoByTwoDigit'],
+  divide: ['arithmetic.setup.hint.easy', 'arithmetic.setup.hint.medium', 'arithmetic.setup.hint.hard'],
+  all: ['arithmetic.setup.hint.easy', 'arithmetic.setup.hint.medium', 'arithmetic.setup.hint.hard'],
+};
+
+const DIFFICULTY_LABEL_KEY: Record<Difficulty, MessageKey> = {
+  easy: 'arithmetic.setup.difficultyEasy',
+  medium: 'arithmetic.setup.difficultyMedium',
+  hard: 'arithmetic.setup.difficultyHard',
 };
 
 const buttonClass = (active: boolean) =>
@@ -123,6 +131,7 @@ export function ArithmeticSetup({
   onNavigateToHub,
   autoOpenPrint = false,
 }: Props) {
+  const { t } = useT();
   const [operation, setOperation] = useState<ArithOp>('add');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [addSubFirstDigits, setAddSubFirstDigits] = useState<number[]>([2]);
@@ -265,16 +274,17 @@ export function ArithmeticSetup({
     saveArithPrintConfig(next, currentUser?.id);
   };
 
-  const hints = DIFFICULTY_HINTS[operation];
+  const hints = DIFFICULTY_HINT_KEYS[operation].map(k => t(k)) as [string, string, string];
 
   // Header label for the digit / difficulty cards so 'all' mode doesn't
   // present an ambiguous "Digits" next to "Multiply digits".
-  const addSubLabel =
+  const addSubLabel = t(
     operation === 'add'
-      ? 'Add'
+      ? 'arithmetic.setup.opAdd'
       : operation === 'subtract'
-        ? 'Subtract'
-        : 'Add & subtract';
+        ? 'arithmetic.setup.opSubtract'
+        : 'arithmetic.setup.opAddSubtract'
+  );
 
   // For the live add/subtract example, pick the first concrete op so the
   // user sees "23 + 7" or "23 − 7" depending on the picker.
@@ -292,14 +302,14 @@ export function ArithmeticSetup({
           onClick={onNavigateToHub}
           className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base mb-2"
         >
-          ← Hub
+          {t('common.backToHub')}
         </button>
 
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary text-center mb-1 md:mb-2">
-          Arithmetic Practice
+          {t('arithmetic.setup.title')}
         </h1>
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick what to work on
+          {currentUser ? t('arithmetic.setup.hiName', { name: currentUser.name }) : ''}{t('arithmetic.setup.subtitle')}
         </p>
 
         <div className="mb-3 md:mb-6 flex items-center justify-end">
@@ -307,14 +317,14 @@ export function ArithmeticSetup({
         </div>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Operation</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('arithmetic.setup.operation')}</h2>
           <div className="grid grid-cols-5 gap-1 md:gap-2">
             {([
               { id: 'add', label: '+' },
               { id: 'subtract', label: '−' },
               { id: 'multiply', label: '×' },
               { id: 'divide', label: '÷' },
-              { id: 'all', label: 'All' },
+              { id: 'all', label: t('arithmetic.setup.all') },
             ] as const).map(op => (
               <button key={op.id} onClick={() => setOperation(op.id)} className={buttonClass(operation === op.id)}>
                 <span className="text-[15px] md:text-[18px]">{op.label}</span>
@@ -331,34 +341,34 @@ export function ArithmeticSetup({
           <>
             <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
               <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-                {addSubLabel} digits
+                {t('arithmetic.setup.digitsHeader', { op: addSubLabel })}
               </h2>
               <DigitChipPicker
-                label="First number"
+                label={t('arithmetic.setup.firstNumber')}
                 options={DIGIT_CHIP_OPTIONS}
                 selected={addSubFirstDigits}
                 onChange={setAddSubFirstDigits}
               />
               <DigitChipPicker
-                label="Second number"
+                label={t('arithmetic.setup.secondNumber')}
                 options={DIGIT_CHIP_OPTIONS}
                 selected={addSubSecondDigits}
                 onChange={setAddSubSecondDigits}
               />
               <p className="text-[12px] md:text-[14px] text-foreground/70 text-center mt-3">
-                Example: {addSubExample(addSubFirstDigits, addSubSecondDigits, exampleOp)}
+                {t('arithmetic.setup.example', { value: addSubExample(addSubFirstDigits, addSubSecondDigits, exampleOp) })}
               </p>
             </Card>
 
             <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
               <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-                {addSubLabel} difficulty
+                {t('arithmetic.setup.difficultyHeader', { op: addSubLabel })}
               </h2>
               <div className="grid grid-cols-3 gap-2">
                 {(['easy', 'medium', 'hard'] as const).map((d, idx) => (
                   <div key={d} className="flex flex-col gap-1 md:gap-1.5">
                     <button onClick={() => setDifficulty(d)} className={buttonClass(difficulty === d)}>
-                      <span className="text-[13px] md:text-[16px]">{d.charAt(0).toUpperCase() + d.slice(1)}</span>
+                      <span className="text-[13px] md:text-[16px]">{t(DIFFICULTY_LABEL_KEY[d])}</span>
                     </button>
                     <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">{hints[idx]}</p>
                   </div>
@@ -375,22 +385,22 @@ export function ArithmeticSetup({
         {showMultiply && (
           <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
             <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-              Multiply digits
+              {t('arithmetic.setup.multiplyDigits')}
             </h2>
             <DigitChipPicker
-              label="First number"
+              label={t('arithmetic.setup.firstNumber')}
               options={DIGIT_CHIP_OPTIONS}
               selected={multiplyFirstDigits}
               onChange={setMultiplyFirstDigits}
             />
             <DigitChipPicker
-              label="Second number"
+              label={t('arithmetic.setup.secondNumber')}
               options={DIGIT_CHIP_OPTIONS}
               selected={multiplySecondDigits}
               onChange={setMultiplySecondDigits}
             />
             <p className="text-[12px] md:text-[14px] text-foreground/70 text-center mt-3">
-              Example: {multiplyExample(multiplyFirstDigits, multiplySecondDigits)}
+              {t('arithmetic.setup.example', { value: multiplyExample(multiplyFirstDigits, multiplySecondDigits) })}
             </p>
           </Card>
         )}
@@ -401,28 +411,28 @@ export function ArithmeticSetup({
           <>
             <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
               <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-                Divide digits
+                {t('arithmetic.setup.divideDigits')}
               </h2>
               <DigitChipPicker
-                label="First number"
+                label={t('arithmetic.setup.firstNumber')}
                 options={DIGIT_CHIP_OPTIONS}
                 selected={divideFirstDigits}
                 onChange={setDivideFirstDigits}
               />
               <DigitChipPicker
-                label="Second number"
+                label={t('arithmetic.setup.secondNumber')}
                 options={DIGIT_CHIP_OPTIONS}
                 selected={divideSecondDigits}
                 onChange={setDivideSecondDigits}
               />
               <p className="text-[12px] md:text-[14px] text-foreground/70 text-center mt-3">
-                Example: {divideExample(divideFirstDigits, divideSecondDigits)}
+                {t('arithmetic.setup.example', { value: divideExample(divideFirstDigits, divideSecondDigits) })}
               </p>
             </Card>
 
             <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
               <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-                Allow remainders
+                {t('arithmetic.setup.allowRemainders')}
               </h2>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -430,33 +440,33 @@ export function ArithmeticSetup({
                   aria-pressed={allowRemainders}
                   className={buttonClass(allowRemainders)}
                 >
-                  <span className="text-[13px] md:text-[16px]">On</span>
+                  <span className="text-[13px] md:text-[16px]">{t('arithmetic.setup.on')}</span>
                 </button>
                 <button
                   onClick={() => setAllowRemainders(false)}
                   aria-pressed={!allowRemainders}
                   className={buttonClass(!allowRemainders)}
                 >
-                  <span className="text-[13px] md:text-[16px]">Off</span>
+                  <span className="text-[13px] md:text-[16px]">{t('arithmetic.setup.off')}</span>
                 </button>
               </div>
               <p className="text-[10px] md:text-[12px] text-foreground/70 text-center mt-2 leading-tight">
                 {allowRemainders
-                  ? 'Some answers will have a remainder (e.g. 25 ÷ 4 = 6 r 1).'
-                  : 'Only exact divisions (e.g. 24 ÷ 4 = 6).'}
+                  ? t('arithmetic.setup.remainderOn')
+                  : t('arithmetic.setup.remainderOff')}
               </p>
             </Card>
           </>
         )}
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Game Mode</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('arithmetic.setup.gameMode')}</h2>
           <div className="flex gap-2 mb-3">
             <button onClick={() => setGameMode('questions')} className={cn('flex-1', buttonClass(gameMode === 'questions'))}>
-              <span className="text-[13px] md:text-[16px]">Questions</span>
+              <span className="text-[13px] md:text-[16px]">{t('arithmetic.setup.questions')}</span>
             </button>
             <button onClick={() => setGameMode('time')} className={cn('flex-1', buttonClass(gameMode === 'time'))}>
-              <span className="text-[13px] md:text-[16px]">Timed</span>
+              <span className="text-[13px] md:text-[16px]">{t('arithmetic.setup.timed')}</span>
             </button>
           </div>
           {gameMode === 'questions' ? (
@@ -480,14 +490,14 @@ export function ArithmeticSetup({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
           <Button variant="outline" onClick={() => setPrintOpen(true)} className="py-3 font-bold">
-            Print Worksheet
+            {t('arithmetic.setup.printWorksheet')}
           </Button>
           <Button
             onClick={start}
             className="py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px]"
             size="lg"
           >
-            Let's Go!
+            {t('game.setup.start')}
           </Button>
         </div>
       </div>

@@ -10,6 +10,8 @@ import { AnswerChoices } from '@/components/game/AnswerChoices';
 import { NONE_OF_THESE, isChoiceCorrect } from '@/lib/game/choices';
 import type { ArithQuestion, ArithSettings } from './logic';
 import { checkArithAnswer, divideUsesRemainderField, generateArithChoices, generateArithQuestions } from './logic';
+import { useT } from '@/lib/i18n/react';
+import { parseAnswer } from '@/lib/i18n/number';
 
 export interface ArithGameResult {
   score: number;
@@ -59,6 +61,7 @@ function ColumnDisplay({ q }: { q: ArithQuestion }) {
 }
 
 export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
+  const { t } = useT();
   const [questions, setQuestions] = useState<ArithQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -178,10 +181,8 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = questions[currentIndex];
-    const parsedQ = parseInt(typed, 10);
-    const parsedR = parseInt(typedRemainder, 10);
-    const quotient = isNaN(parsedQ) ? null : parsedQ;
-    const remainder = isNaN(parsedR) ? null : parsedR;
+    const quotient = parseAnswer(typed);
+    const remainder = parseAnswer(typedRemainder);
     finalize(checkArithAnswer(q, quotient, remainder), quotient);
   };
 
@@ -196,7 +197,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -229,10 +230,10 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
       <div className="mx-auto max-w-xl">
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
-            <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">← Quit</Button>
+            <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">{t('arithmetic.play.quit')}</Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('arithmetic.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -256,7 +257,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('arithmetic.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -274,7 +275,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
             <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">= {formatExpected(q)}</div>
           )}
           {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
           )}
         </Card>
 
@@ -301,8 +302,8 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
                       remainderInputRef.current?.select();
                     }
                   }}
-                  placeholder="quotient"
-                  aria-label="Quotient"
+                  placeholder={t('arithmetic.play.quotientPlaceholder')}
+                  aria-label={t('arithmetic.play.quotientAriaLabel')}
                   className="h-12 md:h-[64px] flex-1 text-center text-2xl md:text-4xl font-bold"
                   autoFocus
                 />
@@ -313,8 +314,8 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
                   inputMode="numeric"
                   value={typedRemainder}
                   onChange={e => setTypedRemainder(e.target.value)}
-                  placeholder="remainder"
-                  aria-label="Remainder"
+                  placeholder={t('arithmetic.play.remainderPlaceholder')}
+                  aria-label={t('arithmetic.play.remainderAriaLabel')}
                   className="h-12 md:h-[64px] flex-1 text-center text-2xl md:text-4xl font-bold"
                 />
               </div>
@@ -325,8 +326,8 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
                 inputMode="numeric"
                 value={typed}
                 onChange={e => setTyped(e.target.value)}
-                placeholder="Type the answer"
-                aria-label="Type the answer"
+                placeholder={t('arithmetic.play.typeTheAnswer')}
+                aria-label={t('arithmetic.play.typeTheAnswer')}
                 className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
                 autoFocus
               />
@@ -336,7 +337,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
               disabled={typed === ''}
             >
-              Check
+              {t('arithmetic.play.check')}
             </Button>
           </form>
         )}
