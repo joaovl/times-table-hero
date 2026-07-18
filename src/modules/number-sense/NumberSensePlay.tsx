@@ -21,6 +21,8 @@ import {
   isNegativeIntervalQuestion,
   isBidmasQuestion,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
+import type { MessageKey } from '@/lib/i18n/i18n';
 
 export interface NumberSenseIncorrectEntry {
   question: NumberSenseQuestion;
@@ -92,7 +94,17 @@ function SequenceDisplay({
   );
 }
 
+const ROUND_NEAREST_KEY: Record<number, MessageKey> = {
+  10: 'numberSense.nearest.10',
+  100: 'numberSense.nearest.100',
+  1000: 'numberSense.nearest.1000',
+  10000: 'numberSense.nearest.10000',
+  100000: 'numberSense.nearest.100000',
+  1000000: 'numberSense.nearest.1000000',
+};
+
 export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
+  const { t } = useT();
   const [questions, setQuestions] = useState<NumberSenseQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -207,7 +219,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -226,7 +238,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
 
   // Choose the placeholder + input type per skill so the kid sees a hint of
   // what shape the answer should take.
-  let placeholder = 'Type the answer';
+  let placeholder = t('numberSense.play.typeTheAnswer');
   let inputType: 'number' | 'text' = 'number';
   let inputMode: 'numeric' | 'text' = 'numeric';
   if (
@@ -235,19 +247,19 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
     isNegativeIntervalQuestion(q) ||
     isBidmasQuestion(q)
   ) {
-    placeholder = 'Type a number';
+    placeholder = t('numberSense.play.typeANumber');
     inputType = 'number';
     inputMode = 'numeric';
   } else if (isSequenceQuestion(q)) {
-    placeholder = `${q.missingIndices.length} numbers, comma-separated`;
+    placeholder = t('numberSense.play.numbersCommaSeparated', { count: q.missingIndices.length });
     inputType = 'text';
     inputMode = 'text';
   } else if (isRomanQuestion(q)) {
-    placeholder = q.direction === 'r2n' ? 'Type a number' : 'Type Roman numerals (e.g. XIV)';
+    placeholder = q.direction === 'r2n' ? t('numberSense.play.typeANumber') : t('numberSense.play.typeRomanNumerals');
     inputType = 'text';
     inputMode = 'text';
   } else if (isOrderQuestion(q)) {
-    placeholder = 'Smallest to largest, comma-separated';
+    placeholder = t('numberSense.play.smallestToLargestCommaSeparated');
     inputType = 'text';
     inputMode = 'text';
   }
@@ -258,11 +270,11 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
             <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">
-              ← Quit
+              {t('numberSense.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('numberSense.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -291,7 +303,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('numberSense.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -307,7 +319,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
           {isPlaceValueQuestion(q) && (
             <>
               <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
-                What is the value of the highlighted digit?
+                {t('numberSense.play.whatIsHighlightedDigit')}
               </p>
               <HighlightedNumber number={q.number} digitIndex={q.digitIndex} />
             </>
@@ -316,18 +328,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
           {isRoundQuestion(q) && (
             <>
               <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
-                Round to the nearest{' '}
-                {q.nearest === 10
-                  ? '10'
-                  : q.nearest === 100
-                    ? '100'
-                    : q.nearest === 1000
-                      ? '1,000'
-                      : q.nearest === 10000
-                        ? '10,000'
-                        : q.nearest === 100000
-                          ? '100,000'
-                          : '1,000,000'}
+                {t('numberSense.play.roundToNearest', { nearest: t(ROUND_NEAREST_KEY[q.nearest] ?? 'numberSense.nearest.1000000') })}
               </p>
               <div className="font-mono text-5xl md:text-6xl font-extrabold text-foreground">
                 {fmt(q.number)}
@@ -338,7 +339,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
           {isNegativeIntervalQuestion(q) && (
             <>
               <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
-                From {q.from} to {q.to}, how many?
+                {t('numberSense.play.fromToHowMany', { from: q.from, to: q.to })}
               </p>
               <div className="font-mono text-4xl md:text-5xl font-extrabold text-foreground">
                 {q.from} → {q.to}
@@ -349,7 +350,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
           {isBidmasQuestion(q) && (
             <>
               <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
-                Work out the answer (remember the order of operations)
+                {t('numberSense.play.workOutBidmas')}
               </p>
               <div className="font-mono text-3xl md:text-5xl font-extrabold text-foreground">
                 {q.expression} = ?
@@ -360,7 +361,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
           {isSequenceQuestion(q) && (
             <>
               <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
-                Fill in the blanks (in order)
+                {t('numberSense.play.fillInBlanks')}
               </p>
               <SequenceDisplay sequence={q.sequence} missingIndices={q.missingIndices} />
             </>
@@ -370,8 +371,8 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
             <>
               <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
                 {q.direction === 'r2n'
-                  ? 'What number is this Roman numeral?'
-                  : 'Write this number in Roman numerals'}
+                  ? t('numberSense.play.whatNumberIsRoman')
+                  : t('numberSense.play.writeInRoman')}
               </p>
               <div className="font-mono text-5xl md:text-6xl font-extrabold text-foreground tracking-wider">
                 {q.prompt}
@@ -382,7 +383,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
           {isOrderQuestion(q) && (
             <>
               <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
-                Type these numbers smallest to largest
+                {t('numberSense.play.typeSmallestToLargest')}
               </p>
               <div className="flex flex-wrap justify-center gap-2 md:gap-3 font-mono text-3xl md:text-4xl font-extrabold text-foreground">
                 {q.numbers.map((n, i) => (
@@ -396,11 +397,11 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
 
           {feedback === 'incorrect' && (
             <div className="mt-4 text-xl md:text-2xl font-bold text-destructive break-words">
-              Answer: {answerText(q)}
+              {t('numberSense.play.answer', { value: answerText(q) })}
             </div>
           )}
           {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
           )}
         </Card>
 
@@ -416,7 +417,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
               value={typed}
               onChange={e => setTyped(e.target.value)}
               placeholder={placeholder}
-              aria-label="Type the answer"
+              aria-label={t('numberSense.play.typeTheAnswer')}
               className="h-12 md:h-[64px] text-center text-xl md:text-3xl font-bold"
               autoFocus
             />
@@ -425,7 +426,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
               disabled={typed.trim() === ''}
             >
-              Check
+              {t('numberSense.play.check')}
             </Button>
           </form>
           )

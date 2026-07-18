@@ -6,6 +6,8 @@
 // dependencies.
 
 import { integerChoices } from '@/lib/game/choices';
+import { t, type MessageKey } from '@/lib/i18n/i18n';
+
 export type NumberSenseSkill =
   | 'place-value-3d'
   | 'place-value-4d'
@@ -128,6 +130,8 @@ export const ALL_SKILLS: NumberSenseSkill[] = [
   'bidmas',
 ];
 
+// Kept English-only: consumed by printConfig.ts/pdf.ts for the printed
+// worksheet, which is out of scope for this extraction pass.
 export const SKILL_LABELS: Record<NumberSenseSkill, string> = {
   'place-value-3d': 'Place value (3-digit)',
   'place-value-4d': 'Place value (4-digit)',
@@ -146,6 +150,29 @@ export const SKILL_LABELS: Record<NumberSenseSkill, string> = {
   'order-numbers': 'Order numbers',
   'bidmas': 'Order of operations',
 };
+
+const SKILL_KEY: Record<NumberSenseSkill, MessageKey> = {
+  'place-value-3d': 'numberSense.skills.placeValue3d',
+  'place-value-4d': 'numberSense.skills.placeValue4d',
+  'place-value-7d': 'numberSense.skills.placeValue7d',
+  'place-value-10m': 'numberSense.skills.placeValue10m',
+  'round-10': 'numberSense.skills.round10',
+  'round-100': 'numberSense.skills.round100',
+  'round-1000': 'numberSense.skills.round1000',
+  'round-10k': 'numberSense.skills.round10k',
+  'round-1m': 'numberSense.skills.round1m',
+  'count-multiples': 'numberSense.skills.countMultiples',
+  'negative-count': 'numberSense.skills.negativeCount',
+  'negative-interval': 'numberSense.skills.negativeInterval',
+  'roman-100': 'numberSense.skills.roman100',
+  'roman-1000': 'numberSense.skills.roman1000',
+  'order-numbers': 'numberSense.skills.orderNumbers',
+  'bidmas': 'numberSense.skills.bidmas',
+};
+
+export function skillLabel(s: NumberSenseSkill): string {
+  return t(SKILL_KEY[s]);
+}
 
 // Curriculum tag map — exported so an orchestrator can build a curriculum
 // reference doc without having to re-implement the mapping.
@@ -656,35 +683,41 @@ export function generateNumberSenseQuestions(
 
 // Render the question prompt as plain text suitable for the PDF and the
 // results-screen recap. Roman/place-value/etc. all flatten to ASCII.
+const ROUND_NEAREST_KEY: Record<number, MessageKey> = {
+  10: 'numberSense.nearest.10',
+  100: 'numberSense.nearest.100',
+  1000: 'numberSense.nearest.1000',
+  10000: 'numberSense.nearest.10000',
+  100000: 'numberSense.nearest.100000',
+  1000000: 'numberSense.nearest.1000000',
+};
+
 export function questionPromptText(q: NumberSenseQuestion): string {
   if (isPlaceValueQuestion(q)) {
     const digitStr = String(q.number)[q.digitIndex];
-    return `What is the value of the ${digitStr} in ${q.number}?`;
+    return t('numberSense.prompt.placeValue', { digit: digitStr, number: q.number });
   }
   if (isRoundQuestion(q)) {
-    const label =
-      q.nearest === 10 ? '10' :
-      q.nearest === 100 ? '100' :
-      q.nearest === 1000 ? '1,000' :
-      q.nearest === 10000 ? '10,000' :
-      q.nearest === 100000 ? '100,000' : '1,000,000';
-    return `Round ${q.number.toLocaleString('en-GB')} to the nearest ${label}.`;
+    const label = t(ROUND_NEAREST_KEY[q.nearest] ?? 'numberSense.nearest.1000000');
+    return t('numberSense.prompt.round', { number: q.number.toLocaleString('en-GB'), nearest: label });
   }
   if (isSequenceQuestion(q)) {
     const cells = q.sequence.map((n, i) => (q.missingIndices.includes(i) ? '?' : String(n)));
     return cells.join(', ');
   }
   if (isRomanQuestion(q)) {
-    return q.direction === 'r2n' ? `Convert ${q.prompt} to a number.` : `Convert ${q.prompt} to Roman numerals.`;
+    return q.direction === 'r2n'
+      ? t('numberSense.prompt.convertToNumber', { value: q.prompt })
+      : t('numberSense.prompt.convertToRoman', { value: q.prompt });
   }
   if (isNegativeIntervalQuestion(q)) {
-    return `From ${q.from} to ${q.to}, how many?`;
+    return t('numberSense.prompt.fromTo', { from: q.from, to: q.to });
   }
   if (isBidmasQuestion(q)) {
     return `${q.expression} = ?`;
   }
   // order-numbers
-  return `Order smallest to largest: ${q.numbers.join(', ')}`;
+  return t('numberSense.prompt.orderSmallestToLargest', { list: q.numbers.join(', ') });
 }
 
 // Render the canonical answer text. Used by PDF answer-key and Results.

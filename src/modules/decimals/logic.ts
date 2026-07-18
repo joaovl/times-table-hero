@@ -12,6 +12,8 @@
 // floating-point quirks (0.1 + 0.2 = 0.30000000000000004) never leak through
 // to either the screen or the PDF answer key.
 
+import { t, type MessageKey } from '@/lib/i18n/i18n';
+
 export type DecimalsSkill =
   | 'identify-tenths'
   | 'identify-hundredths'
@@ -43,6 +45,8 @@ export const ALL_SKILLS: DecimalsSkill[] = [
   'subtract-decimals',
 ];
 
+// Kept English-only: consumed by printConfig.ts/pdf.ts for the printed
+// worksheet, which is out of scope for this extraction pass.
 export const SKILL_LABELS: Record<DecimalsSkill, string> = {
   'identify-tenths': 'Tenths (Y4)',
   'identify-hundredths': 'Hundredths (Y4)',
@@ -58,6 +62,26 @@ export const SKILL_LABELS: Record<DecimalsSkill, string> = {
   'add-decimals': 'Add decimals',
   'subtract-decimals': 'Subtract decimals',
 };
+
+const SKILL_KEY: Record<DecimalsSkill, MessageKey> = {
+  'identify-tenths': 'decimals.skills.identifyTenths',
+  'identify-hundredths': 'decimals.skills.identifyHundredths',
+  'identify-thousandths': 'decimals.skills.identifyThousandths',
+  'round-1dp': 'decimals.skills.round1dp',
+  'round-2dp': 'decimals.skills.round2dp',
+  'compare-decimals': 'decimals.skills.compareDecimals',
+  'fraction-to-decimal': 'decimals.skills.fractionToDecimal',
+  'decimal-to-fraction': 'decimals.skills.decimalToFraction',
+  'percent-fraction': 'decimals.skills.percentFraction',
+  'percent-decimal': 'decimals.skills.percentDecimal',
+  'decimal-percent': 'decimals.skills.decimalPercent',
+  'add-decimals': 'decimals.skills.addDecimals',
+  'subtract-decimals': 'decimals.skills.subtractDecimals',
+};
+
+export function skillLabel(s: DecimalsSkill): string {
+  return t(SKILL_KEY[s]);
+}
 
 // UK National Curriculum tags. Exposed so the orchestrator (or a future
 // curriculum-tagging UI) can group skills by year group.

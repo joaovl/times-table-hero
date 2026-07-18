@@ -28,6 +28,8 @@ import {
   parseDecimalList,
   roundTo,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
+import { parseAnswer } from '@/lib/i18n/number';
 
 // User-typed answer kept on each incorrect entry so the results screen can
 // show what the kid wrote.
@@ -66,21 +68,18 @@ function naturalDp(n: number): number {
 }
 
 function PromptLine({ q }: { q: DecimalsQuestion }) {
+  const { t } = useT();
   if (isIdentifyQuestion(q)) {
     const dp =
       q.skill === 'identify-tenths' ? 1 : q.skill === 'identify-hundredths' ? 2 : 3;
-    return (
-      <span>
-        {formatDecimal(q.decimal, dp)} as a fraction =
-      </span>
-    );
+    return <span>{t('decimals.play.asAFraction', { value: formatDecimal(q.decimal, dp) })}</span>;
   }
   if (isRoundQuestion(q)) {
-    const targetLabel = q.precision === 0 ? 'whole number' : '1 dp';
+    const targetLabel = q.precision === 0 ? t('decimals.play.wholeNumber') : t('decimals.play.onedp');
     const sourceDp = q.skill === 'round-1dp' ? 1 : 2;
     return (
       <span>
-        Round {formatDecimal(q.decimal, sourceDp)} to nearest {targetLabel} =
+        {t('decimals.play.round', { value: formatDecimal(q.decimal, sourceDp), target: targetLabel })}
       </span>
     );
   }
@@ -89,20 +88,20 @@ function PromptLine({ q }: { q: DecimalsQuestion }) {
       const glyph = fractionGlyph(q.num, q.den);
       return (
         <span>
-          {glyph ?? `${q.num}/${q.den}`} as a decimal =
+          {t('decimals.play.asADecimal', { value: glyph ?? `${q.num}/${q.den}` })}
         </span>
       );
     }
     return (
       <span>
-        {formatDecimal(q.decimal, naturalDp(q.decimal))} as a fraction =
+        {t('decimals.play.asAFraction', { value: formatDecimal(q.decimal, naturalDp(q.decimal)) })}
       </span>
     );
   }
   if (isPercentQuestion(q)) {
-    if (q.skill === 'percent-fraction') return <span>{q.percent}% as a fraction =</span>;
-    if (q.skill === 'percent-decimal') return <span>{q.percent}% as a decimal =</span>;
-    return <span>{formatDecimal(q.decimal, naturalDp(q.decimal))} as a % =</span>;
+    if (q.skill === 'percent-fraction') return <span>{t('decimals.play.percentAsFraction', { percent: q.percent })}</span>;
+    if (q.skill === 'percent-decimal') return <span>{t('decimals.play.percentAsDecimal', { percent: q.percent })}</span>;
+    return <span>{t('decimals.play.asAPercent', { value: formatDecimal(q.decimal, naturalDp(q.decimal)) })}</span>;
   }
   if (isAddSubQuestion(q)) {
     const dp = Math.max(naturalDp(q.a), naturalDp(q.b));
@@ -114,7 +113,7 @@ function PromptLine({ q }: { q: DecimalsQuestion }) {
     );
   }
   if (isCompareQuestion(q)) {
-    return <span>Tap the values in order, smallest first</span>;
+    return <span>{t('decimals.play.tapInOrder')}</span>;
   }
   return null;
 }
@@ -170,6 +169,7 @@ function CompareChips({
 }
 
 export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
+  const { t } = useT();
   const [questions, setQuestions] = useState<DecimalsQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -284,8 +284,7 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
 
   const submitNumeric = useCallback(
     (expected: number) => {
-      const parsed = Number(numericInput);
-      const typed = numericInput.trim() === '' || !isFinite(parsed) ? null : parsed;
+      const typed = parseAnswer(numericInput);
       const isCorrect = checkNumericAnswer(expected, typed);
       if (!isCorrect) recordIncorrect({ kind: 'number', value: typed });
       advance(isCorrect);
@@ -297,20 +296,11 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
 
   const submitFraction = useCallback(
     (expectedNum: number, expectedDen: number) => {
-      const n = fracNum.trim() === '' ? null : parseInt(fracNum, 10);
-      const d = fracDen.trim() === '' ? null : parseInt(fracDen, 10);
-      const isCorrect = checkFractionAnswer(
-        expectedNum,
-        expectedDen,
-        n === null || isNaN(n) ? null : n,
-        d === null || isNaN(d) ? null : d
-      );
+      const n = parseAnswer(fracNum);
+      const d = parseAnswer(fracDen);
+      const isCorrect = checkFractionAnswer(expectedNum, expectedDen, n, d);
       if (!isCorrect) {
-        recordIncorrect({
-          kind: 'fraction',
-          num: n === null || isNaN(n) ? null : n,
-          den: d === null || isNaN(d) ? null : d,
-        });
+        recordIncorrect({ kind: 'fraction', num: n, den: d });
       }
       advance(isCorrect);
     },
@@ -322,8 +312,7 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
     (expected: number) => {
       // Accept either "25" or "25%" — strip a trailing %.
       const stripped = numericInput.replace(/%/g, '').trim();
-      const parsed = Number(stripped);
-      const typed = stripped === '' || !isFinite(parsed) ? null : parsed;
+      const typed = parseAnswer(stripped);
       const isCorrect = checkNumericAnswer(expected, typed);
       if (!isCorrect) recordIncorrect({ kind: 'number', value: typed });
       advance(isCorrect);
@@ -349,7 +338,7 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -381,7 +370,7 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
             className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
             disabled={!allPicked}
           >
-            Check
+            {t('decimals.play.check')}
           </Button>
         </div>
       );
@@ -425,16 +414,16 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
               {
                 value: fracNum,
                 onChange: setFracNum,
-                ariaLabel: 'Numerator',
-                placeholder: 'num',
+                ariaLabel: t('decimals.play.numerator'),
+                placeholder: t('decimals.play.numPlaceholder'),
                 inputRef,
                 autoFocus: true,
               },
               {
                 value: fracDen,
                 onChange: setFracDen,
-                ariaLabel: 'Denominator',
-                placeholder: 'den',
+                ariaLabel: t('decimals.play.denominator'),
+                placeholder: t('decimals.play.denPlaceholder'),
                 inputRef: fracDenRef,
               },
             ]}
@@ -446,7 +435,7 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
             className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
             disabled={fracNum === '' || fracDen === ''}
           >
-            Check
+            {t('decimals.play.check')}
           </Button>
         </form>
       );
@@ -483,8 +472,8 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
           inputMode="decimal"
           value={numericInput}
           onChange={e => setNumericInput(e.target.value)}
-          placeholder={isPercent ? 'e.g. 50' : 'Type the answer'}
-          aria-label="Type the answer"
+          placeholder={isPercent ? t('decimals.play.egFifty') : t('decimals.play.typeTheAnswer')}
+          aria-label={t('decimals.play.typeTheAnswer')}
           className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
           autoFocus
         />
@@ -493,7 +482,7 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
           className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
           disabled={numericInput.trim() === ''}
         >
-          Check
+          {t('decimals.play.check')}
         </Button>
       </form>
     );
@@ -531,11 +520,11 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
             <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">
-              ← Quit
+              {t('decimals.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('decimals.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -564,7 +553,7 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('decimals.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -586,7 +575,7 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
             </div>
           )}
           {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
           )}
         </Card>
 

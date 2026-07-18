@@ -20,6 +20,8 @@ import {
   isPercentQuestion,
   isRoundQuestion,
 } from './logic';
+import { t } from '@/lib/i18n/i18n';
+import { useT } from '@/lib/i18n/react';
 
 interface Props {
   result: DecimalsGameResult;
@@ -44,11 +46,12 @@ function questionSummary(q: DecimalsIncorrectEntry['question']): string {
   }
   if (isRoundQuestion(q)) {
     const sourceDp = q.skill === 'round-1dp' ? 1 : 2;
-    const targetLabel = q.precision === 0 ? 'whole' : '1dp';
-    return `Round ${formatDecimal(q.decimal, sourceDp)} (${targetLabel}) = ${formatDecimal(
-      q.answer,
-      q.precision
-    )}`;
+    const targetLabel = q.precision === 0 ? t('decimals.results.whole') : t('decimals.results.onedp');
+    return t('decimals.results.roundSummary', {
+      value: formatDecimal(q.decimal, sourceDp),
+      target: targetLabel,
+      answer: formatDecimal(q.answer, q.precision),
+    });
   }
   if (isCompareQuestion(q)) {
     return `${q.decimals.map(d => formatDecimal(d, naturalDp(d))).join(', ')} → ${q.answer
@@ -101,13 +104,14 @@ function IncorrectRow({ entry }: { entry: DecimalsIncorrectEntry }) {
     <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-4 py-2">
       <span className="font-medium text-sm md:text-base">{questionSummary(entry.question)}</span>
       {youSaid && (
-        <span className="text-sm text-destructive whitespace-nowrap">You said: {youSaid}</span>
+        <span className="text-sm text-destructive whitespace-nowrap">{t('decimals.results.youSaid', { answer: youSaid })}</span>
       )}
     </div>
   );
 }
 
 export function DecimalsResults({ result, onPlayAgain, onNewGame, userId }: Props) {
+  const { t: tt } = useT();
   const percentage = result.total > 0 ? Math.round((result.score / result.total) * 100) : 0;
   const stars =
     percentage === 100 ? 5
@@ -140,17 +144,17 @@ export function DecimalsResults({ result, onPlayAgain, onNewGame, userId }: Prop
   }, [result, userId, percentage]);
 
   const message =
-    percentage === 100 ? "Perfect score! You're a maths superstar!"
-      : percentage >= 80 ? 'Brilliant work! Keep it up!'
-      : percentage >= 60 ? 'Good effort! Practice makes perfect!'
-      : percentage >= 40 ? "Nice try! You'll get better!"
-      : "Keep practising, you've got this!";
+    percentage === 100 ? tt('decimals.results.perfectScore')
+      : percentage >= 80 ? tt('decimals.results.brilliantWork')
+      : percentage >= 60 ? tt('decimals.results.goodEffort')
+      : percentage >= 40 ? tt('decimals.results.niceTry')
+      : tt('decimals.results.keepPractising');
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto max-w-xl">
         <div className="mb-8 text-center">
-          <div className="mb-3 flex justify-center gap-1" aria-label={`${stars} out of 5 stars`}>
+          <div className="mb-3 flex justify-center gap-1" aria-label={tt('decimals.results.starsAriaLabel', { stars })}>
             {[1, 2, 3, 4, 5].map(n => (
               <Star
                 key={n}
@@ -172,18 +176,18 @@ export function DecimalsResults({ result, onPlayAgain, onNewGame, userId }: Prop
             </div>
           </div>
           <p className="text-2xl font-bold text-foreground">{message}</p>
-          <p className="mt-2 text-muted-foreground">{percentage}% correct</p>
+          <p className="mt-2 text-muted-foreground">{tt('decimals.results.percentCorrect', { percent: percentage })}</p>
           {result.bestStreak >= 3 && (
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg">
               <Flame className="w-4 h-4" />
-              Best streak: {result.bestStreak}
+              {tt('decimals.results.bestStreak', { count: result.bestStreak })}
             </div>
           )}
         </div>
 
         {result.incorrectQuestions.length > 0 && (
           <Card className="mb-4 p-4">
-            <h3 className="mb-3 font-bold text-foreground">Questions to practise:</h3>
+            <h3 className="mb-3 font-bold text-foreground">{tt('decimals.results.questionsToPractise')}</h3>
             <div className="space-y-2">
               {result.incorrectQuestions.map((entry, idx) => (
                 <IncorrectRow key={idx} entry={entry} />
@@ -194,10 +198,10 @@ export function DecimalsResults({ result, onPlayAgain, onNewGame, userId }: Prop
 
         <div className="space-y-3">
           <Button onClick={onPlayAgain} className="w-full py-6 text-xl font-bold shadow-button">
-            Play Again
+            {tt('decimals.results.playAgain')}
           </Button>
           <Button onClick={onNewGame} variant="outline" className="w-full py-4 font-bold">
-            Change Settings
+            {tt('decimals.results.changeSettings')}
           </Button>
         </div>
       </div>
