@@ -93,6 +93,31 @@ export function PieChart({
         );
       })}
 
+      {/* Value label on each slice — without these, "what fraction is this
+          slice?" is unanswerable by eye (3/10 vs 4/12 look identical). Placed
+          at the slice's mid-angle, dark text on the light fills and white on
+          the dark fills for contrast. */}
+      {slices.map((s, i) => {
+        const lx = PIE_CX + PIE_R * 0.62 * Math.cos(s.midAngle);
+        const ly = PIE_CY + PIE_R * 0.62 * Math.sin(s.midAngle);
+        const darkFill = i % SLICE_FILLS.length === 1 || i % SLICE_FILLS.length === 3;
+        return (
+          <text
+            key={`val-${i}`}
+            x={lx}
+            y={ly}
+            fontSize="14"
+            fontWeight="bold"
+            fill={darkFill ? 'white' : 'hsl(220 30% 15%)'}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontFamily="sans-serif"
+          >
+            {s.value}
+          </text>
+        );
+      })}
+
       {/* Legend — 2 columns of swatch + label below the pie. */}
       {categories.map((c, i) => {
         const col = i % 2;
