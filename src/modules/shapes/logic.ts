@@ -9,6 +9,7 @@
 // left to the conversions module to avoid duplication.
 
 import { integerChoices } from '@/lib/game/choices';
+import { t, type MessageKey } from '@/lib/i18n/i18n';
 export type ShapeSkill =
   | 'name-2d'
   | 'count-sides'
@@ -130,6 +131,8 @@ export const SHAPE_SKILL_OPTIONS: ReadonlyArray<ShapeSkill> = [
   'angle-vertical',
 ];
 
+// English-only labels: used by the PDF worksheets and as source wording for
+// the translated shapeSkillLabel() below.
 export const SHAPE_SKILL_LABEL: Record<ShapeSkill, string> = {
   'name-2d': 'Name (2D)',
   'count-sides': 'Count sides',
@@ -154,6 +157,36 @@ export const SHAPE_SKILL_LABEL: Record<ShapeSkill, string> = {
   'angle-on-line': 'Angles on a line',
   'angle-vertical': 'Vertically opposite',
 };
+
+const SHAPE_SKILL_KEY: Record<ShapeSkill, MessageKey> = {
+  'name-2d': 'shapes.skills.name2d',
+  'count-sides': 'shapes.skills.countSides',
+  'perimeter-rect': 'shapes.skills.perimeterRect',
+  'area-rect': 'shapes.skills.areaRect',
+  'area-tri': 'shapes.skills.areaTri',
+  'area-circle': 'shapes.skills.areaCircle',
+  circumference: 'shapes.skills.circumference',
+  'angle-name': 'shapes.skills.angleName',
+  'name-3d': 'shapes.skills.name3d',
+  'count-faces': 'shapes.skills.countFaces',
+  'count-edges': 'shapes.skills.countEdges',
+  'count-vertices': 'shapes.skills.countVertices',
+  'angle-measure': 'shapes.skills.angleMeasure',
+  'angle-name-reflex': 'shapes.skills.angleNameReflex',
+  'lines-of-symmetry': 'shapes.skills.linesOfSymmetry',
+  'coord-read': 'shapes.skills.coordRead',
+  'coord-plot': 'shapes.skills.coordPlot',
+  translation: 'shapes.skills.translation',
+  'coord-four-quadrants': 'shapes.skills.coordFourQuadrants',
+  'angle-at-point': 'shapes.skills.angleAtPoint',
+  'angle-on-line': 'shapes.skills.angleOnLine',
+  'angle-vertical': 'shapes.skills.angleVertical',
+};
+
+/** Translated on-screen label for a shape skill (PDFs keep SHAPE_SKILL_LABEL). */
+export function shapeSkillLabel(s: ShapeSkill): string {
+  return t(SHAPE_SKILL_KEY[s]);
+}
 
 /**
  * Curriculum tags per skill. Maps to UK National Curriculum year groups
@@ -711,6 +744,66 @@ export function promptFor(q: ShapeQuestion): string {
       return 'Missing angle? (sum = 180°)';
     case 'angle-vertical':
       return 'Vertically opposite angle?';
+  }
+}
+
+/**
+ * Translated on-screen prompt for a question. Mirrors promptFor() (which the
+ * PDFs keep in English/WinAnsi); answer TOKENS (shape names typed/chosen)
+ * intentionally remain canonical English until the answer-token localization
+ * pass — grading compares against those tokens.
+ */
+export function promptForScreen(q: ShapeQuestion): string {
+  switch (q.skill) {
+    case 'name-2d':
+    case 'name-3d':
+      return t('shapes.prompt.name');
+    case 'count-sides':
+      return t('shapes.prompt.sides');
+    case 'perimeter-rect':
+      return t('shapes.prompt.perimeter');
+    case 'area-rect':
+    case 'area-tri':
+      return t('shapes.prompt.area');
+    case 'area-circle':
+      return t('shapes.prompt.areaPi');
+    case 'circumference':
+      return t('shapes.prompt.circumferencePi');
+    case 'angle-name':
+    case 'angle-name-reflex':
+      return t('shapes.prompt.angle');
+    case 'count-faces':
+      return t('shapes.prompt.faces');
+    case 'count-edges':
+      return t('shapes.prompt.edges');
+    case 'count-vertices':
+      return t('shapes.prompt.vertices');
+    case 'angle-measure':
+      return t('shapes.prompt.angleDegrees');
+    case 'lines-of-symmetry':
+      return t('shapes.prompt.linesOfSymmetry');
+    case 'coord-read':
+    case 'coord-four-quadrants':
+      return t('shapes.prompt.coordinates');
+    case 'coord-plot':
+      if (q.point) return t('shapes.prompt.plotPoint', { x: q.point.x, y: q.point.y });
+      return t('shapes.prompt.plotThePoint');
+    case 'translation': {
+      const dx = q.delta?.dx ?? 0;
+      const dy = q.delta?.dy ?? 0;
+      const sx = q.point?.x ?? 0;
+      const sy = q.point?.y ?? 0;
+      const hx = dx === 0 ? '' : `${Math.abs(dx)} ${t(dx > 0 ? 'shapes.prompt.right' : 'shapes.prompt.left')}`;
+      const hy = dy === 0 ? '' : `${Math.abs(dy)} ${t(dy > 0 ? 'shapes.prompt.up' : 'shapes.prompt.down')}`;
+      const parts = [hx, hy].filter(Boolean).join(', ');
+      return t('shapes.prompt.translate', { x: sx, y: sy, parts });
+    }
+    case 'angle-at-point':
+      return t('shapes.prompt.missingAngle360');
+    case 'angle-on-line':
+      return t('shapes.prompt.missingAngle180');
+    case 'angle-vertical':
+      return t('shapes.prompt.verticallyOpposite');
   }
 }
 

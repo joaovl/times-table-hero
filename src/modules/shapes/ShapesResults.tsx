@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 import type { ShapesGameResult } from './ShapesPlay';
 import { saveShapeSession } from './storage';
+import { useT } from '@/lib/i18n/react';
 
 interface Props {
   result: ShapesGameResult;
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function ShapesResults({ result, onPlayAgain, onNewGame, userId }: Props) {
+  const { t } = useT();
   const percentage = result.total > 0 ? Math.round((result.score / result.total) * 100) : 0;
   const stars =
     percentage === 100 ? 5
@@ -48,17 +50,17 @@ export function ShapesResults({ result, onPlayAgain, onNewGame, userId }: Props)
   }, [result, userId, percentage]);
 
   const message =
-    percentage === 100 ? "Perfect score! You're a maths superstar!"
-      : percentage >= 80 ? 'Brilliant work! Keep it up!'
-      : percentage >= 60 ? 'Good effort! Practice makes perfect!'
-      : percentage >= 40 ? "Nice try! You'll get better!"
-      : "Keep practising, you've got this!";
+    percentage === 100 ? t('shapes.results.perfectScore')
+      : percentage >= 80 ? t('shapes.results.brilliantWork')
+      : percentage >= 60 ? t('shapes.results.goodEffort')
+      : percentage >= 40 ? t('shapes.results.niceTry')
+      : t('shapes.results.keepPractising');
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto max-w-xl">
         <div className="mb-8 text-center">
-          <div className="mb-3 flex justify-center gap-1" aria-label={`${stars} out of 5 stars`}>
+          <div className="mb-3 flex justify-center gap-1" aria-label={t('shapes.results.starsAriaLabel', { stars })}>
             {[1, 2, 3, 4, 5].map(n => (
               <Star
                 key={n}
@@ -80,18 +82,18 @@ export function ShapesResults({ result, onPlayAgain, onNewGame, userId }: Props)
             </div>
           </div>
           <p className="text-2xl font-bold text-foreground">{message}</p>
-          <p className="mt-2 text-muted-foreground">{percentage}% correct</p>
+          <p className="mt-2 text-muted-foreground">{t('shapes.results.percentCorrect', { percent: percentage })}</p>
           {result.bestStreak >= 3 && (
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg">
               <Flame className="w-4 h-4" />
-              Best streak: {result.bestStreak}
+              {t('shapes.results.bestStreak', { count: result.bestStreak })}
             </div>
           )}
         </div>
 
         {result.incorrectQuestions.length > 0 && (
           <Card className="mb-4 p-4">
-            <h3 className="mb-3 font-bold text-foreground">Questions to practise:</h3>
+            <h3 className="mb-3 font-bold text-foreground">{t('shapes.results.questionsToPractise')}</h3>
             <div className="space-y-2">
               {result.incorrectQuestions.map((q, idx) => (
                 <div key={idx} className="flex items-center justify-between rounded-lg bg-muted px-4 py-2">
@@ -100,7 +102,7 @@ export function ShapesResults({ result, onPlayAgain, onNewGame, userId }: Props)
                     {q.correctAnswer}
                   </span>
                   {q.userAnswer !== null && (
-                    <span className="text-sm text-destructive">You said: {q.userAnswer}</span>
+                    <span className="text-sm text-destructive">{t('shapes.results.youSaid', { answer: q.userAnswer })}</span>
                   )}
                 </div>
               ))}
@@ -109,8 +111,8 @@ export function ShapesResults({ result, onPlayAgain, onNewGame, userId }: Props)
         )}
 
         <div className="space-y-3">
-          <Button onClick={onPlayAgain} className="w-full py-6 text-xl font-bold shadow-button">Play Again</Button>
-          <Button onClick={onNewGame} variant="outline" className="w-full py-4 font-bold">Change Settings</Button>
+          <Button onClick={onPlayAgain} className="w-full py-6 text-xl font-bold shadow-button">{t('shapes.results.playAgain')}</Button>
+          <Button onClick={onNewGame} variant="outline" className="w-full py-4 font-bold">{t('shapes.results.changeSettings')}</Button>
         </div>
       </div>
     </div>

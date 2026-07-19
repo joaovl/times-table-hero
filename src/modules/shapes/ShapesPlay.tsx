@@ -13,6 +13,7 @@ import {
   ANGLE_CATEGORIES,
   ANGLE_CATEGORIES_REFLEX,
   answerString,
+  promptForScreen,
   generateShapeQuestions,
   isAnswerCorrect,
   pickNameDistractors,
@@ -20,6 +21,7 @@ import {
   promptFor,
 } from './logic';
 import { ShapeFigure } from './ShapeFigure';
+import { t } from '@/lib/i18n/i18n';
 import type { ShapeFigureMode } from './ShapeFigure';
 import { recordAttempt } from '@/lib/feedback/attemptLog';
 
@@ -170,7 +172,7 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
         setIncorrect(prev => [
           ...prev,
           {
-            prompt: promptFor(q),
+            prompt: promptForScreen(q),
             correctAnswer: answerString(q),
             userAnswer: value || null,
           },
@@ -201,7 +203,7 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -267,10 +269,10 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
       <div className="mx-auto max-w-xl">
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
-            <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">← Quit</Button>
+            <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">{t('shapes.play.quit')}</Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('shapes.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -294,7 +296,7 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('shapes.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -305,7 +307,7 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
           cardClassName="py-4 md:py-6"
           figure={<ShapeFigure shape={figureMode} question={q} size={220} />}
           promptText={
-            <p className="text-sm md:text-base text-muted-foreground">{promptFor(q)}</p>
+            <p className="text-sm md:text-base text-muted-foreground">{promptForScreen(q)}</p>
           }
           correctAnswerHint={answerString(q)}
         >
@@ -377,7 +379,7 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
                 value={typed}
                 onChange={e => setTyped(e.target.value)}
                 placeholder={inputPlaceholder(q)}
-                aria-label="Type the answer"
+                aria-label={t('shapes.play.typeTheAnswer')}
                 className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
                 autoFocus
               />
@@ -386,7 +388,7 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
                 className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                 disabled={typed.trim() === ''}
               >
-                Check
+                {t('shapes.play.check')}
               </Button>
             </form>
             )
