@@ -6,6 +6,7 @@
 // the existing UI, PDF, and tests keep working unchanged.
 
 import { integerChoices } from '@/lib/game/choices';
+import { t, type MessageKey } from '@/lib/i18n/i18n';
 export type TimePrecision = 'hour' | 'half' | 'quarter' | '5min' | '1min';
 export type TimeFormat = '12h' | '24h' | 'both';
 export type TimeSkill =
@@ -34,6 +35,19 @@ export const TIME_PRECISION_LABEL: Record<TimePrecision, string> = {
   '1min': '1-min',
 };
 
+const TIME_PRECISION_KEY: Record<TimePrecision, MessageKey> = {
+  hour: 'time.precision.hour',
+  half: 'time.precision.half',
+  quarter: 'time.precision.quarter',
+  '5min': 'time.precision.fiveMin',
+  '1min': 'time.precision.oneMin',
+};
+
+/** Translated on-screen label for a precision chip. */
+export function timePrecisionLabel(p: TimePrecision): string {
+  return t(TIME_PRECISION_KEY[p]);
+}
+
 export const TIME_SKILL_OPTIONS: ReadonlyArray<Exclude<TimeSkill, 'all'>> = [
   'read',
   'read-roman',
@@ -42,6 +56,7 @@ export const TIME_SKILL_OPTIONS: ReadonlyArray<Exclude<TimeSkill, 'all'>> = [
   'duration',
 ];
 
+// English-only labels: PDF worksheets + source wording for timeSkillLabel().
 export const TIME_SKILL_LABEL: Record<Exclude<TimeSkill, 'all'>, string> = {
   read: 'Read clock',
   'read-roman': 'Roman clock',
@@ -49,6 +64,19 @@ export const TIME_SKILL_LABEL: Record<Exclude<TimeSkill, 'all'>, string> = {
   'time-arith-pm': 'PM arithmetic',
   duration: 'Duration',
 };
+
+const TIME_SKILL_KEY: Record<Exclude<TimeSkill, 'all'>, MessageKey> = {
+  read: 'time.skills.read',
+  'read-roman': 'time.skills.readRoman',
+  arith: 'time.skills.arith',
+  'time-arith-pm': 'time.skills.timeArithPm',
+  duration: 'time.skills.duration',
+};
+
+/** Translated on-screen label for a time skill (PDFs keep TIME_SKILL_LABEL). */
+export function timeSkillLabel(s: Exclude<TimeSkill, 'all'>): string {
+  return t(TIME_SKILL_KEY[s]);
+}
 
 export const TIME_NUMERALS_OPTIONS: ReadonlyArray<TimeNumerals> = [
   'arabic',
@@ -61,6 +89,17 @@ export const TIME_NUMERALS_LABEL: Record<TimeNumerals, string> = {
   roman: 'Roman',
   both: 'Both',
 };
+
+const TIME_NUMERALS_KEY: Record<TimeNumerals, MessageKey> = {
+  arabic: 'time.numerals.arabic',
+  roman: 'time.numerals.roman',
+  both: 'time.numerals.both',
+};
+
+/** Translated on-screen label for a clock-numerals option. */
+export function timeNumeralsLabel(n: TimeNumerals): string {
+  return t(TIME_NUMERALS_KEY[n]);
+}
 
 // Curriculum mapping (UK NC Y3-Y5). Single source of truth for setup chips
 // and docs. `years` is a non-empty subset of {3,4,5}.
@@ -679,7 +718,7 @@ export function formatDurationPrompt(q: TimeDurationQuestion): string {
     q.format === '12h'
       ? format12hAmPm(q.endHour, q.endMinute)
       : format24h(q.endHour, q.endMinute);
-  return `How long from ${start} to ${end}?`;
+  return t('time.prompt.howLong', { start, end });
 }
 
 export function generateTimeQuestions(settings: TimeSettings, count: number): TimeQuestion[] {

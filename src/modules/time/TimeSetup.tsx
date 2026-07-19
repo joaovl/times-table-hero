@@ -15,13 +15,15 @@ import type {
 } from './logic';
 import {
   generateTimeQuestions,
-  TIME_NUMERALS_LABEL,
+  timeNumeralsLabel,
   TIME_NUMERALS_OPTIONS,
-  TIME_PRECISION_LABEL,
+  timePrecisionLabel,
   TIME_PRECISION_OPTIONS,
-  TIME_SKILL_LABEL,
+  timeSkillLabel,
   TIME_SKILL_OPTIONS,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
+import type { MessageKey } from '@/lib/i18n/i18n';
 import { generateTimePdf } from './pdf';
 import {
   getSavedTimeSettings,
@@ -52,10 +54,16 @@ const TIME_LIMITS = [
   { label: '10 min', value: 600 },
 ];
 
-const ARITH_DIFFICULTY_HINTS: Record<TimeArithDifficulty, string> = {
-  easy: 'Within the same hour',
-  medium: 'Crosses the hour',
-  hard: 'Crosses midnight',
+const ARITH_DIFFICULTY_HINT_KEY: Record<TimeArithDifficulty, MessageKey> = {
+  easy: 'time.setup.hintEasy',
+  medium: 'time.setup.hintMedium',
+  hard: 'time.setup.hintHard',
+};
+
+const ARITH_DIFFICULTY_LABEL_KEY: Record<TimeArithDifficulty, MessageKey> = {
+  easy: 'time.setup.difficultyEasy',
+  medium: 'time.setup.difficultyMedium',
+  hard: 'time.setup.difficultyHard',
 };
 
 type SkillId = Exclude<TimeSkill, 'all'>;
@@ -104,7 +112,7 @@ function PrecisionChipPicker({ selected, onChange }: PrecisionChipPickerProps) {
           aria-pressed={isSelected(p)}
           className={buttonClass(isSelected(p))}
         >
-          <span className="text-[13px] md:text-[15px]">{TIME_PRECISION_LABEL[p]}</span>
+          <span className="text-[13px] md:text-[15px]">{timePrecisionLabel(p)}</span>
         </button>
       ))}
     </div>
@@ -149,7 +157,7 @@ function SkillPicker({ selected, onChange }: SkillPickerProps) {
           aria-pressed={isSelected(id)}
           className={buttonClass(isSelected(id))}
         >
-          <span className="text-[12px] md:text-[15px]">{TIME_SKILL_LABEL[id]}</span>
+          <span className="text-[12px] md:text-[15px]">{timeSkillLabel(id)}</span>
         </button>
       ))}
     </div>
@@ -173,7 +181,7 @@ function NumeralsPicker({ selected, onChange }: NumeralsPickerProps) {
           aria-pressed={selected === id}
           className={buttonClass(selected === id)}
         >
-          <span className="text-[13px] md:text-[15px]">{TIME_NUMERALS_LABEL[id]}</span>
+          <span className="text-[13px] md:text-[15px]">{timeNumeralsLabel(id)}</span>
         </button>
       ))}
     </div>
@@ -188,6 +196,7 @@ export function TimeSetup({
   onNavigateToHub,
   autoOpenPrint = false,
 }: Props) {
+  const { t } = useT();
   const [skills, setSkills] = useState<SkillId[]>(['read']);
   const [precisions, setPrecisions] = useState<TimePrecision[]>(['hour']);
   const [format, setFormat] = useState<TimeFormat>('12h');
@@ -308,14 +317,14 @@ export function TimeSetup({
           onClick={onNavigateToHub}
           className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base mb-2"
         >
-          ← Hub
+          {t('common.backToHub')}
         </button>
 
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary text-center mb-1 md:mb-2">
-          Time Practice
+          {t('time.setup.title')}
         </h1>
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Read the clock or add minutes
+          {currentUser ? t('time.setup.hiName', { name: currentUser.name }) : ''}{t('time.setup.subtitle')}
         </p>
 
         <div className="mb-3 md:mb-6 flex items-center justify-end">
@@ -323,7 +332,7 @@ export function TimeSetup({
         </div>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Skill</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('time.setup.skill')}</h2>
           <SkillPicker
             selected={skills}
             onChange={next => {
@@ -340,17 +349,17 @@ export function TimeSetup({
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Precision</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('time.setup.precision')}</h2>
           <PrecisionChipPicker selected={precisions} onChange={setPrecisions} />
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Format</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('time.setup.format')}</h2>
           <div className="grid grid-cols-3 gap-2">
             {([
-              { id: '12h', label: '12-hour' },
-              { id: '24h', label: '24-hour' },
-              { id: 'both', label: 'Both' },
+              { id: '12h', label: t('time.setup.format12h') },
+              { id: '24h', label: t('time.setup.format24h') },
+              { id: 'both', label: t('time.setup.formatBoth') },
             ] as const).map(f => (
               <button key={f.id} onClick={() => setFormat(f.id)} className={buttonClass(format === f.id)}>
                 <span className="text-[13px] md:text-[16px]">{f.label}</span>
@@ -362,7 +371,7 @@ export function TimeSetup({
         {showNumerals && (
           <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
             <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-              Numerals
+              {t('time.setup.numerals')}
             </h2>
             <NumeralsPicker selected={numerals} onChange={setNumerals} />
           </Card>
@@ -371,7 +380,7 @@ export function TimeSetup({
         {showArithDifficulty && (
           <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
             <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-              Time arithmetic difficulty
+              {t('time.setup.arithDifficulty')}
             </h2>
             <div className="grid grid-cols-3 gap-2">
               {(['easy', 'medium', 'hard'] as const).map(d => (
@@ -381,11 +390,11 @@ export function TimeSetup({
                     className={buttonClass(arithDifficulty === d)}
                   >
                     <span className="text-[13px] md:text-[16px]">
-                      {d.charAt(0).toUpperCase() + d.slice(1)}
+                      {t(ARITH_DIFFICULTY_LABEL_KEY[d])}
                     </span>
                   </button>
                   <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">
-                    {ARITH_DIFFICULTY_HINTS[d]}
+                    {t(ARITH_DIFFICULTY_HINT_KEY[d])}
                   </p>
                 </div>
               ))}
@@ -394,13 +403,13 @@ export function TimeSetup({
         )}
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Game Mode</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('time.setup.gameMode')}</h2>
           <div className="flex gap-2 mb-3">
             <button onClick={() => setGameMode('questions')} className={cn('flex-1', buttonClass(gameMode === 'questions'))}>
-              <span className="text-[13px] md:text-[16px]">Questions</span>
+              <span className="text-[13px] md:text-[16px]">{t('time.setup.questions')}</span>
             </button>
             <button onClick={() => setGameMode('time')} className={cn('flex-1', buttonClass(gameMode === 'time'))}>
-              <span className="text-[13px] md:text-[16px]">Timed</span>
+              <span className="text-[13px] md:text-[16px]">{t('time.setup.timed')}</span>
             </button>
           </div>
           {gameMode === 'questions' ? (
@@ -424,14 +433,14 @@ export function TimeSetup({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
           <Button variant="outline" onClick={() => setPrintOpen(true)} className="py-3 font-bold">
-            Print Worksheet
+            {t('time.setup.printWorksheet')}
           </Button>
           <Button
             onClick={start}
             className="py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px]"
             size="lg"
           >
-            Let's Go!
+            {t('game.setup.start')}
           </Button>
         </div>
       </div>

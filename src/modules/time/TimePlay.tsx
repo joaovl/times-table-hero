@@ -17,6 +17,7 @@ import {
   isAnswerCorrect,
 } from './logic';
 import { ClockDisplay } from './ClockDisplay';
+import { t } from '@/lib/i18n/i18n';
 
 export interface TimeIncorrect {
   skill: 'read' | 'arith' | 'duration';
@@ -46,8 +47,8 @@ interface Props {
 function promptString(q: TimeQuestion): string {
   if (q.skill === 'arith') return formatArithEquation(q).replace(/\s*=\s*$/, '');
   if (q.skill === 'duration') return formatDurationPrompt(q);
-  const t = q.format === '24h' ? q.answer24h : q.answer12h;
-  return `Clock shows ${t}`;
+  const shown = q.format === '24h' ? q.answer24h : q.answer12h;
+  return t('time.play.clockShows', { time: shown });
 }
 
 export function TimePlay({ settings, onComplete, onQuit }: Props) {
@@ -174,7 +175,7 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -196,31 +197,31 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
   // "2h 15m", "2:15", or "135".
   const placeholder =
     q.skill === 'duration'
-      ? 'e.g. 2h 15m'
+      ? t('time.play.phDuration')
       : q.skill === 'arith'
-      ? q.format === '24h' ? 'e.g. 14:05' : 'e.g. 4:05 PM'
-      : q.format === '24h' ? 'e.g. 14:30' : 'e.g. 3:45';
+      ? q.format === '24h' ? t('time.play.phArith24h') : t('time.play.phArithAmPm')
+      : q.format === '24h' ? t('time.play.phRead24h') : t('time.play.phRead12h');
 
   const typeHint =
     q.skill === 'duration'
-      ? 'Type the duration (e.g. 2h 15m or 135)'
+      ? t('time.play.hintDuration')
       : q.skill === 'arith'
       ? q.format === '24h'
-        ? 'Type the time (24-hour)'
-        : 'Type the time with AM or PM'
+        ? t('time.play.hint24h')
+        : t('time.play.hintAmPm')
       : q.format === '24h'
-        ? 'Type the time (24-hour)'
-        : 'Type the time (12-hour)';
+        ? t('time.play.hint24h')
+        : t('time.play.hint12h');
 
   return (
     <div className="min-h-screen bg-background py-2 px-3 md:py-[26px] md:px-8">
       <div className="mx-auto max-w-xl">
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
-            <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">← Quit</Button>
+            <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">{t('time.play.quit')}</Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('time.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -244,7 +245,7 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('time.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -286,7 +287,7 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
             </div>
           )}
           {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
           )}
         </Card>
 
@@ -309,7 +310,7 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
               value={typed}
               onChange={e => setTyped(e.target.value)}
               placeholder={placeholder}
-              aria-label="Type the answer"
+              aria-label={t('time.play.typeTheAnswer')}
               className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
               autoFocus
             />
@@ -318,7 +319,7 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
               disabled={typed.trim() === ''}
             >
-              Check
+              {t('time.play.check')}
             </Button>
           </form>
           )
