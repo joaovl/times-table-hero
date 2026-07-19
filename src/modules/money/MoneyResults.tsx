@@ -7,6 +7,8 @@ import confetti from 'canvas-confetti';
 import type { MoneyGameResult } from './MoneyPlay';
 import { renderQuestionPlain, formatMoney } from './logic';
 import { saveMoneySession } from './storage';
+import { useT } from '@/lib/i18n/react';
+import { t as tGlobal } from '@/lib/i18n/i18n';
 
 interface Props {
   result: MoneyGameResult;
@@ -17,13 +19,14 @@ interface Props {
 
 function correctAnswerText(q: MoneyGameResult['incorrectQuestions'][number]['question']): string {
   if (q.skill === 'compare-prices') {
-    if (q.answer === 'equal') return 'Equal';
+    if (q.answer === 'equal') return tGlobal('money.play.equal');
     return q.answer;
   }
   return formatMoney(q.answerPence);
 }
 
 export function MoneyResults({ result, onPlayAgain, onNewGame, userId }: Props) {
+  const { t } = useT();
   const percentage =
     result.total > 0 ? Math.round((result.score / result.total) * 100) : 0;
   const stars =
@@ -64,14 +67,14 @@ export function MoneyResults({ result, onPlayAgain, onNewGame, userId }: Props) 
 
   const message =
     percentage === 100
-      ? "Perfect score! You're a maths superstar!"
+      ? t('money.results.perfectScore')
       : percentage >= 80
-        ? 'Brilliant work! Keep it up!'
+        ? t('money.results.brilliantWork')
         : percentage >= 60
-          ? 'Good effort! Practice makes perfect!'
+          ? t('money.results.goodEffort')
           : percentage >= 40
-            ? "Nice try! You'll get better!"
-            : "Keep practising, you've got this!";
+            ? t('money.results.niceTry')
+            : t('money.results.keepPractising');
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -79,7 +82,7 @@ export function MoneyResults({ result, onPlayAgain, onNewGame, userId }: Props) 
         <div className="mb-8 text-center">
           <div
             className="mb-3 flex justify-center gap-1"
-            aria-label={`${stars} out of 5 stars`}
+            aria-label={t('money.results.starsAriaLabel', { stars })}
           >
             {[1, 2, 3, 4, 5].map(n => (
               <Star
@@ -108,18 +111,18 @@ export function MoneyResults({ result, onPlayAgain, onNewGame, userId }: Props) 
             </div>
           </div>
           <p className="text-2xl font-bold text-foreground">{message}</p>
-          <p className="mt-2 text-muted-foreground">{percentage}% correct</p>
+          <p className="mt-2 text-muted-foreground">{t('money.results.percentCorrect', { percent: percentage })}</p>
           {result.bestStreak >= 3 && (
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg">
               <Flame className="w-4 h-4" />
-              Best streak: {result.bestStreak}
+              {t('money.results.bestStreak', { count: result.bestStreak })}
             </div>
           )}
         </div>
 
         {result.incorrectQuestions.length > 0 && (
           <Card className="mb-4 p-4">
-            <h3 className="mb-3 font-bold text-foreground">Questions to practise:</h3>
+            <h3 className="mb-3 font-bold text-foreground">{t('money.results.questionsToPractise')}</h3>
             <div className="space-y-2">
               {result.incorrectQuestions.map((iq, idx) => (
                 <div
@@ -131,7 +134,7 @@ export function MoneyResults({ result, onPlayAgain, onNewGame, userId }: Props) 
                   </span>
                   {iq.userAnswer !== null && iq.userAnswer !== '' && (
                     <span className="text-sm text-destructive whitespace-nowrap">
-                      You said: {iq.userAnswer}
+                      {t('money.results.youSaid', { answer: iq.userAnswer })}
                     </span>
                   )}
                 </div>
@@ -145,10 +148,10 @@ export function MoneyResults({ result, onPlayAgain, onNewGame, userId }: Props) 
             onClick={onPlayAgain}
             className="w-full py-6 text-xl font-bold shadow-button"
           >
-            Play Again
+            {t('money.results.playAgain')}
           </Button>
           <Button onClick={onNewGame} variant="outline" className="w-full py-4 font-bold">
-            Change Settings
+            {t('money.results.changeSettings')}
           </Button>
         </div>
       </div>

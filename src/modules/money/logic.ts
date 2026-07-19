@@ -6,6 +6,7 @@
 // play, PDF) can switch on shape without re-parsing.
 
 import { CURRENCIES, type CurrencyConfig } from '@/lib/i18n/currency';
+import { t, type MessageKey } from '@/lib/i18n/i18n';
 
 export type MoneySkill =
   | 'add-money'
@@ -61,6 +62,7 @@ export const MONEY_SKILL_OPTIONS: ReadonlyArray<MoneySkill> = [
   'multiply-money',
 ];
 
+// English-only labels: PDF worksheets + source wording for moneySkillLabel().
 export const MONEY_SKILL_LABEL: Record<MoneySkill, string> = {
   'add-money': 'Add money',
   'subtract-money': 'Subtract money',
@@ -69,6 +71,20 @@ export const MONEY_SKILL_LABEL: Record<MoneySkill, string> = {
   'compare-prices': 'Compare prices',
   'multiply-money': 'Multiply money',
 };
+
+const MONEY_SKILL_KEY: Record<MoneySkill, MessageKey> = {
+  'add-money': 'money.skills.addMoney',
+  'subtract-money': 'money.skills.subtractMoney',
+  change: 'money.skills.change',
+  'multi-item': 'money.skills.multiItem',
+  'compare-prices': 'money.skills.comparePrices',
+  'multiply-money': 'money.skills.multiplyMoney',
+};
+
+/** Translated on-screen label for a money skill (PDFs keep MONEY_SKILL_LABEL). */
+export function moneySkillLabel(s: MoneySkill): string {
+  return t(MONEY_SKILL_KEY[s]);
+}
 
 export const MONEY_SKILL_SHORT_LABEL: Record<MoneySkill, string> = {
   'add-money': '+',
@@ -103,6 +119,38 @@ export const ITEM_NAMES: ReadonlyArray<string> = [
   'card',
   'sharpener',
 ];
+
+// Item nouns stay canonical English in question objects (PDFs + grading-safe);
+// itemLabel() resolves the translated singular/plural for on-screen text.
+const ITEM_KEY: Record<string, MessageKey> = {
+  apple: 'money.items.apple',
+  banana: 'money.items.banana',
+  bread: 'money.items.bread',
+  milk: 'money.items.milk',
+  cheese: 'money.items.cheese',
+  biscuits: 'money.items.biscuits',
+  eggs: 'money.items.eggs',
+  orange: 'money.items.orange',
+  pear: 'money.items.pear',
+  yoghurt: 'money.items.yoghurt',
+  pen: 'money.items.pen',
+  pencil: 'money.items.pencil',
+  rubber: 'money.items.rubber',
+  ruler: 'money.items.ruler',
+  notebook: 'money.items.notebook',
+  book: 'money.items.book',
+  crayon: 'money.items.crayon',
+  sticker: 'money.items.sticker',
+  card: 'money.items.card',
+  sharpener: 'money.items.sharpener',
+};
+
+/** Translated item noun, pluralized by count (falls back to naive English). */
+export function itemLabel(name: string, count: number): string {
+  const key = ITEM_KEY[name];
+  if (!key) return count === 1 ? name : `${name}s`;
+  return t(key, { count });
+}
 
 // ---------------------------------------------------------------------------
 // Question shapes (discriminated union by `skill`).
@@ -526,14 +574,14 @@ export function renderQuestionPlain(q: MoneyQuestion): string {
     case 'subtract-money':
       return `${formatMoney(q.aPence)} - ${formatMoney(q.bPence)} = ?`;
     case 'change':
-      return `Buy ${q.itemName} ${formatMoney(q.pricePence)}, pay ${formatMoney(q.paidPence)}. Change?`;
+      return t('money.prompt.change', { item: itemLabel(q.itemName, 1), price: formatMoney(q.pricePence), paid: formatMoney(q.paidPence) });
     case 'multi-item': {
-      const list = q.items.map(it => `${it.name} ${formatMoney(it.pricePence)}`).join(', ');
-      return `${list}. Total?`;
+      const list = q.items.map(it => `${itemLabel(it.name, 1)} ${formatMoney(it.pricePence)}`).join(', ');
+      return t('money.prompt.multiItem', { list });
     }
     case 'compare-prices':
-      return `Cheaper: A ${q.itemAName} ${formatMoney(q.aPence)} or B ${q.itemBName} ${formatMoney(q.bPence)}?`;
+      return t('money.prompt.compare', { a: itemLabel(q.itemAName, 1), aPrice: formatMoney(q.aPence), b: itemLabel(q.itemBName, 1), bPrice: formatMoney(q.bPence) });
     case 'multiply-money':
-      return `${q.bPence} ${q.itemName}${q.bPence === 1 ? '' : 's'} at ${formatMoney(q.aPence)} each. Total?`;
+      return t('money.prompt.multiply', { count: q.bPence, items: itemLabel(q.itemName, q.bPence), price: formatMoney(q.aPence) });
   }
 }

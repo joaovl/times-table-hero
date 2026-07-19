@@ -16,8 +16,10 @@ import {
   checkMoneyAnswer,
   formatMoney,
   generateMoneyQuestions,
+  itemLabel,
   parseMoney,
 } from './logic';
+import { t } from '@/lib/i18n/i18n';
 
 export interface MoneyGameResult {
   score: number;
@@ -55,31 +57,30 @@ function QuestionDisplay({ q }: { q: MoneyQuestion }) {
     case 'multiply-money':
       return (
         <div className="text-2xl md:text-3xl font-bold text-foreground leading-snug">
-          {q.bPence} {q.itemName}
-          {q.bPence === 1 ? '' : 's'} at{' '}
-          <span className="font-mono">{formatMoney(q.aPence)}</span> each.
+          {q.bPence} {itemLabel(q.itemName, q.bPence)} at{' '}
+          <span className="font-mono">{formatMoney(q.aPence)}</span> {t('money.play.each')}
           <br />
-          Total?
+          {t('money.play.total')}
         </div>
       );
     case 'change':
       return (
         <div className="text-xl md:text-2xl font-bold text-foreground leading-snug">
-          Buy a {q.itemName} for{' '}
-          <span className="font-mono">{formatMoney(q.pricePence)}</span>, pay with{' '}
+          {t('money.play.buyA', { item: itemLabel(q.itemName, 1) })}{' '}
+          <span className="font-mono">{formatMoney(q.pricePence)}</span>{t('money.play.payWith')}{' '}
           <span className="font-mono">{formatMoney(q.paidPence)}</span>.
           <br />
-          How much change?
+          {t('money.play.howMuchChange')}
         </div>
       );
     case 'multi-item':
       return (
         <div className="text-xl md:text-2xl font-bold text-foreground leading-snug text-left max-w-md mx-auto">
-          <div className="mb-2">Total cost of:</div>
+          <div className="mb-2">{t('money.play.totalCostOf')}</div>
           <ul className="list-disc list-inside font-mono text-lg md:text-xl">
             {q.items.map((it, i) => (
               <li key={i}>
-                {it.name}: {formatMoney(it.pricePence)}
+                {itemLabel(it.name, 1)}: {formatMoney(it.pricePence)}
               </li>
             ))}
           </ul>
@@ -88,16 +89,16 @@ function QuestionDisplay({ q }: { q: MoneyQuestion }) {
     case 'compare-prices':
       return (
         <div className="text-xl md:text-2xl font-bold text-foreground leading-snug">
-          Which is cheaper?
+          {t('money.play.whichIsCheaper')}
           <div className="mt-3 grid grid-cols-2 gap-3 text-left">
             <div>
               <div className="text-sm text-muted-foreground">A</div>
-              <div className="font-mono text-2xl">{q.itemAName}</div>
+              <div className="font-mono text-2xl">{itemLabel(q.itemAName, 1)}</div>
               <div className="font-mono text-2xl">{formatMoney(q.aPence)}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">B</div>
-              <div className="font-mono text-2xl">{q.itemBName}</div>
+              <div className="font-mono text-2xl">{itemLabel(q.itemBName, 1)}</div>
               <div className="font-mono text-2xl">{formatMoney(q.bPence)}</div>
             </div>
           </div>
@@ -108,7 +109,7 @@ function QuestionDisplay({ q }: { q: MoneyQuestion }) {
 
 function expectedDisplay(q: MoneyQuestion): string {
   if (q.skill === 'compare-prices') {
-    if (q.answer === 'equal') return 'Equal';
+    if (q.answer === 'equal') return t('money.play.equal');
     return q.answer === 'A' ? 'A' : 'B';
   }
   return formatMoney(q.answerPence);
@@ -227,7 +228,7 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
       if (questions.length === 0) return;
       const q = questions[currentIndex] as ComparePricesQuestion;
       const ok = checkCompareAnswer(q, pick);
-      advance(ok, pick === 'equal' ? 'Equal' : pick);
+      advance(ok, pick === 'equal' ? t('money.play.equal') : pick);
     },
     [questions, currentIndex, advance]
   );
@@ -240,7 +241,7 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -268,11 +269,11 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
               onClick={onQuit}
               className="text-muted-foreground h-11"
             >
-              ← Quit
+              {t('money.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('money.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -304,7 +305,7 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('money.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -325,7 +326,7 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
           )}
           {feedback === 'correct' && (
             <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">
-              Brilliant!
+              {t('play.feedback.brilliant')}
             </div>
           )}
         </Card>
@@ -345,7 +346,7 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
                   variant="outline"
                   className="py-4 text-lg font-bold"
                 >
-                  Equal
+                  {t('money.play.equal')}
                 </Button>
                 <Button
                   onClick={() => submitCompare('B')}
@@ -366,8 +367,8 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
                     inputMode="decimal"
                     value={typed}
                     onChange={e => setTyped(e.target.value)}
-                    placeholder="0.00"
-                    aria-label="Money answer"
+                    placeholder={t('money.play.amountPlaceholder')}
+                    aria-label={t('money.play.moneyAnswer')}
                     className="h-12 md:h-[64px] pl-9 md:pl-12 text-center text-2xl md:text-4xl font-bold"
                     autoFocus
                   />
@@ -377,7 +378,7 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
                   className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                   disabled={typed.trim() === ''}
                 >
-                  Check
+                  {t('money.play.check')}
                 </Button>
               </form>
             )}

@@ -8,11 +8,13 @@ import type { UserProfile } from '@/lib/userStorage';
 import type { Difficulty, MoneySettings, MoneySkill } from './logic';
 import {
   CURRICULUM_TAGS,
-  MONEY_SKILL_LABEL,
+  moneySkillLabel,
   MONEY_SKILL_OPTIONS,
   generateMoneyQuestions,
   moneyExample,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
+import type { MessageKey } from '@/lib/i18n/i18n';
 import { generateMoneyPdf } from './pdf';
 import {
   getSavedMoneyPrintConfig,
@@ -43,10 +45,16 @@ const TIME_LIMITS = [
   { label: '10 min', value: 600 },
 ];
 
-const DIFFICULTY_HINTS: Record<Difficulty, string> = {
-  easy: 'Pence-only or whole pounds',
-  medium: '£ + p, no decimal carry',
-  hard: '£ + p, with carries',
+const DIFFICULTY_HINT_KEY: Record<Difficulty, MessageKey> = {
+  easy: 'money.setup.hintEasy',
+  medium: 'money.setup.hintMedium',
+  hard: 'money.setup.hintHard',
+};
+
+const DIFFICULTY_LABEL_KEY: Record<Difficulty, MessageKey> = {
+  easy: 'money.setup.difficultyEasy',
+  medium: 'money.setup.difficultyMedium',
+  hard: 'money.setup.difficultyHard',
 };
 
 const buttonClass = (active: boolean) =>
@@ -99,7 +107,7 @@ function SkillChipPicker({ selected, onChange }: SkillChipPickerProps) {
             aria-pressed={isSelected(s)}
             className={cn(buttonClass(isSelected(s)), 'flex-col py-2 leading-tight')}
           >
-            <span className="text-[13px] md:text-[15px]">{MONEY_SKILL_LABEL[s]}</span>
+            <span className="text-[13px] md:text-[15px]">{moneySkillLabel(s)}</span>
             <span className="text-[10px] md:text-[11px] opacity-80">{years}</span>
           </button>
         );
@@ -116,6 +124,7 @@ export function MoneySetup({
   onNavigateToHub,
   autoOpenPrint = false,
 }: Props) {
+  const { t } = useT();
   const [skills, setSkills] = useState<MoneySkill[]>(['add-money']);
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [gameMode, setGameMode] = useState<'questions' | 'time'>('questions');
@@ -203,14 +212,14 @@ export function MoneySetup({
           onClick={onNavigateToHub}
           className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base mb-2"
         >
-          ← Hub
+          {t('common.backToHub')}
         </button>
 
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary text-center mb-1 md:mb-2">
-          Money Practice
+          {t('money.setup.title')}
         </h1>
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick which skills to work on
+          {currentUser ? t('money.setup.hiName', { name: currentUser.name }) : ''}{t('money.setup.subtitle')}
         </p>
 
         <div className="mb-3 md:mb-6 flex items-center justify-end">
@@ -223,17 +232,17 @@ export function MoneySetup({
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Skills
+            {t('money.setup.skills')}
           </h2>
           <SkillChipPicker selected={skills} onChange={setSkills} />
           <p className="text-[12px] md:text-[14px] text-foreground/70 text-center mt-3">
-            Example: {exampleText}
+            {t('money.setup.example', { example: exampleText })}
           </p>
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Difficulty
+            {t('money.setup.difficulty')}
           </h2>
           <div className="grid grid-cols-3 gap-2">
             {(['easy', 'medium', 'hard'] as const).map(d => (
@@ -243,11 +252,11 @@ export function MoneySetup({
                   className={buttonClass(difficulty === d)}
                 >
                   <span className="text-[13px] md:text-[16px]">
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
+                    {t(DIFFICULTY_LABEL_KEY[d])}
                   </span>
                 </button>
                 <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">
-                  {DIFFICULTY_HINTS[d]}
+                  {t(DIFFICULTY_HINT_KEY[d])}
                 </p>
               </div>
             ))}
@@ -256,20 +265,20 @@ export function MoneySetup({
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Game Mode
+            {t('money.setup.gameMode')}
           </h2>
           <div className="flex gap-2 mb-3">
             <button
               onClick={() => setGameMode('questions')}
               className={cn('flex-1', buttonClass(gameMode === 'questions'))}
             >
-              <span className="text-[13px] md:text-[16px]">Questions</span>
+              <span className="text-[13px] md:text-[16px]">{t('money.setup.questions')}</span>
             </button>
             <button
               onClick={() => setGameMode('time')}
               className={cn('flex-1', buttonClass(gameMode === 'time'))}
             >
-              <span className="text-[13px] md:text-[16px]">Timed</span>
+              <span className="text-[13px] md:text-[16px]">{t('money.setup.timed')}</span>
             </button>
           </div>
           {gameMode === 'questions' ? (
@@ -305,14 +314,14 @@ export function MoneySetup({
             onClick={() => setPrintOpen(true)}
             className="py-3 font-bold"
           >
-            Print Worksheet
+            {t('money.setup.printWorksheet')}
           </Button>
           <Button
             onClick={start}
             className="py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px]"
             size="lg"
           >
-            Let's Go!
+            {t('game.setup.start')}
           </Button>
         </div>
       </div>
