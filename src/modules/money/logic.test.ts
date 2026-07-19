@@ -404,3 +404,15 @@ describe('renderQuestionPlain', () => {
     ).toBe('5 apples at £1.30 each. Total?');
   });
 });
+
+describe('currency wiring (i18n)', () => {
+  it('renders prompts in the given currency (EUR: no £)', async () => {
+    const { CURRENCIES } = await import('@/lib/i18n/currency');
+    const q = { skill: 'multiply-money', aPence: 130, bPence: 5, answerPence: 650, itemName: 'apple' } as const;
+    const eur = renderQuestionPlain(q, CURRENCIES.EUR);
+    expect(eur).toContain('€');
+    expect(eur).not.toContain('£');
+    // Default stays GBP.
+    expect(renderQuestionPlain(q)).toContain('£');
+  });
+});

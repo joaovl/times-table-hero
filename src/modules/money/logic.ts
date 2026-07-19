@@ -567,21 +567,21 @@ export function moneyExample(skills: MoneySkill[], difficulty: Difficulty): stri
 // Plain one-line rendering, used by setup-screen previews and the results
 // "questions to practise" list. Keeps to ASCII-safe glyphs everywhere except
 // £, which is WinAnsi-safe and renders fine in jsPDF Helvetica.
-export function renderQuestionPlain(q: MoneyQuestion): string {
+export function renderQuestionPlain(q: MoneyQuestion, cfg: CurrencyConfig = CURRENCIES.GBP): string {
   switch (q.skill) {
     case 'add-money':
-      return `${formatMoney(q.aPence)} + ${formatMoney(q.bPence)} = ?`;
+      return `${formatMoney(q.aPence, cfg)} + ${formatMoney(q.bPence, cfg)} = ?`;
     case 'subtract-money':
-      return `${formatMoney(q.aPence)} - ${formatMoney(q.bPence)} = ?`;
+      return `${formatMoney(q.aPence, cfg)} - ${formatMoney(q.bPence, cfg)} = ?`;
     case 'change':
-      return t('money.prompt.change', { item: itemLabel(q.itemName, 1), price: formatMoney(q.pricePence), paid: formatMoney(q.paidPence) });
+      return t('money.prompt.change', { item: itemLabel(q.itemName, 1), price: formatMoney(q.pricePence, cfg), paid: formatMoney(q.paidPence, cfg) });
     case 'multi-item': {
-      const list = q.items.map(it => `${itemLabel(it.name, 1)} ${formatMoney(it.pricePence)}`).join(', ');
+      const list = q.items.map(it => `${itemLabel(it.name, 1)} ${formatMoney(it.pricePence, cfg)}`).join(', ');
       return t('money.prompt.multiItem', { list });
     }
     case 'compare-prices':
-      return t('money.prompt.compare', { a: itemLabel(q.itemAName, 1), aPrice: formatMoney(q.aPence), b: itemLabel(q.itemBName, 1), bPrice: formatMoney(q.bPence) });
+      return t('money.prompt.compare', { a: itemLabel(q.itemAName, 1), aPrice: formatMoney(q.aPence, cfg), b: itemLabel(q.itemBName, 1), bPrice: formatMoney(q.bPence, cfg) });
     case 'multiply-money':
-      return t('money.prompt.multiply', { count: q.bPence, items: itemLabel(q.itemName, q.bPence), price: formatMoney(q.aPence) });
+      return t('money.prompt.multiply', { count: q.bPence, items: itemLabel(q.itemName, q.bPence), price: formatMoney(q.aPence, cfg) });
   }
 }

@@ -20,6 +20,7 @@ import {
   parseMoney,
 } from './logic';
 import { t } from '@/lib/i18n/i18n';
+import { currencyForLocale, type CurrencyConfig } from '@/lib/i18n/currency';
 
 export interface MoneyGameResult {
   score: number;
@@ -39,26 +40,27 @@ interface Props {
 }
 
 // One-line presentation of the question for the play screen. Uses real
-// glyphs (− for subtract) since this is HTML, not the PDF.
-function QuestionDisplay({ q }: { q: MoneyQuestion }) {
+// glyphs (− for subtract) since this is HTML, not the PDF. Amounts render in
+// the device's currency (£/€/$/R$ per locale).
+function QuestionDisplay({ q, cfg }: { q: MoneyQuestion; cfg: CurrencyConfig }) {
   switch (q.skill) {
     case 'add-money':
       return (
         <div className="font-mono text-3xl md:text-5xl font-extrabold text-foreground tracking-wider">
-          {formatMoney(q.aPence)} + {formatMoney(q.bPence)} =
+          {formatMoney(q.aPence, cfg)} + {formatMoney(q.bPence, cfg)} =
         </div>
       );
     case 'subtract-money':
       return (
         <div className="font-mono text-3xl md:text-5xl font-extrabold text-foreground tracking-wider">
-          {formatMoney(q.aPence)} − {formatMoney(q.bPence)} =
+          {formatMoney(q.aPence, cfg)} − {formatMoney(q.bPence, cfg)} =
         </div>
       );
     case 'multiply-money':
       return (
         <div className="text-2xl md:text-3xl font-bold text-foreground leading-snug">
           {q.bPence} {itemLabel(q.itemName, q.bPence)} at{' '}
-          <span className="font-mono">{formatMoney(q.aPence)}</span> {t('money.play.each')}
+          <span className="font-mono">{formatMoney(q.aPence, cfg)}</span> {t('money.play.each')}
           <br />
           {t('money.play.total')}
         </div>
@@ -67,8 +69,8 @@ function QuestionDisplay({ q }: { q: MoneyQuestion }) {
       return (
         <div className="text-xl md:text-2xl font-bold text-foreground leading-snug">
           {t('money.play.buyA', { item: itemLabel(q.itemName, 1) })}{' '}
-          <span className="font-mono">{formatMoney(q.pricePence)}</span>{t('money.play.payWith')}{' '}
-          <span className="font-mono">{formatMoney(q.paidPence)}</span>.
+          <span className="font-mono">{formatMoney(q.pricePence, cfg)}</span>{t('money.play.payWith')}{' '}
+          <span className="font-mono">{formatMoney(q.paidPence, cfg)}</span>.
           <br />
           {t('money.play.howMuchChange')}
         </div>
@@ -80,7 +82,7 @@ function QuestionDisplay({ q }: { q: MoneyQuestion }) {
           <ul className="list-disc list-inside font-mono text-lg md:text-xl">
             {q.items.map((it, i) => (
               <li key={i}>
-                {itemLabel(it.name, 1)}: {formatMoney(it.pricePence)}
+                {itemLabel(it.name, 1)}: {formatMoney(it.pricePence, cfg)}
               </li>
             ))}
           </ul>
@@ -94,12 +96,12 @@ function QuestionDisplay({ q }: { q: MoneyQuestion }) {
             <div>
               <div className="text-sm text-muted-foreground">A</div>
               <div className="font-mono text-2xl">{itemLabel(q.itemAName, 1)}</div>
-              <div className="font-mono text-2xl">{formatMoney(q.aPence)}</div>
+              <div className="font-mono text-2xl">{formatMoney(q.aPence, cfg)}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">B</div>
               <div className="font-mono text-2xl">{itemLabel(q.itemBName, 1)}</div>
-              <div className="font-mono text-2xl">{formatMoney(q.bPence)}</div>
+              <div className="font-mono text-2xl">{formatMoney(q.bPence, cfg)}</div>
             </div>
           </div>
         </div>
@@ -107,15 +109,16 @@ function QuestionDisplay({ q }: { q: MoneyQuestion }) {
   }
 }
 
-function expectedDisplay(q: MoneyQuestion): string {
+function expectedDisplay(q: MoneyQuestion, cfg: CurrencyConfig): string {
   if (q.skill === 'compare-prices') {
     if (q.answer === 'equal') return t('money.play.equal');
     return q.answer === 'A' ? 'A' : 'B';
   }
-  return formatMoney(q.answerPence);
+  return formatMoney(q.answerPence, cfg);
 }
 
 export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
+  const cfg = currencyForLocale();
   const [questions, setQuestions] = useState<MoneyQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -218,10 +221,10 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
     if (questions.length === 0) return;
     const q = questions[currentIndex];
     if (q.skill === 'compare-prices') return; // handled separately
-    const userPence = parseMoney(typed);
+    const userPence = parseMoney(typed, cfg);
     const ok = checkMoneyAnswer(q, userPence);
     advance(ok, typed);
-  }, [questions, currentIndex, typed, advance]);
+  }, [questions, currentIndex, typed, advance, cfg]);
 
   const submitCompare = useCallback(
     (pick: 'A' | 'B' | 'equal') => {
@@ -318,10 +321,10 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
-          <QuestionDisplay q={q} />
+          <QuestionDisplay q={q} cfg={cfg} />
           {feedback === 'incorrect' && (
             <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">
-              = {expectedDisplay(q)}
+              = {expectedDisplay(q, cfg)}
             </div>
           )}
           {feedback === 'correct' && (
@@ -359,7 +362,7 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
               <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl md:text-3xl font-bold text-muted-foreground pointer-events-none select-none">
-                    £
+                    {cfg.symbol}
                   </span>
                   <Input
                     ref={inputRef}

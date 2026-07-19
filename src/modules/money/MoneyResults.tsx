@@ -9,6 +9,7 @@ import { renderQuestionPlain, formatMoney } from './logic';
 import { saveMoneySession } from './storage';
 import { useT } from '@/lib/i18n/react';
 import { t as tGlobal } from '@/lib/i18n/i18n';
+import { currencyForLocale, type CurrencyConfig } from '@/lib/i18n/currency';
 
 interface Props {
   result: MoneyGameResult;
@@ -17,16 +18,17 @@ interface Props {
   userId?: string;
 }
 
-function correctAnswerText(q: MoneyGameResult['incorrectQuestions'][number]['question']): string {
+function correctAnswerText(q: MoneyGameResult['incorrectQuestions'][number]['question'], cfg: CurrencyConfig): string {
   if (q.skill === 'compare-prices') {
     if (q.answer === 'equal') return tGlobal('money.play.equal');
     return q.answer;
   }
-  return formatMoney(q.answerPence);
+  return formatMoney(q.answerPence, cfg);
 }
 
 export function MoneyResults({ result, onPlayAgain, onNewGame, userId }: Props) {
   const { t } = useT();
+  const cfg = currencyForLocale();
   const percentage =
     result.total > 0 ? Math.round((result.score / result.total) * 100) : 0;
   const stars =
@@ -130,7 +132,7 @@ export function MoneyResults({ result, onPlayAgain, onNewGame, userId }: Props) 
                   className="flex items-start justify-between gap-3 rounded-lg bg-muted px-4 py-2"
                 >
                   <span className="font-medium text-sm md:text-base flex-1 break-words">
-                    {renderQuestionPlain(iq.question)} → {correctAnswerText(iq.question)}
+                    {renderQuestionPlain(iq.question, cfg)} → {correctAnswerText(iq.question, cfg)}
                   </span>
                   {iq.userAnswer !== null && iq.userAnswer !== '' && (
                     <span className="text-sm text-destructive whitespace-nowrap">
