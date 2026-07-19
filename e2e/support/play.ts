@@ -21,48 +21,48 @@
 // files).
 import { expect, type Locator, type Page } from '@playwright/test';
 import { readOracle } from './oracle';
+import en from '../../src/lib/i18n/locales/en.json' with { type: 'json' };
 
-// Slug -> human label, copied from `SKILL_LABELS` in
-// `src/modules/fractions/logic.ts` (the button text, and therefore the
-// accessible name, IS this label - the buttons render
-// `<span>{SKILL_LABELS[s]}</span>` with no separate aria-label).
+// The suite runs in `en`; labels are sourced from the SAME catalog the app
+// renders from, so a copy change can never silently break a selector.
+const label = (key: keyof typeof en): string => en[key] as string;
+
+// Slug -> en.json key for the fractions Skills toggle buttons.
 const FRACTION_SKILL_LABELS: Record<string, string> = {
-  'add-same': 'Add (same denom)',
-  'sub-same': 'Subtract (same denom)',
-  'add-diff': 'Add (different denom)',
-  'sub-diff': 'Subtract (different denom)',
-  id: 'Identify shaded',
-  eq: 'Equivalent fractions',
-  cmp: 'Compare fractions',
-  mixed: 'Mixed ↔ improper',
-  'mul-by-whole': 'Multiply by whole',
-  'mixed-mul-whole': 'Mixed × whole',
-  'mul-frac': 'Fraction × fraction',
-  'to-decimal': 'Fraction → decimal',
-  'from-decimal': 'Decimal → fraction',
-  'add-mixed': 'Add mixed numbers',
-  'sub-mixed': 'Subtract mixed numbers',
-  'div-frac-whole': 'Fraction ÷ whole',
+  'add-same': label('fractions.skills.addSame'),
+  'sub-same': label('fractions.skills.subSame'),
+  'add-diff': label('fractions.skills.addDiff'),
+  'sub-diff': label('fractions.skills.subDiff'),
+  id: label('fractions.skills.id'),
+  eq: label('fractions.skills.eq'),
+  cmp: label('fractions.skills.cmp'),
+  mixed: label('fractions.skills.mixed'),
+  'mul-by-whole': label('fractions.skills.mulByWhole'),
+  'mixed-mul-whole': label('fractions.skills.mixedMulWhole'),
+  'mul-frac': label('fractions.skills.mulFrac'),
+  'to-decimal': label('fractions.skills.toDecimal'),
+  'from-decimal': label('fractions.skills.fromDecimal'),
+  'add-mixed': label('fractions.skills.addMixed'),
+  'sub-mixed': label('fractions.skills.subMixed'),
+  'div-frac-whole': label('fractions.skills.divFracWhole'),
 };
 
-// Slug -> human label, copied from `CHART_SKILL_LABEL` in
-// `src/modules/charts/logic.ts`. Most slugs render verbatim; only the
-// timetable/multi-step skills have a shortened label.
+// Slug -> en.json key for the charts Skill chips.
 const CHART_SKILL_LABELS: Record<string, string> = {
-  'read-bar': 'read-bar',
-  'compare-bar': 'compare-bar',
-  'total-bar': 'total-bar',
-  'read-pie': 'read-pie',
-  'pie-fraction': 'pie-fraction',
-  'read-line': 'read-line',
-  'line-trend': 'line-trend',
-  'line-max': 'line-max',
-  'timetable-read': 'timetable',
-  'timetable-duration': 'duration',
-  'multi-step-bar': 'multi-step',
+  'read-bar': label('charts.skills.readBar'),
+  'compare-bar': label('charts.skills.compareBar'),
+  'total-bar': label('charts.skills.totalBar'),
+  'read-pie': label('charts.skills.readPie'),
+  'pie-fraction': label('charts.skills.pieFraction'),
+  'read-line': label('charts.skills.readLine'),
+  'line-trend': label('charts.skills.lineTrend'),
+  'line-max': label('charts.skills.lineMax'),
+  'timetable-read': label('charts.skills.timetableRead'),
+  'timetable-duration': label('charts.skills.timetableDuration'),
+  'multi-step-bar': label('charts.skills.multiStepBar'),
 };
 
-const START_BUTTON_NAME = "Let's Go!";
+const START_BUTTON_NAME = label('game.setup.start');
 
 // Select exactly `label` among the toggle buttons inside `container` (a Card),
 // deselecting any other currently-selected sibling. Generic over Fractions'
