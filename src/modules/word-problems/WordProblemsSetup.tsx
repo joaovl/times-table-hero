@@ -13,9 +13,11 @@ import type {
 import {
   generateWordQuestions,
   WORD_SKILL_OPTIONS,
-  WORD_SKILL_SHORT,
+  wordSkillShortLabel,
   CURRICULUM_TAGS,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
+import type { MessageKey } from '@/lib/i18n/i18n';
 import { generateWordPdf } from './pdf';
 import {
   getSavedWordSettings,
@@ -46,10 +48,16 @@ const TIME_LIMITS = [
   { label: '15 min', value: 900 },
 ];
 
-const DIFFICULTY_HINTS: Record<WordDifficulty, string> = {
-  easy: 'Small numbers, one step',
-  medium: 'Two-digit numbers',
-  hard: 'Two steps, harder numbers',
+const DIFFICULTY_HINT_KEY: Record<WordDifficulty, MessageKey> = {
+  easy: 'wordProblems.setup.hintEasy',
+  medium: 'wordProblems.setup.hintMedium',
+  hard: 'wordProblems.setup.hintHard',
+};
+
+const DIFFICULTY_LABEL_KEY: Record<WordDifficulty, MessageKey> = {
+  easy: 'wordProblems.setup.difficultyEasy',
+  medium: 'wordProblems.setup.difficultyMedium',
+  hard: 'wordProblems.setup.difficultyHard',
 };
 
 const buttonClass = (active: boolean) =>
@@ -108,7 +116,7 @@ function SkillChipPicker({ selected, onChange }: SkillChipPickerProps) {
           )}
         >
           <span className="text-[13px] md:text-[15px] leading-tight">
-            {WORD_SKILL_SHORT[s]}
+            {wordSkillShortLabel(s)}
           </span>
           <span className="text-[10px] md:text-[11px] opacity-80 leading-tight">
             {CURRICULUM_TAGS[s].join(' / ')}
@@ -127,6 +135,7 @@ export function WordProblemsSetup({
   onNavigateToHub,
   autoOpenPrint = false,
 }: Props) {
+  const { t } = useT();
   const [skills, setSkills] = useState<WordProblemSkill[]>([
     'arith-1step',
     'money-1step',
@@ -226,14 +235,14 @@ export function WordProblemsSetup({
           onClick={onNavigateToHub}
           className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base mb-2"
         >
-          ← Hub
+          {t('common.backToHub')}
         </button>
 
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary text-center mb-1 md:mb-2">
-          Word Problems
+          {t('wordProblems.setup.title')}
         </h1>
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Read the question, work it out
+          {currentUser ? t('wordProblems.setup.hiName', { name: currentUser.name }) : ''}{t('wordProblems.setup.subtitle')}
         </p>
 
         <div className="mb-3 md:mb-6 flex items-center justify-end">
@@ -246,17 +255,17 @@ export function WordProblemsSetup({
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Skills
+            {t('wordProblems.setup.skills')}
           </h2>
           <SkillChipPicker selected={skills} onChange={setSkills} />
           <p className="text-[11px] md:text-[12px] text-muted-foreground text-center mt-2 leading-tight">
-            Pick one or more topics
+            {t('wordProblems.setup.pickTopics')}
           </p>
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Difficulty
+            {t('wordProblems.setup.difficulty')}
           </h2>
           <div className="grid grid-cols-3 gap-2">
             {(['easy', 'medium', 'hard'] as const).map(d => (
@@ -266,11 +275,11 @@ export function WordProblemsSetup({
                   className={buttonClass(difficulty === d)}
                 >
                   <span className="text-[13px] md:text-[16px]">
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
+                    {t(DIFFICULTY_LABEL_KEY[d])}
                   </span>
                 </button>
                 <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">
-                  {DIFFICULTY_HINTS[d]}
+                  {t(DIFFICULTY_HINT_KEY[d])}
                 </p>
               </div>
             ))}
@@ -279,20 +288,20 @@ export function WordProblemsSetup({
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
           <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">
-            Game Mode
+            {t('wordProblems.setup.gameMode')}
           </h2>
           <div className="flex gap-2 mb-3">
             <button
               onClick={() => setGameMode('questions')}
               className={cn('flex-1', buttonClass(gameMode === 'questions'))}
             >
-              <span className="text-[13px] md:text-[16px]">Questions</span>
+              <span className="text-[13px] md:text-[16px]">{t('wordProblems.setup.questions')}</span>
             </button>
             <button
               onClick={() => setGameMode('time')}
               className={cn('flex-1', buttonClass(gameMode === 'time'))}
             >
-              <span className="text-[13px] md:text-[16px]">Timed</span>
+              <span className="text-[13px] md:text-[16px]">{t('wordProblems.setup.timed')}</span>
             </button>
           </div>
           {gameMode === 'questions' ? (
@@ -328,14 +337,14 @@ export function WordProblemsSetup({
             onClick={() => setPrintOpen(true)}
             className="py-3 font-bold"
           >
-            Print Worksheet
+            {t('wordProblems.setup.printWorksheet')}
           </Button>
           <Button
             onClick={start}
             className="py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px]"
             size="lg"
           >
-            Let's Go!
+            {t('game.setup.start')}
           </Button>
         </div>
       </div>

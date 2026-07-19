@@ -9,11 +9,12 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { WordQuestion, WordSettings } from './logic';
+import { t } from '@/lib/i18n/i18n';
 import {
   checkWordAnswer,
   expectedAnswerString,
   generateWordQuestions,
-  WORD_SKILL_SHORT,
+  wordSkillShortLabel,
 } from './logic';
 
 export interface WordIncorrect {
@@ -177,7 +178,7 @@ export function WordProblemsPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -204,11 +205,11 @@ export function WordProblemsPlay({ settings, onComplete, onQuit }: Props) {
               onClick={onQuit}
               className="text-muted-foreground h-11"
             >
-              ← Quit
+              {t('wordProblems.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('wordProblems.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -240,7 +241,7 @@ export function WordProblemsPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('wordProblems.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -254,7 +255,7 @@ export function WordProblemsPlay({ settings, onComplete, onQuit }: Props) {
           )}
         >
           <div className="text-[11px] md:text-xs text-muted-foreground uppercase tracking-wide mb-1">
-            {WORD_SKILL_SHORT[q.skill]}
+            {wordSkillShortLabel(q.skill)}
           </div>
           <p className="text-lg md:text-2xl font-medium text-foreground leading-relaxed">
             {q.prompt}
@@ -262,18 +263,18 @@ export function WordProblemsPlay({ settings, onComplete, onQuit }: Props) {
           {feedback === 'incorrect' && (
             <div className="mt-3">
               <div className="text-xl md:text-2xl font-bold text-destructive">
-                Answer: {expectedAnswerString(q)}
+                {t('wordProblems.play.answer', { value: expectedAnswerString(q) })}
               </div>
               {q.workings && (
                 <div className="mt-1 text-sm md:text-base text-foreground/80">
-                  Working: {q.workings}
+                  {t('wordProblems.play.working', { workings: q.workings })}
                 </div>
               )}
             </div>
           )}
           {feedback === 'correct' && (
             <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">
-              Brilliant!
+              {t('play.feedback.brilliant')}
             </div>
           )}
         </Card>
@@ -290,7 +291,7 @@ export function WordProblemsPlay({ settings, onComplete, onQuit }: Props) {
               value={typed}
               onChange={e => setTyped(e.target.value)}
               placeholder={placeholderFor(q)}
-              aria-label="Type the answer"
+              aria-label={t('wordProblems.play.typeTheAnswer')}
               className="h-12 md:h-[64px] text-center text-xl md:text-3xl font-bold"
               autoFocus
             />
@@ -299,7 +300,7 @@ export function WordProblemsPlay({ settings, onComplete, onQuit }: Props) {
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
               disabled={typed.trim() === ''}
             >
-              Check
+              {t('wordProblems.play.check')}
             </Button>
           </form>
           )

@@ -14,6 +14,7 @@
 // preferred over ≤/≥.
 
 import { integerChoices } from '@/lib/game/choices';
+import { t, type MessageKey } from '@/lib/i18n/i18n';
 export type WordProblemSkill =
   | 'arith-1step'
   | 'arith-2step'
@@ -59,6 +60,25 @@ export const WORD_SKILL_SHORT: Record<WordProblemSkill, string> = {
   'measure-2step': 'Measure 2-step',
   'fractions-1step': 'Fractions',
 };
+
+const WORD_SKILL_SHORT_KEY: Record<WordProblemSkill, MessageKey> = {
+  'arith-1step': 'wordProblems.skills.arith1',
+  'arith-2step': 'wordProblems.skills.arith2',
+  'money-1step': 'wordProblems.skills.money1',
+  'money-2step': 'wordProblems.skills.money2',
+  'time-1step': 'wordProblems.skills.time1',
+  'measure-1step': 'wordProblems.skills.measure1',
+  'measure-2step': 'wordProblems.skills.measure2',
+  'fractions-1step': 'wordProblems.skills.fractions1',
+};
+
+/** Translated compact chip label (PDFs keep WORD_SKILL_SHORT/LABEL).
+ *  NOTE: the story prompts themselves are English-only for now — they are
+ *  grammar-, gender- and currency-coupled and need per-language template
+ *  sets rather than mechanical key extraction. Tracked as a follow-up. */
+export function wordSkillShortLabel(s: WordProblemSkill): string {
+  return t(WORD_SKILL_SHORT_KEY[s]);
+}
 
 // UK National Curriculum tags per skill. Exported so the orchestrator
 // (hub / lessons screen) can show year-group hints.
