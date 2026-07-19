@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { t, getLocale, setLocale, detectLocale, subscribe } from './i18n';
+import { t, getLocale, setLocale, detectLocale, subscribe, registerCatalog } from './i18n';
+import pt from './locales/pt.json';
 
 beforeEach(() => { localStorage.clear(); });
 afterEach(() => vi.unstubAllGlobals());
@@ -14,9 +15,16 @@ describe('t()', () => {
     expect(t('play.questionsLeft', { count: 1 })).toBe('1 question left');
     expect(t('play.questionsLeft', { count: 4 })).toBe('4 questions left');
   });
-  it('falls back to English for a key missing in the active locale', () => {
-    setLocale('pt'); // pt.json does not exist yet in this task
-    expect(t('common.save')).toBe('Save');
+  it('translates via the active catalog and falls back to English for missing keys', () => {
+    // Register a deliberately partial catalog to exercise the fallback path.
+    registerCatalog('pt', { 'common.back': 'Voltar' });
+    setLocale('pt');
+    try {
+      expect(t('common.back')).toBe('Voltar'); // present → translated
+      expect(t('common.save')).toBe('Save');   // missing → English fallback
+    } finally {
+      registerCatalog('pt', pt as unknown as Record<string, string>); // restore
+    }
   });
 });
 

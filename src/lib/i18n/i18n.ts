@@ -1,4 +1,7 @@
 import en from './locales/en.json';
+import pt from './locales/pt.json';
+import es from './locales/es.json';
+import fr from './locales/fr.json';
 
 export type Locale = 'en' | 'pt' | 'es' | 'fr';
 export const SUPPORTED_LOCALES: Locale[] = ['en', 'pt', 'es', 'fr'];
@@ -6,10 +9,14 @@ export type MessageKey = keyof typeof en;
 
 const LANG_KEY = 'tth_lang';
 
-// Non-en catalogs are loaded lazily-eager: static imports keep this simple and
-// the files are small; Vite bundles them into the main chunk (~a few KB each).
-// Added in Task 9; until then the record holds only en.
-const catalogs: Partial<Record<Locale, Record<string, string>>> = { en };
+// All catalogs ship in the main chunk (a few KB gzipped each). Missing keys
+// in a non-en catalog fall back to the English string at lookup time.
+const catalogs: Partial<Record<Locale, Record<string, string>>> = {
+  en,
+  pt: pt as unknown as Record<string, string>,
+  es: es as unknown as Record<string, string>,
+  fr: fr as unknown as Record<string, string>,
+};
 
 export function registerCatalog(locale: Locale, messages: Record<string, string>): void {
   catalogs[locale] = messages;
