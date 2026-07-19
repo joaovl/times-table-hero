@@ -6,6 +6,7 @@
 // All generators are pure functions on Math.random(); no external deps.
 
 import { buildChoices, numberDistractors, spreadFor } from '@/lib/game/choices';
+import { t, type MessageKey } from '@/lib/i18n/i18n';
 
 export type RatioSkill =
   | 'percent-of'
@@ -84,6 +85,7 @@ export const ALL_SKILLS: RatioSkill[] = [
   'ratio-equivalent',
 ];
 
+// English-only labels: PDF worksheets + source wording for ratioSkillLabel().
 export const SKILL_LABELS: Record<RatioSkill, string> = {
   'percent-of': 'Percent of amount',
   'scale-factor': 'Scale factor',
@@ -91,6 +93,19 @@ export const SKILL_LABELS: Record<RatioSkill, string> = {
   'ratio-simplify': 'Simplify a ratio',
   'ratio-equivalent': 'Equivalent ratio',
 };
+
+const SKILL_KEY: Record<RatioSkill, MessageKey> = {
+  'percent-of': 'ratio.skills.percentOf',
+  'scale-factor': 'ratio.skills.scaleFactor',
+  'ratio-share': 'ratio.skills.ratioShare',
+  'ratio-simplify': 'ratio.skills.ratioSimplify',
+  'ratio-equivalent': 'ratio.skills.ratioEquivalent',
+};
+
+/** Translated on-screen label (PDFs keep SKILL_LABELS). */
+export function ratioSkillLabel(s: RatioSkill): string {
+  return t(SKILL_KEY[s]);
+}
 
 // All Y6, but tagged individually so an external curriculum map can pick
 // them up.
@@ -260,13 +275,13 @@ export function questionPromptText(q: RatioQuestion): string {
     return `${q.percent}% of ${q.whole}?`;
   }
   if (q.skill === 'scale-factor') {
-    return `Scale ${q.length} ${q.units} by × ${q.factor}.`;
+    return t('ratio.prompt.scale', { length: q.length, units: q.units, factor: q.factor });
   }
   if (q.skill === 'ratio-share') {
-    return `Share ${q.total} in the ratio ${q.a}:${q.b}.`;
+    return t('ratio.prompt.share', { total: q.total, a: q.a, b: q.b });
   }
   if (q.skill === 'ratio-simplify') {
-    return `Simplify the ratio ${q.left}:${q.right}.`;
+    return t('ratio.prompt.simplify', { left: q.left, right: q.right });
   }
   // ratio-equivalent
   if (q.missing === 'right') {

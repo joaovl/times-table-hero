@@ -17,6 +17,7 @@ import {
   isRatioShareQuestion,
   isRatioSimplifyQuestion,
 } from './logic';
+import { t } from '@/lib/i18n/i18n';
 
 export interface RatioIncorrectEntry {
   question: RatioQuestion;
@@ -150,7 +151,7 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -168,11 +169,11 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
   };
 
   // Pick placeholder based on shape.
-  let placeholder = 'Type the answer';
+  let placeholder = t('ratio.play.typeTheAnswer');
   const inputType: 'number' | 'text' = isRatioShareQuestion(q) || isRatioSimplifyQuestion(q) ? 'text' : 'number';
   const inputMode: 'numeric' | 'text' = inputType === 'number' ? 'numeric' : 'text';
-  if (isRatioShareQuestion(q)) placeholder = 'e.g. 15 and 25';
-  else if (isRatioSimplifyQuestion(q)) placeholder = 'e.g. 2:3';
+  if (isRatioShareQuestion(q)) placeholder = t('ratio.play.sharePlaceholder');
+  else if (isRatioSimplifyQuestion(q)) placeholder = t('ratio.play.simplifyPlaceholder');
 
   return (
     <div className="min-h-screen bg-background py-2 px-3 md:py-[26px] md:px-8">
@@ -180,11 +181,11 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
             <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">
-              ← Quit
+              {t('ratio.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('ratio.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -213,7 +214,7 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('ratio.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -227,18 +228,18 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
           )}
         >
           <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
-            Work it out
+            {t('ratio.play.workItOut')}
           </p>
           <div className="font-mono text-3xl md:text-4xl font-extrabold text-foreground">
             {questionPromptText(q)}
           </div>
           {feedback === 'incorrect' && (
             <div className="mt-4 text-xl md:text-2xl font-bold text-destructive break-words">
-              Answer: {answerText(q)}
+              {t('ratio.play.answer', { value: answerText(q) })}
             </div>
           )}
           {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
           )}
         </Card>
 
@@ -252,7 +253,7 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
                 value={typed}
                 onChange={e => setTyped(e.target.value)}
                 placeholder={placeholder}
-                aria-label="Type the answer"
+                aria-label={t('ratio.play.typeTheAnswer')}
                 className="h-12 md:h-[64px] text-center text-xl md:text-3xl font-bold"
                 autoFocus
               />
@@ -261,7 +262,7 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
                 className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
                 disabled={typed.trim() === ''}
               >
-                Check
+                {t('ratio.play.check')}
               </Button>
             </form>
           ) : (

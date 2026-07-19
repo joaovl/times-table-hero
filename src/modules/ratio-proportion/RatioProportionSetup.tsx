@@ -6,7 +6,9 @@ import { UserSelector } from '@/components/UserSelector';
 import { PrintWorksheetModal } from '@/components/PrintWorksheetModal';
 import type { UserProfile } from '@/lib/userStorage';
 import type { RatioSettings, RatioSkill, Difficulty } from './logic';
-import { ALL_SKILLS, SKILL_LABELS, generateRatioQuestions } from './logic';
+import { ALL_SKILLS, ratioSkillLabel, generateRatioQuestions } from './logic';
+import { useT } from '@/lib/i18n/react';
+import type { MessageKey } from '@/lib/i18n/i18n';
 import { generateRatioPdf } from './pdf';
 import {
   getSavedRatioSettings,
@@ -33,7 +35,17 @@ const TIME_LIMITS = [
   { label: '10 min', value: 600 },
 ];
 
-const DIFFICULTY_HINTS: [string, string, string] = ['Friendly numbers', 'Mid range', 'Less obvious'];
+const DIFFICULTY_HINT_KEYS: [MessageKey, MessageKey, MessageKey] = [
+  'ratio.setup.hintEasy',
+  'ratio.setup.hintMedium',
+  'ratio.setup.hintHard',
+];
+
+const DIFFICULTY_LABEL_KEY: Record<'easy' | 'medium' | 'hard', MessageKey> = {
+  easy: 'ratio.setup.difficultyEasy',
+  medium: 'ratio.setup.difficultyMedium',
+  hard: 'ratio.setup.difficultyHard',
+};
 
 const buttonClass = (active: boolean) =>
   cn(
@@ -52,6 +64,7 @@ export function RatioProportionSetup({
   onNavigateToHub,
   autoOpenPrint = false,
 }: Props) {
+  const { t } = useT();
   const [skills, setSkills] = useState<RatioSkill[]>(['percent-of']);
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [gameMode, setGameMode] = useState<'questions' | 'time'>('questions');
@@ -130,14 +143,14 @@ export function RatioProportionSetup({
           onClick={onNavigateToHub}
           className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base mb-2"
         >
-          ← Hub
+          {t('common.backToHub')}
         </button>
 
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary text-center mb-1 md:mb-2">
-          Ratio & Proportion
+          {t('ratio.setup.title')}
         </h1>
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Pick what to work on
+          {currentUser ? t('ratio.setup.hiName', { name: currentUser.name }) : ''}{t('ratio.setup.subtitle')}
         </p>
 
         <div className="mb-3 md:mb-6 flex items-center justify-end">
@@ -145,7 +158,7 @@ export function RatioProportionSetup({
         </div>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Skills</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('ratio.setup.skills')}</h2>
           <div className="grid grid-cols-2 gap-1 md:gap-2">
             {ALL_SKILLS.map(s => (
               <button
@@ -154,22 +167,22 @@ export function RatioProportionSetup({
                 aria-pressed={skills.includes(s)}
                 className={buttonClass(skills.includes(s))}
               >
-                <span className="text-[12px] md:text-[14px] px-2 text-center">{SKILL_LABELS[s]}</span>
+                <span className="text-[12px] md:text-[14px] px-2 text-center">{ratioSkillLabel(s)}</span>
               </button>
             ))}
           </div>
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Difficulty</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('ratio.setup.difficulty')}</h2>
           <div className="grid grid-cols-3 gap-2">
             {(['easy', 'medium', 'hard'] as const).map((d, idx) => (
               <div key={d} className="flex flex-col gap-1 md:gap-1.5">
                 <button onClick={() => setDifficulty(d)} className={buttonClass(difficulty === d)}>
-                  <span className="text-[13px] md:text-[16px]">{d.charAt(0).toUpperCase() + d.slice(1)}</span>
+                  <span className="text-[13px] md:text-[16px]">{t(DIFFICULTY_LABEL_KEY[d])}</span>
                 </button>
                 <p className="text-[10px] md:text-[12px] text-foreground/70 text-center leading-tight">
-                  {DIFFICULTY_HINTS[idx]}
+                  {t(DIFFICULTY_HINT_KEYS[idx])}
                 </p>
               </div>
             ))}
@@ -177,19 +190,19 @@ export function RatioProportionSetup({
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Game Mode</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('ratio.setup.gameMode')}</h2>
           <div className="flex gap-2 mb-3">
             <button
               onClick={() => setGameMode('questions')}
               className={cn('flex-1', buttonClass(gameMode === 'questions'))}
             >
-              <span className="text-[13px] md:text-[16px]">Questions</span>
+              <span className="text-[13px] md:text-[16px]">{t('ratio.setup.questions')}</span>
             </button>
             <button
               onClick={() => setGameMode('time')}
               className={cn('flex-1', buttonClass(gameMode === 'time'))}
             >
-              <span className="text-[13px] md:text-[16px]">Timed</span>
+              <span className="text-[13px] md:text-[16px]">{t('ratio.setup.timed')}</span>
             </button>
           </div>
           {gameMode === 'questions' ? (
@@ -213,14 +226,14 @@ export function RatioProportionSetup({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
           <Button variant="outline" onClick={() => setPrintOpen(true)} className="py-3 font-bold">
-            Print Worksheet
+            {t('ratio.setup.printWorksheet')}
           </Button>
           <Button
             onClick={start}
             className="py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px]"
             size="lg"
           >
-            Let's Go!
+            {t('game.setup.start')}
           </Button>
         </div>
       </div>
