@@ -24,6 +24,7 @@ import { PieChart } from './PieChart';
 import { E2EOracle } from '@/lib/e2e/oracle';
 import { E2E_ENABLED, feedbackDelay } from '@/lib/e2e/env';
 import { chartOracle } from './oracle';
+import { t } from '@/lib/i18n/i18n';
 
 export interface ChartsGameResult {
   score: number;
@@ -49,12 +50,20 @@ function formatCorrectAnswer(q: ChartQuestion): string {
   if (kind === 'fraction' && q.expectedFraction) {
     return `${q.expectedFraction.num}/${q.expectedFraction.den}`;
   }
-  if (kind === 'trend' && q.expectedTrend) return q.expectedTrend;
+  if (kind === 'trend' && q.expectedTrend) return t(TREND_KEY[q.expectedTrend]);
   if (kind === 'time' && q.expectedTime) return q.expectedTime;
   return String(q.answer);
 }
 
 const TREND_CHOICES: Array<'rising' | 'falling' | 'flat'> = ['rising', 'falling', 'flat'];
+
+// Buttons display the translated word; grading still receives the canonical
+// English token ('rising' | 'falling' | 'flat') that expectedTrend stores.
+const TREND_KEY = {
+  rising: 'charts.play.rising',
+  falling: 'charts.play.falling',
+  flat: 'charts.play.flat',
+} as const;
 
 /**
  * Deterministically pick `count` labels from `categories` that always include
@@ -243,7 +252,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -270,11 +279,11 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
             <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">
-              ← Quit
+              {t('charts.play.quit')}
             </Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('charts.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -306,7 +315,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('charts.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -341,7 +350,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
                 <table className="mx-auto border-collapse text-sm md:text-base">
                   <thead>
                     <tr>
-                      <th className="border border-foreground/40 px-2 py-1 bg-muted font-bold">Station</th>
+                      <th className="border border-foreground/40 px-2 py-1 bg-muted font-bold">{t('charts.play.station')}</th>
                       {q.times && q.times[0] && q.times[0].map((_, idx) => (
                         <th
                           key={`th-${idx}`}
@@ -386,7 +395,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
             </div>
           )}
           {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
           )}
         </Card>
 
@@ -410,14 +419,14 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
 
         {feedback === 'none' && kind === 'trend' && (
           <div className="grid grid-cols-3 gap-2 md:gap-3">
-            {TREND_CHOICES.map(t => (
+            {TREND_CHOICES.map(tr => (
               <Button
-                key={`trend-${t}`}
+                key={`trend-${tr}`}
                 type="button"
-                onClick={() => handleLabelChoice(t)}
+                onClick={() => handleLabelChoice(tr)}
                 className="py-4 md:py-5 text-lg md:text-xl font-bold shadow-button bg-gradient-to-b from-primary via-primary/85 to-primary/65"
               >
-                {t}
+                {t(TREND_KEY[tr])}
               </Button>
             ))}
           </div>
@@ -431,8 +440,8 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
               inputMode="numeric"
               value={typed}
               onChange={e => setTyped(e.target.value)}
-              placeholder="HH:MM"
-              aria-label="Time answer in HH:MM format"
+              placeholder={t('charts.play.timePlaceholder')}
+              aria-label={t('charts.play.timeAria')}
               className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold tracking-wider"
               autoFocus
             />
@@ -441,7 +450,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
               disabled={typed.trim() === ''}
             >
-              Check
+              {t('charts.play.check')}
             </Button>
           </form>
         )}
@@ -455,9 +464,9 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
                 inputMode="numeric"
                 value={fracNum}
                 onChange={e => setFracNum(e.target.value.replace(/[^0-9]/g, ''))}
-                placeholder="n"
+                placeholder={t('charts.play.numPlaceholder')}
                 className="h-12 md:h-[64px] w-20 md:w-24 text-center text-2xl md:text-4xl font-bold"
-                aria-label="numerator"
+                aria-label={t('charts.play.numeratorAria')}
                 autoFocus
               />
               <div className="text-3xl md:text-5xl font-bold text-muted-foreground">/</div>
@@ -466,9 +475,9 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
                 inputMode="numeric"
                 value={fracDen}
                 onChange={e => setFracDen(e.target.value.replace(/[^0-9]/g, ''))}
-                placeholder="d"
+                placeholder={t('charts.play.denPlaceholder')}
                 className="h-12 md:h-[64px] w-20 md:w-24 text-center text-2xl md:text-4xl font-bold"
-                aria-label="denominator"
+                aria-label={t('charts.play.denominatorAria')}
               />
             </div>
             <Button
@@ -476,7 +485,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
               disabled={!fracNum.trim() || !fracDen.trim()}
             >
-              Check
+              {t('charts.play.check')}
             </Button>
           </form>
         )}
@@ -493,8 +502,8 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
               inputMode="numeric"
               value={typed}
               onChange={e => setTyped(e.target.value)}
-              placeholder="Type your answer"
-              aria-label="Type the answer"
+              placeholder={t('charts.play.typeYourAnswer')}
+              aria-label={t('charts.play.typeTheAnswer')}
               className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
               autoFocus
             />
@@ -503,7 +512,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
               disabled={typed.trim() === ''}
             >
-              Check
+              {t('charts.play.check')}
             </Button>
           </form>
         )}

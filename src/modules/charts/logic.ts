@@ -7,6 +7,7 @@
 // (multi-step-bar).
 
 import { integerChoices, numericChoicesWithNone } from '@/lib/game/choices';
+import { t, type MessageKey } from '@/lib/i18n/i18n';
 
 export type ChartSkill =
   | 'read-bar'
@@ -35,6 +36,8 @@ export const CHART_SKILL_OPTIONS: ReadonlyArray<ChartSkill> = [
   'multi-step-bar',
 ];
 
+// English-only labels: used by the PDF worksheets and as source wording for
+// the translated chartSkillLabel() below.
 export const CHART_SKILL_LABEL: Record<ChartSkill, string> = {
   'read-bar': 'read-bar',
   'compare-bar': 'compare-bar',
@@ -48,6 +51,25 @@ export const CHART_SKILL_LABEL: Record<ChartSkill, string> = {
   'timetable-duration': 'duration',
   'multi-step-bar': 'multi-step',
 };
+
+const CHART_SKILL_KEY: Record<ChartSkill, MessageKey> = {
+  'read-bar': 'charts.skills.readBar',
+  'compare-bar': 'charts.skills.compareBar',
+  'total-bar': 'charts.skills.totalBar',
+  'read-pie': 'charts.skills.readPie',
+  'pie-fraction': 'charts.skills.pieFraction',
+  'read-line': 'charts.skills.readLine',
+  'line-trend': 'charts.skills.lineTrend',
+  'line-max': 'charts.skills.lineMax',
+  'timetable-read': 'charts.skills.timetableRead',
+  'timetable-duration': 'charts.skills.timetableDuration',
+  'multi-step-bar': 'charts.skills.multiStepBar',
+};
+
+/** Translated on-screen label for a chart skill (PDFs keep CHART_SKILL_LABEL). */
+export function chartSkillLabel(s: ChartSkill): string {
+  return t(CHART_SKILL_KEY[s]);
+}
 
 /**
  * UK National Curriculum tags. Exposed so the orchestrator (or a future
@@ -215,38 +237,61 @@ interface LabelPool {
   readonly labels: ReadonlyArray<string>;
 }
 
-const POOLS: ReadonlyArray<LabelPool> = [
+// Pool definitions hold message KEYS (except proper nouns) and are resolved to
+// the active language at pick time, so chart labels and units translate.
+interface LabelPoolDef {
+  readonly name: string;
+  readonly unit: MessageKey;
+  readonly labels: ReadonlyArray<string | MessageKey>;
+  readonly translated: boolean; // false = proper nouns, used verbatim
+}
+
+const POOL_DEFS: ReadonlyArray<LabelPoolDef> = [
   {
     name: 'days',
-    unit: 'votes',
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    unit: 'charts.units.votes',
+    labels: ['charts.labels.mon', 'charts.labels.tue', 'charts.labels.wed', 'charts.labels.thu', 'charts.labels.fri', 'charts.labels.sat', 'charts.labels.sun'],
+    translated: true,
   },
   {
     name: 'fruit',
-    unit: 'apples',
-    labels: ['Apple', 'Banana', 'Cherry', 'Date', 'Grape', 'Kiwi', 'Mango'],
+    unit: 'charts.units.apples',
+    labels: ['charts.labels.apple', 'charts.labels.banana', 'charts.labels.cherry', 'charts.labels.date', 'charts.labels.grape', 'charts.labels.kiwi', 'charts.labels.mango'],
+    translated: true,
   },
   {
     name: 'animals',
-    unit: 'animals',
-    labels: ['Cat', 'Dog', 'Cow', 'Pig', 'Hen', 'Goat', 'Duck'],
+    unit: 'charts.units.animals',
+    labels: ['charts.labels.cat', 'charts.labels.dog', 'charts.labels.cow', 'charts.labels.pig', 'charts.labels.hen', 'charts.labels.goat', 'charts.labels.duck'],
+    translated: true,
   },
   {
     name: 'sports',
-    unit: 'fans',
-    labels: ['Football', 'Tennis', 'Cricket', 'Rugby', 'Hockey', 'Golf', 'Swim'],
+    unit: 'charts.units.fans',
+    labels: ['charts.labels.football', 'charts.labels.tennis', 'charts.labels.cricket', 'charts.labels.rugby', 'charts.labels.hockey', 'charts.labels.golf', 'charts.labels.swim'],
+    translated: true,
   },
   {
     name: 'kids',
-    unit: 'stickers',
+    unit: 'charts.units.stickers',
     labels: ['Amy', 'Ben', 'Cal', 'Dan', 'Eve', 'Finn', 'Gus'],
+    translated: false,
   },
   {
     name: 'colors',
-    unit: 'votes',
-    labels: ['Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Purple', 'Orange'],
+    unit: 'charts.units.votes',
+    labels: ['charts.labels.red', 'charts.labels.blue', 'charts.labels.green', 'charts.labels.yellow', 'charts.labels.pink', 'charts.labels.purple', 'charts.labels.orange'],
+    translated: true,
   },
 ];
+
+function resolvePool(d: LabelPoolDef): LabelPool {
+  return {
+    name: d.name,
+    unit: t(d.unit),
+    labels: d.translated ? d.labels.map(k => t(k as MessageKey)) : (d.labels as string[]),
+  };
+}
 
 /**
  * Line-chart pools — ordered (time-series friendly) and use plain ASCII
@@ -259,23 +304,27 @@ interface OrderedPool {
   readonly labels: ReadonlyArray<string>;
 }
 
-const LINE_POOLS: ReadonlyArray<OrderedPool> = [
+const LINE_POOL_DEFS: ReadonlyArray<{ name: string; unit: MessageKey; labels: ReadonlyArray<MessageKey> }> = [
   {
     name: 'days',
-    unit: 'visitors',
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    unit: 'charts.units.visitors',
+    labels: ['charts.labels.mon', 'charts.labels.tue', 'charts.labels.wed', 'charts.labels.thu', 'charts.labels.fri', 'charts.labels.sat', 'charts.labels.sun'],
   },
   {
     name: 'months',
-    unit: 'sales',
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+    unit: 'charts.units.sales',
+    labels: ['charts.labels.jan', 'charts.labels.feb', 'charts.labels.mar', 'charts.labels.apr', 'charts.labels.may', 'charts.labels.jun', 'charts.labels.jul'],
   },
   {
     name: 'weeks',
-    unit: 'books read',
-    labels: ['Wk1', 'Wk2', 'Wk3', 'Wk4', 'Wk5', 'Wk6', 'Wk7'],
+    unit: 'charts.units.booksRead',
+    labels: ['charts.labels.wk1', 'charts.labels.wk2', 'charts.labels.wk3', 'charts.labels.wk4', 'charts.labels.wk5', 'charts.labels.wk6', 'charts.labels.wk7'],
   },
 ];
+
+function resolveLinePool(d: (typeof LINE_POOL_DEFS)[number]): OrderedPool {
+  return { name: d.name, unit: t(d.unit), labels: d.labels.map(k => t(k)) };
+}
 
 /** Station pools for timetable skills. Always pick the first N. */
 const STATION_POOLS: ReadonlyArray<ReadonlyArray<string>> = [
@@ -295,9 +344,9 @@ function pick<T>(arr: ReadonlyArray<T>): T {
 
 function pickPool(prevName: string | null): LabelPool {
   // Cycle so consecutive questions tend to use different pools.
-  if (POOLS.length <= 1 || !prevName) return pick(POOLS);
-  const others = POOLS.filter(p => p.name !== prevName);
-  return pick(others);
+  if (POOL_DEFS.length <= 1 || !prevName) return resolvePool(pick(POOL_DEFS));
+  const others = POOL_DEFS.filter(p => p.name !== prevName);
+  return resolvePool(pick(others));
 }
 
 function pickLabels(pool: LabelPool, count: number): string[] {
@@ -333,7 +382,7 @@ function buildReadBar(categories: ChartCategory[], unit: string): {
   const cat = categories[target];
   return {
     targets: [target],
-    prompt: `How many ${unit} did ${cat.label} get?`,
+    prompt: t('charts.prompt.readBar', { unit, label: cat.label }),
     answer: cat.value,
   };
 }
@@ -357,7 +406,7 @@ function buildCompareBar(categories: ChartCategory[], unit: string): {
   const y = categories[yIdx];
   return {
     targets: [xIdx, yIdx],
-    prompt: `How many more ${unit} did ${x.label} get than ${y.label}?`,
+    prompt: t('charts.prompt.compareBar', { unit, more: x.label, less: y.label }),
     answer: Math.abs(x.value - y.value),
   };
 }
@@ -370,7 +419,7 @@ function buildTotalBar(categories: ChartCategory[], unit: string): {
   const sum = categories.reduce((acc, c) => acc + c.value, 0);
   return {
     targets: categories.map((_, i) => i),
-    prompt: `What is the total number of ${unit}?`,
+    prompt: t('charts.prompt.totalBar', { unit }),
     answer: sum,
   };
 }
@@ -453,10 +502,10 @@ function buildReadPie(categories: ChartCategory[], unit: string): {
     }
   }
   const cat = categories[pickedIdx];
-  const which = askLargest ? 'biggest' : 'smallest';
+  const which = t(askLargest ? 'charts.prompt.biggest' : 'charts.prompt.smallest');
   return {
     targets: [pickedIdx],
-    prompt: `Which slice is the ${which} in this pie of ${unit}?`,
+    prompt: t('charts.prompt.readPie', { which, unit }),
     // `answer` stays numeric (the slice count) for backwards compatibility,
     // but read-pie uses `expectedLabel` for grading.
     answer: cat.value,
@@ -479,7 +528,7 @@ function buildPieFraction(
   const frac = reduceFraction(cat.value, total);
   return {
     targets: [idx],
-    prompt: `What fraction of the ${unit} pie is the highlighted slice?`,
+    prompt: t('charts.prompt.pieFraction', { unit }),
     answer: cat.value,
     expectedFraction: frac,
   };
@@ -489,9 +538,9 @@ function buildPieFraction(
 // Line-chart helpers.
 
 function pickLinePool(prevName: string | null): OrderedPool {
-  if (LINE_POOLS.length <= 1 || !prevName) return pick(LINE_POOLS);
-  const others = LINE_POOLS.filter(p => p.name !== prevName);
-  return pick(others);
+  if (LINE_POOL_DEFS.length <= 1 || !prevName) return resolveLinePool(pick(LINE_POOL_DEFS));
+  const others = LINE_POOL_DEFS.filter(p => p.name !== prevName);
+  return resolveLinePool(pick(others));
 }
 
 /**
@@ -550,11 +599,11 @@ function buildReadLine(categories: ChartCategory[], unit: string): {
   prompt: string;
   answer: number;
 } {
-  const t = randInt(0, categories.length - 1);
+  const ti = randInt(0, categories.length - 1);
   return {
-    targets: [t],
-    prompt: `What was the number of ${unit} on ${categories[t].label}?`,
-    answer: categories[t].value,
+    targets: [ti],
+    prompt: t('charts.prompt.readLine', { unit, label: categories[ti].label }),
+    answer: categories[ti].value,
   };
 }
 
@@ -566,7 +615,7 @@ function buildLineTrend(trend: TrendAnswer, unit: string): {
 } {
   return {
     targets: [],
-    prompt: `Is the trend of ${unit} rising, falling or flat?`,
+    prompt: t('charts.prompt.lineTrend', { unit }),
     answer: 0,
     expectedTrend: trend,
   };
@@ -584,7 +633,7 @@ function buildLineMax(categories: ChartCategory[], unit: string): {
   }
   return {
     targets: [idx],
-    prompt: `Which point had the most ${unit}?`,
+    prompt: t('charts.prompt.lineMax', { unit }),
     answer: categories[idx].value,
     expectedLabel: categories[idx].label,
   };
@@ -633,14 +682,14 @@ function buildMultiStep(
   // the smaller value from the larger value but still naming both bars.
   if (op === 'add') {
     answer = A.value + B.value;
-    prompt = `What is the total of ${unit} for ${A.label} and ${B.label}?`;
+    prompt = t('charts.prompt.multiStepAdd', { unit, a: A.label, b: B.label });
   } else if (op === 'sub') {
     const xIdx = A.value >= B.value ? a : b;
     const yIdx = A.value >= B.value ? b : a;
     const x = categories[xIdx];
     const y = categories[yIdx];
     answer = Math.abs(A.value - B.value);
-    prompt = `How many ${unit} does ${x.label} have minus ${y.label}?`;
+    prompt = t('charts.prompt.multiStepMinus', { unit, a: x.label, b: y.label });
     return {
       targets: [xIdx, yIdx],
       prompt,
@@ -649,7 +698,7 @@ function buildMultiStep(
     };
   } else {
     answer = Math.abs(A.value - B.value);
-    prompt = `What is the difference in ${unit} between ${A.label} and ${B.label}?`;
+    prompt = t('charts.prompt.multiStepDiff', { unit, a: A.label, b: B.label });
   }
   return {
     targets: [a, b],
@@ -745,7 +794,7 @@ function buildTimetableRead(
   const fromTime = times[fromIdx][serviceIdx];
   return {
     targets: [],
-    prompt: `The train leaves ${stations[fromIdx]} at ${fromTime}. What time does it arrive at ${stations[toIdx]}?`,
+    prompt: t('charts.prompt.timetableRead', { from: stations[fromIdx], time: fromTime, to: stations[toIdx] }),
     answer: 0,
     expectedTime: arrivalTime,
     timetableQuery: { fromIdx, toIdx, serviceIdx, question: 'arrival' },
@@ -769,7 +818,7 @@ function buildTimetableDuration(
   const minutes = diffMinutes(fromTime, toTime);
   return {
     targets: [],
-    prompt: `How many minutes does the journey from ${stations[fromIdx]} to ${stations[toIdx]} take?`,
+    prompt: t('charts.prompt.timetableDuration', { from: stations[fromIdx], to: stations[toIdx] }),
     answer: minutes,
     timetableQuery: { fromIdx, toIdx, serviceIdx, question: 'duration' },
   };

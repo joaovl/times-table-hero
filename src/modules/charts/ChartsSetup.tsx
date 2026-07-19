@@ -9,10 +9,11 @@ import type { ChartSettings, ChartSkill } from './logic';
 import {
   CHART_MAX_VALUE_OPTIONS,
   CHART_NUM_CATEGORIES_OPTIONS,
-  CHART_SKILL_LABEL,
+  chartSkillLabel,
   CHART_SKILL_OPTIONS,
   generateChartQuestions,
 } from './logic';
+import { useT } from '@/lib/i18n/react';
 import { generateChartsPdf } from './pdf';
 import {
   getSavedChartsSettings,
@@ -87,7 +88,7 @@ function SkillChipPicker({ selected, onChange }: SkillChipPickerProps) {
           aria-pressed={isSelected(s)}
           className={buttonClass(isSelected(s))}
         >
-          <span className="text-[11px] md:text-[12px]">{CHART_SKILL_LABEL[s]}</span>
+          <span className="text-[11px] md:text-[12px]">{chartSkillLabel(s)}</span>
         </button>
       ))}
     </div>
@@ -102,6 +103,7 @@ export function ChartsSetup({
   onNavigateToHub,
   autoOpenPrint = false,
 }: Props) {
+  const { t } = useT();
   const [skills, setSkills] = useState<ChartSkill[]>(['read-bar']);
   const [maxValue, setMaxValue] = useState<number>(50);
   const [numCategories, setNumCategories] = useState<number>(5);
@@ -185,14 +187,14 @@ export function ChartsSetup({
           onClick={onNavigateToHub}
           className="text-muted-foreground hover:text-foreground transition-colors text-sm md:text-base mb-2"
         >
-          ← Hub
+          {t('common.backToHub')}
         </button>
 
         <h1 className="text-[22px] md:text-[36px] font-bold text-primary text-center mb-1 md:mb-2">
-          Charts Practice
+          {t('charts.setup.title')}
         </h1>
         <p className="text-center text-[12px] md:text-[17px] text-muted-foreground mb-3">
-          {currentUser ? `Hi ${currentUser.name}! ` : ''}Read the bar chart, type the answer
+          {currentUser ? t('charts.setup.hiName', { name: currentUser.name }) : ''}{t('charts.setup.subtitle')}
         </p>
 
         <div className="mb-3 md:mb-6 flex items-center justify-end">
@@ -200,12 +202,12 @@ export function ChartsSetup({
         </div>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Skill</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('charts.setup.skill')}</h2>
           <SkillChipPicker selected={skills} onChange={setSkills} />
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Max value</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('charts.setup.maxValue')}</h2>
           <div className="grid grid-cols-4 gap-2">
             {CHART_MAX_VALUE_OPTIONS.map(v => (
               <button
@@ -220,7 +222,7 @@ export function ChartsSetup({
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Categories</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('charts.setup.categories')}</h2>
           <div className="grid grid-cols-4 gap-2">
             {CHART_NUM_CATEGORIES_OPTIONS.map(v => (
               <button
@@ -235,13 +237,13 @@ export function ChartsSetup({
         </Card>
 
         <Card className="mb-2 md:mb-4 p-3 md:p-5 shadow-card">
-          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">Game Mode</h2>
+          <h2 className="mb-2 md:mb-3 text-[14px] md:text-[20px] font-semibold text-foreground">{t('charts.setup.gameMode')}</h2>
           <div className="flex gap-2 mb-3">
             <button onClick={() => setGameMode('questions')} className={cn('flex-1', buttonClass(gameMode === 'questions'))}>
-              <span className="text-[13px] md:text-[16px]">Questions</span>
+              <span className="text-[13px] md:text-[16px]">{t('charts.setup.questions')}</span>
             </button>
             <button onClick={() => setGameMode('time')} className={cn('flex-1', buttonClass(gameMode === 'time'))}>
-              <span className="text-[13px] md:text-[16px]">Timed</span>
+              <span className="text-[13px] md:text-[16px]">{t('charts.setup.timed')}</span>
             </button>
           </div>
           {gameMode === 'questions' ? (
@@ -265,14 +267,14 @@ export function ChartsSetup({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
           <Button variant="outline" onClick={() => setPrintOpen(true)} className="py-3 font-bold">
-            Print Worksheet
+            {t('charts.setup.printWorksheet')}
           </Button>
           <Button
             onClick={start}
             className="py-3 md:py-4 text-lg md:text-2xl font-bold bg-gradient-to-b from-primary via-primary/85 to-primary/65 shadow-button transition-all hover:translate-y-[-2px]"
             size="lg"
           >
-            Let's Go!
+            {t('game.setup.start')}
           </Button>
         </div>
       </div>
