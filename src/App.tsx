@@ -42,7 +42,7 @@ const StatisticsIndex = lazy(() => import('./modules/statistics/StatisticsIndex'
 // `t` directly from i18n.ts here rather than using the `useT()` hook.
 const ModuleLoading = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="text-xl font-bold text-primary" role="status" aria-live="polite">
+    <div className="text-xl font-bold text-primary animate-pulse" role="status" aria-live="polite">
       {t('common.loading')}
     </div>
   </div>

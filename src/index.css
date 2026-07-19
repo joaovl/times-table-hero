@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&display=swap');
+/* Fonts are self-hosted via @fontsource/nunito (imported in main.tsx). */
 
 @tailwind base;
 @tailwind components;
@@ -123,7 +123,9 @@
   }
 
   body {
-    @apply bg-background text-foreground font-comfortaa;
+    @apply bg-background text-foreground font-sans;
+    /* Maths app: digits must line up and never jiggle as they change. */
+    font-variant-numeric: tabular-nums;
   }
 }
 

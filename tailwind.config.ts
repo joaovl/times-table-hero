@@ -14,7 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        comfortaa: ["Comfortaa", "cursive"],
+        sans: ["Nunito", "ui-rounded", "system-ui", "sans-serif"],
+        // Legacy alias: components that used font-comfortaa now get Nunito too.
+        comfortaa: ["Nunito", "ui-rounded", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

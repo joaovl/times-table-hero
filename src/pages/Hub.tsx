@@ -8,6 +8,7 @@ import { NewUserModal } from '@/components/NewUserModal';
 import { UserProfile, getCurrentUser, getUserById } from '@/lib/userStorage';
 import { PRESET_THEMES, DEFAULT_THEME, getTheme, saveTheme, resetTheme } from '@/lib/themeStorage';
 import { useT } from '@/lib/i18n/react';
+import { moduleAccent } from '@/lib/moduleAccent';
 import type { MessageKey } from '@/lib/i18n/i18n';
 import { useInstallPrompt } from '@/lib/pwa-install';
 
@@ -45,8 +46,9 @@ const MODULES: ModuleCard[] = [
   { slug: 'statistics', nameKey: 'hub.modules.statistics.name', blurbKey: 'hub.modules.statistics.blurb', iconName: 'line-chart', years: [6] },
 ];
 
+// Icons render in currentColor so the card's module accent flows through.
 function ModuleIcon({ iconName }: { iconName: NonNullable<ModuleCard['iconName']> }) {
-  const cls = 'w-14 h-14 md:w-[72px] md:h-[72px] text-primary';
+  const cls = 'w-14 h-14 md:w-[72px] md:h-[72px]';
   switch (iconName) {
     case 'clock': return <Clock className={cls} strokeWidth={2.5} aria-hidden="true" />;
     case 'bar-chart-3': return <BarChart3 className={cls} strokeWidth={2.5} aria-hidden="true" />;
@@ -309,15 +311,18 @@ const Hub = () => {
               onClick={() => navigate(`/${m.slug}`)}
               className="p-5 md:p-6 shadow-card cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md"
             >
-              {m.glyph ? (
-                <div className="text-5xl md:text-6xl font-extrabold text-primary text-center mb-2">
-                  {m.glyph}
+              <div className="flex justify-center mb-2">
+                <div
+                  className="flex h-20 w-20 md:h-24 md:w-24 items-center justify-center rounded-2xl"
+                  style={{ color: moduleAccent(m.slug).color, backgroundColor: moduleAccent(m.slug).soft }}
+                >
+                  {m.glyph ? (
+                    <span className="text-5xl md:text-6xl font-extrabold leading-none">{m.glyph}</span>
+                  ) : (
+                    <ModuleIcon iconName={m.iconName!} />
+                  )}
                 </div>
-              ) : (
-                <div className="flex justify-center mb-2">
-                  <ModuleIcon iconName={m.iconName!} />
-                </div>
-              )}
+              </div>
               <div className="text-lg md:text-xl font-bold text-foreground text-center">{t(m.nameKey)}</div>
               <div className="text-xs md:text-sm text-muted-foreground text-center mt-1">
                 {t(m.blurbKey)}
