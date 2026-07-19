@@ -11,6 +11,8 @@
 // (both are in WinAnsi).
 
 import { integerChoices } from '@/lib/game/choices';
+import { t, getLocale, type MessageKey } from '@/lib/i18n/i18n';
+import { formatNumber as formatNumberIntl } from '@/lib/i18n/number';
 export type ConversionSkill =
   // Length
   | 'length-cm-mm'
@@ -49,6 +51,7 @@ export const CONVERSION_SKILL_OPTIONS: ReadonlyArray<ConversionSkill> = [
   'volume-cuboid',
 ];
 
+// English-only labels: PDF worksheets + source wording for conversionSkillLabel().
 export const CONVERSION_SKILL_LABEL: Record<ConversionSkill, string> = {
   'length-cm-mm': 'Length (cm → mm)',
   'length-m-cm': 'Length (m → cm)',
@@ -63,6 +66,36 @@ export const CONVERSION_SKILL_LABEL: Record<ConversionSkill, string> = {
   'volume-cube': 'Volume (cube)',
   'volume-cuboid': 'Volume (cuboid)',
 };
+
+const CONVERSION_SKILL_KEY: Record<ConversionSkill, MessageKey> = {
+  'length-cm-mm': 'conversions.skills.lengthCmMm',
+  'length-m-cm': 'conversions.skills.lengthMCm',
+  'length-km-m': 'conversions.skills.lengthKmM',
+  'mass-kg-g': 'conversions.skills.massKgG',
+  'volume-L-mL': 'conversions.skills.volumeLMl',
+  'time-h-min': 'conversions.skills.timeHMin',
+  'time-min-s': 'conversions.skills.timeMinS',
+  'metric-imperial': 'conversions.skills.metricImperial',
+  'perimeter-composite': 'conversions.skills.perimeterComposite',
+  'area-irregular': 'conversions.skills.areaIrregular',
+  'volume-cube': 'conversions.skills.volumeCube',
+  'volume-cuboid': 'conversions.skills.volumeCuboid',
+};
+
+/** Translated on-screen label (PDFs keep CONVERSION_SKILL_LABEL). */
+export function conversionSkillLabel(s: ConversionSkill): string {
+  return t(CONVERSION_SKILL_KEY[s]);
+}
+
+/** Imperial↔metric conversion only makes sense where imperial units are taught. */
+export function isImperialSkill(s: ConversionSkill): boolean {
+  return s === 'metric-imperial';
+}
+
+/** Skill list for the setup screen: imperial skills only under `en` locales. */
+export function visibleConversionSkills(): ConversionSkill[] {
+  return CONVERSION_SKILL_OPTIONS.filter(s => !isImperialSkill(s) || getLocale() === 'en');
+}
 
 export const CONVERSION_DIFFICULTY_OPTIONS: ReadonlyArray<ConversionDifficulty> = [
   'easy',
@@ -546,11 +579,33 @@ export function generateConversionQuestions(
 // ---------------------------------------------------------------------------
 
 /** Format a number for display — drop trailing zeros so "12.00" reads as
- *  "12" and "1.50" as "1.5". Up to 2 dp. */
+ *  "12" and "1.50" as "1.5". Up to 2 dp, locale decimal separator. */
 export function formatNumber(n: number): string {
-  if (Number.isInteger(n)) return String(n);
-  const s = n.toFixed(2);
-  return s.replace(/\.?0+$/, '');
+  return formatNumberIntl(n, { maximumFractionDigits: 2 });
+}
+
+/** Translated on-screen prompt; mirrors promptFor() (which PDFs keep English). */
+export function promptForScreen(q: ConversionQuestion): string {
+  switch (q.skill) {
+    case 'metric-imperial':
+      return t('conversions.prompt.approx', { value: formatNumber(q.fromValue), from: q.fromUnit, to: q.toUnit });
+    case 'length-cm-mm':
+    case 'length-m-cm':
+    case 'length-km-m':
+    case 'mass-kg-g':
+    case 'volume-L-mL':
+    case 'time-h-min':
+    case 'time-min-s':
+      return `${formatNumber(q.fromValue)} ${q.fromUnit} = ? ${q.toUnit}`;
+    case 'perimeter-composite':
+      return t('conversions.prompt.perimeter', { unit: q.unit });
+    case 'area-irregular':
+      return t('conversions.prompt.area');
+    case 'volume-cube':
+      return t('conversions.prompt.volumeCube', { side: q.side });
+    case 'volume-cuboid':
+      return t('conversions.prompt.volumeCuboid', { l: q.length, w: q.width, h: q.height });
+  }
 }
 
 /** Short prompt text for a question (used by online play + PDF). */

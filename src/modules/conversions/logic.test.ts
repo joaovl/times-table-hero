@@ -607,3 +607,20 @@ describe('encoding safety — promptFor / answerString avoid the Unicode Math Op
     }
   );
 });
+
+describe('imperial gating (i18n)', () => {
+  it('offers imperial skills only under en', async () => {
+    const { setLocale } = await import('@/lib/i18n/i18n');
+    const { visibleConversionSkills, isImperialSkill } = await import('./logic');
+    try {
+      setLocale('fr');
+      expect(visibleConversionSkills().some(isImperialSkill)).toBe(false);
+      setLocale('en');
+      expect(visibleConversionSkills().some(isImperialSkill)).toBe(true);
+      // Metric skills are never gated.
+      expect(visibleConversionSkills()).toContain('length-cm-mm');
+    } finally {
+      setLocale('en');
+    }
+  });
+});

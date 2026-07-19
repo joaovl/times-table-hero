@@ -13,9 +13,10 @@ import {
   answerString,
   generateConversionQuestions,
   isAnswerCorrect,
-  promptFor,
+  promptForScreen,
 } from './logic';
 import { ConversionFigure } from './ConversionFigure';
+import { t } from '@/lib/i18n/i18n';
 
 export interface ConversionsGameResult {
   score: number;
@@ -137,7 +138,7 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
         setIncorrect(prev => [
           ...prev,
           {
-            prompt: promptFor(q),
+            prompt: promptForScreen(q),
             correctAnswer: answerString(q),
             userAnswer: value || null,
           },
@@ -168,7 +169,7 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
   if (questions.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-2xl font-bold text-primary">Loading...</div>
+        <div className="text-2xl font-bold text-primary">{t('common.loading')}</div>
       </div>
     );
   }
@@ -192,10 +193,10 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
       <div className="mx-auto max-w-xl">
         <div className="mb-3 md:mb-[19px]">
           <div className="mb-2 flex items-center justify-between">
-            <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">← Quit</Button>
+            <Button variant="ghost" onClick={onQuit} className="text-muted-foreground h-11">{t('conversions.play.quit')}</Button>
             <div className="text-center">
               <span className="text-xl md:text-2xl font-bold text-primary">{score}</span>
-              <span className="text-sm md:text-base text-muted-foreground"> correct</span>
+              <span className="text-sm md:text-base text-muted-foreground">{t('conversions.play.correct')}</span>
             </div>
             <div className="text-right">
               {settings.gameMode === 'questions' ? (
@@ -219,7 +220,7 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
                 className="animate-bounce-in inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 text-sm font-bold text-white shadow-lg"
               >
                 <Flame className="w-4 h-4" />
-                {streak} in a row!
+                {t('conversions.play.streak', { count: streak })}
               </span>
             </div>
           )}
@@ -241,7 +242,7 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
             'text-foreground',
             showFigure ? 'mt-3 text-base md:text-lg' : 'text-2xl md:text-3xl font-bold'
           )}>
-            {promptFor(q)}
+            {promptForScreen(q)}
           </p>
           {feedback === 'incorrect' && (
             <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">
@@ -249,7 +250,7 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
             </div>
           )}
           {feedback === 'correct' && (
-            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">Brilliant!</div>
+            <div className="mt-3 text-2xl md:text-3xl font-extrabold text-success">{t('play.feedback.brilliant')}</div>
           )}
         </Card>
 
@@ -264,8 +265,8 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
               inputMode="decimal"
               value={typed}
               onChange={e => setTyped(e.target.value)}
-              placeholder="your answer"
-              aria-label="Type the answer"
+              placeholder={t('conversions.play.yourAnswer')}
+              aria-label={t('conversions.play.typeTheAnswer')}
               className="h-12 md:h-[64px] text-center text-2xl md:text-4xl font-bold"
               autoFocus
             />
@@ -274,7 +275,7 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
               className="w-full py-3 md:py-[19px] text-lg md:text-xl font-bold shadow-button"
               disabled={typed.trim() === ''}
             >
-              Check
+              {t('conversions.play.check')}
             </Button>
           </form>
           )
