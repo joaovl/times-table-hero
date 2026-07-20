@@ -1126,6 +1126,19 @@ export function chartHighlightIndices(q: ChartQuestion): number[] {
 }
 
 /**
+ * Which bars/points must NOT print their numeric value. For a "read one value"
+ * question (read-bar, read-line) the answer IS a single bar's value, so
+ * printing it on that bar hands the answer over (bug: "the answer is shown on
+ * top"). We hide only the queried element; the others keep their labels so the
+ * child can read the hidden bar by comparison against the axis and neighbours.
+ * Compute skills (compare/total/multi-step) print every value — those numbers
+ * are inputs to an arithmetic answer that is never itself printed.
+ */
+export function chartHideValueIndices(q: ChartQuestion): number[] {
+  return q.skill === 'read-bar' || q.skill === 'read-line' ? q.targets : [];
+}
+
+/**
  * Multiple-choice options for easy/medium (typed on hard). Only numeric-answer
  * skills (bar/pie/line reads, totals, durations, multi-step) get choices;
  * fraction/trend/time/label skills return [] so the caller falls back to a
@@ -1156,9 +1169,12 @@ export function axisMax(dataMax: number): number {
 }
 
 export function axisTickCount(axisHigh: number): number {
-  // 5 gridlines is the sweet spot for chart cells of this size.
-  if (axisHigh <= 10) return 5;
-  if (axisHigh <= 100) return 5;
+  // Gridlines must land on whole numbers so a child can read a bar's height
+  // off the axis (see chartHideValueIndices — the queried bar hides its own
+  // number, so the axis has to be legible). For small ranges we put a line on
+  // every integer; larger ranges (axisMax is a multiple of 10/100/1000) divide
+  // cleanly into 5.
+  if (axisHigh <= 10) return Math.max(1, axisHigh);
   return 5;
 }
 

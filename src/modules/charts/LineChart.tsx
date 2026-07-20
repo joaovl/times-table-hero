@@ -9,6 +9,12 @@ interface Props {
   categories: ChartCategory[];
   /** Indices into `categories` whose point should render with a stronger fill / ring. */
   highlightIndices?: number[];
+  /**
+   * Indices whose numeric value must NOT be printed above the point — used for
+   * read-line so the answer isn't handed to the child. See
+   * chartHideValueIndices in logic.ts.
+   */
+  hideValueIndices?: number[];
   /** CSS width of the rendered chart. Defaults to 320. */
   width?: number;
   /** CSS height of the rendered chart. Defaults to 240. */
@@ -32,12 +38,14 @@ const PLOT_H = VIEW_H - PAD_TOP - PAD_BOTTOM;
 export function LineChart({
   categories,
   highlightIndices = [],
+  hideValueIndices = [],
   width = VIEW_W,
   height = VIEW_H,
   className,
   unit,
 }: Props) {
   const highlight = new Set(highlightIndices);
+  const hideValue = new Set(hideValueIndices);
   const dataMax = categories.reduce((m, c) => Math.max(m, c.value), 0);
   const yMax = axisMax(dataMax);
   const ticks = axisTickCount(yMax);
@@ -160,17 +168,21 @@ export function LineChart({
               stroke="currentColor"
               strokeWidth={isHi ? 1.5 : 0.8}
             />
-            {/* Value label above each point */}
-            <text
-              x={cx}
-              y={cy - 8}
-              textAnchor="middle"
-              fontSize="9"
-              fill="currentColor"
-              fontFamily="sans-serif"
-            >
-              {c.value}
-            </text>
+            {/* Value label above each point. Suppressed for the point a
+                read-line question asks about, so its value isn't handed over. */}
+            {!hideValue.has(i) && (
+              <text
+                data-testid="line-value"
+                x={cx}
+                y={cy - 8}
+                textAnchor="middle"
+                fontSize="9"
+                fill="currentColor"
+                fontFamily="sans-serif"
+              >
+                {c.value}
+              </text>
+            )}
           </g>
         );
       })}

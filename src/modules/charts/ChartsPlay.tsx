@@ -10,6 +10,7 @@ import { AnswerChoices } from '@/components/game/AnswerChoices';
 import { NONE_OF_THESE, isChoiceCorrect } from '@/lib/game/choices';
 import type { ChartQuestion, ChartSettings } from './logic';
 import {
+  chartHideValueIndices,
   chartHighlightIndices,
   generateChartChoices,
   generateChartQuestions,
@@ -341,6 +342,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
               <LineChart
                 categories={q.categories}
                 highlightIndices={chartHighlightIndices(q)}
+                hideValueIndices={chartHideValueIndices(q)}
                 width={360}
                 height={260}
                 unit={q.unit}
@@ -382,6 +384,7 @@ export function ChartsPlay({ settings, onComplete, onQuit }: Props) {
               <BarChart
                 categories={q.categories}
                 highlightIndices={chartHighlightIndices(q)}
+                hideValueIndices={chartHideValueIndices(q)}
                 width={360}
                 height={260}
                 unit={q.unit}

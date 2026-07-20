@@ -10,6 +10,12 @@ interface Props {
   categories: ChartCategory[];
   /** Indices into `categories` that should render with a stronger fill. */
   highlightIndices?: number[];
+  /**
+   * Indices whose numeric value must NOT be printed on the bar — used for
+   * read-bar so the answer isn't handed to the child. See
+   * chartHideValueIndices in logic.ts.
+   */
+  hideValueIndices?: number[];
   /** CSS width of the rendered chart. Defaults to 320. */
   width?: number;
   /** CSS height of the rendered chart. Defaults to 240. */
@@ -33,12 +39,14 @@ const PLOT_H = VIEW_H - PAD_TOP - PAD_BOTTOM;
 export function BarChart({
   categories,
   highlightIndices = [],
+  hideValueIndices = [],
   width = VIEW_W,
   height = VIEW_H,
   className,
   unit,
 }: Props) {
   const highlight = new Set(highlightIndices);
+  const hideValue = new Set(hideValueIndices);
   const dataMax = categories.reduce((m, c) => Math.max(m, c.value), 0);
   const yMax = axisMax(dataMax);
   const ticks = axisTickCount(yMax);
@@ -142,17 +150,21 @@ export function BarChart({
               stroke="currentColor"
               strokeWidth={isHi ? 1.5 : 0.6}
             />
-            {/* Value label centered above each bar */}
-            <text
-              x={x + barW / 2}
-              y={y - 3}
-              textAnchor="middle"
-              fontSize="9"
-              fill="currentColor"
-              fontFamily="sans-serif"
-            >
-              {c.value}
-            </text>
+            {/* Value label centered above each bar. Suppressed for the bar a
+                read-bar question asks about, so its value isn't handed over. */}
+            {!hideValue.has(i) && (
+              <text
+                data-testid="bar-value"
+                x={x + barW / 2}
+                y={y - 3}
+                textAnchor="middle"
+                fontSize="9"
+                fill="currentColor"
+                fontFamily="sans-serif"
+              >
+                {c.value}
+              </text>
+            )}
           </g>
         );
       })}
