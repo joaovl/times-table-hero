@@ -11,6 +11,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
+    "verify": "tsc -b --noEmit && vitest run",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
