@@ -30,6 +30,9 @@ import {
 } from './logic';
 import { useT } from '@/lib/i18n/react';
 import { parseAnswer } from '@/lib/i18n/number';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { decimalsOracle } from './oracle';
 
 // User-typed answer kept on each incorrect entry so the results screen can
 // show what the kid wrote.
@@ -566,6 +569,7 @@ export function DecimalsPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
+          {E2E_ENABLED && <E2EOracle data={decimalsOracle(q)} />}
           <div className="text-3xl md:text-4xl font-extrabold text-foreground tracking-wide">
             <PromptLine q={q} />
           </div>

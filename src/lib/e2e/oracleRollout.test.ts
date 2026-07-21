@@ -20,6 +20,9 @@ import { ratioProportionOracle } from '@/modules/ratio-proportion/oracle';
 import { timeOracle } from '@/modules/time/oracle';
 import { numberTheoryOracle } from '@/modules/number-theory/oracle';
 import { moneyOracle } from '@/modules/money/oracle';
+import { decimalsOracle } from '@/modules/decimals/oracle';
+import { fractionsOracle } from '@/modules/fractions/oracle';
+import { shapesOracle } from '@/modules/shapes/oracle';
 
 // slug -> oracle(question, choicesShown) => OracleData. Modules are added here
 // as their oracle lands; modules absent from this map are simply not yet
@@ -40,6 +43,9 @@ const ORACLES: Record<string, (q: any, choices: string[]) => OracleData> = {
   time: (q) => timeOracle(q),
   'number-theory': (q) => numberTheoryOracle(q),
   money: (q) => moneyOracle(q),
+  decimals: (q) => decimalsOracle(q),
+  fractions: (q) => fractionsOracle(q),
+  shapes: shapesOracle,
 };
 
 const K = 20;

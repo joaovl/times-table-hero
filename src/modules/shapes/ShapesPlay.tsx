@@ -22,6 +22,9 @@ import {
 } from './logic';
 import { ShapeFigure } from './ShapeFigure';
 import { t } from '@/lib/i18n/i18n';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { shapesOracle } from './oracle';
 import type { ShapeFigureMode } from './ShapeFigure';
 import { recordAttempt } from '@/lib/feedback/attemptLog';
 
@@ -302,6 +305,7 @@ export function ShapesPlay({ settings, onComplete, onQuit }: Props) {
           )}
         </div>
 
+        {E2E_ENABLED && <E2EOracle data={shapesOracle(q, choices)} />}
         <VisualQuestion
           feedback={feedback}
           cardClassName="py-4 md:py-6"

@@ -231,6 +231,15 @@ export async function isolateToggleByIndex(container: Locator, index: number) {
   throw new Error(`isolateToggleByIndex: could not isolate index ${index} after 50 attempts`);
 }
 
+// Select the i-th operation button in an operation picker card (times-tables /
+// arithmetic). Operations are a plain single-select (no aria-pressed), so we
+// click the i-th button in the card by index.
+export async function selectOperationByIndex(page: Page, heading: string, index: number) {
+  const btns = skillsCard(page, heading).locator('button');
+  await btns.first().waitFor();
+  await btns.nth(index).click();
+}
+
 // Select a difficulty by its button label if a difficulty selector exists on
 // this setup screen (some modules have none). Case-insensitive: catalogs use
 // both "Easy" and "easy". Returns true if a difficulty button was clicked.
@@ -276,12 +285,15 @@ export async function answerViaOracle(page: Page): Promise<string> {
     await page.waitForTimeout(80);
     const nInputs = await inputs.count();
 
-    if (nInputs >= 2 && o.expected.includes('/')) {
-      // Two-field fraction: "n/d".
-      const [num, den] = o.expected.split('/');
-      await fillStable(page, inputs.nth(0), num.trim());
-      await fillStable(page, inputs.nth(1), den.trim());
-      await submitTyped(page, inputs.nth(1));
+    const twoFieldSep = o.expected.includes('/') ? '/' : / r /i.test(o.expected) ? / r /i : null;
+    if (nInputs >= 2 && twoFieldSep) {
+      // Two fields: a fraction "n/d", or a remainder division "Q r R". Fill the
+      // LAST two inputs — some fraction skills prepend an optional whole-number
+      // field (defaults to 0) that we must leave empty.
+      const [a, b] = o.expected.split(twoFieldSep);
+      await fillStable(page, inputs.nth(nInputs - 2), a.trim());
+      await fillStable(page, inputs.nth(nInputs - 1), b.trim());
+      await submitTyped(page, inputs.nth(nInputs - 1));
     } else if (nInputs >= 1) {
       const box = inputs.first();
       await fillStable(page, box, o.expected);
