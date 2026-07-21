@@ -71,7 +71,7 @@ const START_BUTTON_NAME = label('game.setup.start');
 // `aria-pressed`-toggle-button pattern (see `buttonClass` in both *Setup.tsx
 // files). Robust to whatever selection localStorage restored, so it does not
 // assume the app's hardcoded defaults.
-async function isolateToggle(container: Locator, label: string) {
+export async function isolateToggle(container: Locator, label: string) {
   const target = container.getByRole('button', { name: label, exact: true });
   await target.waitFor();
   if ((await target.getAttribute('aria-pressed')) !== 'true') {
@@ -190,6 +190,65 @@ export async function startModuleByRoute(page: Page, route: string) {
   await expect(page.getByTestId('e2e-oracle')).toBeAttached();
 }
 
+// The setup card that holds a module's skill toggles, located by its heading
+// ("Skill" for charts/time, "Skills" for the rest).
+export function skillsCard(page: Page, heading: string): Locator {
+  return page.getByRole('heading', { name: heading, exact: true }).locator('xpath=..');
+}
+
+// How many skill toggles the skills card holds.
+export async function countSkillToggles(page: Page, heading: string): Promise<number> {
+  const toggles = skillsCard(page, heading).locator('button[aria-pressed]');
+  await toggles.first().waitFor();
+  return toggles.count();
+}
+
+// Select the i-th skill toggle and deselect every other one — by element
+// index, not label text, so multi-line skill buttons (whose textContent lacks
+// the spaces the accessible name has) still match reliably.
+export async function isolateToggleByIndex(container: Locator, index: number) {
+  const toggles = container.locator('button[aria-pressed]');
+  const target = toggles.nth(index);
+  await target.waitFor();
+  if ((await target.getAttribute('aria-pressed')) !== 'true') {
+    await target.click();
+    await expect(target).toHaveAttribute('aria-pressed', 'true');
+  }
+  for (let guard = 0; guard < 50; guard++) {
+    const n = await toggles.count();
+    let clickedAnother = false;
+    for (let j = 0; j < n; j++) {
+      if (j === index) continue;
+      const btn = toggles.nth(j);
+      if ((await btn.getAttribute('aria-pressed')) === 'true') {
+        await btn.click();
+        clickedAnother = true;
+        break;
+      }
+    }
+    if (!clickedAnother) return;
+  }
+  throw new Error(`isolateToggleByIndex: could not isolate index ${index} after 50 attempts`);
+}
+
+// Select a difficulty by its button label if a difficulty selector exists on
+// this setup screen (some modules have none). Case-insensitive: catalogs use
+// both "Easy" and "easy". Returns true if a difficulty button was clicked.
+export async function setDifficultyIfPresent(page: Page, level: 'easy' | 'medium' | 'hard'): Promise<boolean> {
+  const btn = page.getByRole('button', { name: new RegExp(`^${level}$`, 'i') });
+  if (await btn.count()) {
+    await btn.first().click();
+    return true;
+  }
+  return false;
+}
+
+// Press "Let's Go!" and wait for the first question's oracle.
+export async function pressStart(page: Page) {
+  await page.getByRole('button', { name: START_BUTTON_NAME, exact: true }).click();
+  await expect(page.getByTestId('e2e-oracle')).toBeAttached();
+}
+
 // Answer the current question using the oracle's ground truth: click the
 // correct multiple-choice button (or "None of these" when the correct value
 // isn't shown), or type the expected answer and press Check. Returns the
@@ -208,27 +267,62 @@ export async function answerViaOracle(page: Page): Promise<string> {
       await page.getByRole('button', { name: target, exact: true }).first().click();
     }
   } else {
-    // Typed input. A question-change effect resets the field to '' shortly
-    // after the new question mounts — which can land *after* our fill and
-    // silently clear it. Fill, give that reset a beat to fire, and re-fill
-    // until the value holds; then click the form's (now-enabled) submit
-    // button. Enter alone is unreliable here: implicit submission is blocked
-    // while the submit button is disabled (empty field).
-    const box = page.locator('input:visible').first();
-    await box.waitFor({ state: 'visible' });
-    for (let attempt = 0; attempt < 6; attempt++) {
-      await box.fill(o.expected);
-      await page.waitForTimeout(120); // let any question-change reset fire
-      if ((await box.inputValue()) === o.expected) break;
-    }
-    const submit = page.locator('button[type="submit"]:visible').first();
-    if (await submit.count()) {
-      await submit.click();
+    // "Typed" per the oracle, but the actual widget varies by skill: a single
+    // field, two fields (a fraction n/d), or a row of label/word buttons (e.g.
+    // chart "which slice?" category buttons, or rising/falling/flat). Pick the
+    // interaction from what's actually on screen.
+    const inputs = page.locator('input:visible');
+    // Give the question a beat to mount its inputs before counting.
+    await page.waitForTimeout(80);
+    const nInputs = await inputs.count();
+
+    if (nInputs >= 2 && o.expected.includes('/')) {
+      // Two-field fraction: "n/d".
+      const [num, den] = o.expected.split('/');
+      await fillStable(page, inputs.nth(0), num.trim());
+      await fillStable(page, inputs.nth(1), den.trim());
+      await submitTyped(page, inputs.nth(1));
+    } else if (nInputs >= 1) {
+      const box = inputs.first();
+      await fillStable(page, box, o.expected);
+      await submitTyped(page, box);
     } else {
-      await box.press('Enter');
+      // No text input — the answer is a labelled/word button (chart label or
+      // trend). Click the button whose accessible name matches `expected`
+      // (case-insensitive; catalogs may capitalise trend words).
+      const exact = page.getByRole('button', { name: new RegExp(`^\\s*${escapeRegExp(o.expected)}\\s*$`, 'i') });
+      if (await exact.count()) {
+        await exact.first().click();
+      } else {
+        await page.getByRole('button', { name: new RegExp(escapeRegExp(o.expected), 'i') }).first().click();
+      }
     }
   }
   return o.questionId;
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Fill a field and re-fill until the value survives the question-change reset.
+async function fillStable(page: Page, box: Locator, value: string) {
+  await box.waitFor({ state: 'visible' });
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await box.fill(value);
+    await page.waitForTimeout(120);
+    if ((await box.inputValue()) === value) break;
+  }
+}
+
+// Submit a typed answer via the form's submit button (preferred) or Enter.
+async function submitTyped(page: Page, box: Locator) {
+  const submit = page.locator('button[type="submit"]:visible').first();
+  if (await submit.count()) {
+    await submit.click();
+  } else {
+    await box.press('Enter');
+  }
 }
 
 // Answer the current question and wait until the game advances to the next one
