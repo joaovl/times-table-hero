@@ -12,6 +12,8 @@ import { ratioProportionModule } from './modules/ratioProportion';
 import { algebraModule } from './modules/algebra';
 import { statisticsModule } from './modules/statistics';
 import { timeModule } from './modules/time';
+import { fractionsModule } from './modules/fractions';
+import { shapesModule } from './modules/shapes';
 
 // Adapters are appended here as they land (Tasks 3-8 of the regression plan).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,4 +31,6 @@ export const ALL_MODULES: PlayableModule<any, any>[] = [
   algebraModule,
   statisticsModule,
   timeModule,
+  fractionsModule,
+  shapesModule,
 ];
