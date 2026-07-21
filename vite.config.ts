@@ -113,6 +113,22 @@ export default defineConfig({
     // combination and can take several seconds on slower machines. Use a
     // generous default so it doesn't trip the watchdog under CI load.
     testTimeout: 30000,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "text-summary", "html", "json-summary"],
+      reportsDirectory: "coverage",
+      // Measure the code that ships to kids: module logic, shared libs,
+      // components, and pages. Exclude tests, the test harness, generated
+      // types, and config from the denominator.
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/**/*.{test,spec}.{ts,tsx}",
+        "src/lib/testkit/**",
+        "src/**/*.d.ts",
+        "src/main.tsx",
+        "src/vite-env.d.ts",
+      ],
+    },
   },
   // Cast: `test` is a Vitest field. Vitest 4 bundles its own vite copy, so the
   // `vitest/config` augmentation of `test` lands on that nested vite's

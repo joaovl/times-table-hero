@@ -41,3 +41,6 @@ DELETE/
 
 # Orphaned native build tree (mobile apps live on their own branch)
 android/
+
+# Test coverage reports
+coverage/
