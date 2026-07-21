@@ -18,6 +18,9 @@ import {
 } from './logic';
 import { useT } from '@/lib/i18n/react';
 import { t } from '@/lib/i18n/i18n';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { numberTheoryOracle } from './oracle';
 
 export interface NumberTheoryGameResult {
   score: number;
@@ -278,6 +281,7 @@ export function NumberTheoryPlay({ settings, onComplete, onQuit }: Props) {
           )}
         </div>
 
+        {E2E_ENABLED && <E2EOracle data={numberTheoryOracle(q)} />}
         <VisualQuestion
           feedback={feedback}
           promptText={<PromptDisplay q={q} />}

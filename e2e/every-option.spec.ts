@@ -39,6 +39,8 @@ const DRIVABLE = new Set([
   'statistics',
   'ratio-proportion',
   'time',
+  'number-theory',
+  'money',
 ]);
 
 const LEVELS = ['easy', 'medium', 'hard'] as const;

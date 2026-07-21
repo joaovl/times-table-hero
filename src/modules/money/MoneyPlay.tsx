@@ -21,6 +21,9 @@ import {
 } from './logic';
 import { t } from '@/lib/i18n/i18n';
 import { currencyForLocale, type CurrencyConfig } from '@/lib/i18n/currency';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { moneyOracle } from './oracle';
 
 export interface MoneyGameResult {
   score: number;
@@ -321,6 +324,7 @@ export function MoneyPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
+          {E2E_ENABLED && <E2EOracle data={moneyOracle(q)} />}
           <QuestionDisplay q={q} cfg={cfg} />
           {feedback === 'incorrect' && (
             <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">
