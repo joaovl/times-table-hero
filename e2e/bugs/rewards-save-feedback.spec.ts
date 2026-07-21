@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 // Bug #5: saving reward rules with a blank balance unit must give a specific,
 // actionable message (not an opaque "Could not save."), and succeed once fixed.

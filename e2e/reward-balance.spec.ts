@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // Proves the proportional "TV-hours" reward end to end in a real browser:
 // configure a balance rule, log a few days of practice (incl. a skipped day)

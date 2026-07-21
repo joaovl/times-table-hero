@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // Real-stack journey for #15 (kid <-> parent linking): a parent signs up with a
 // family PIN and creates a kid with their own PIN; then, logged out (a "kid's

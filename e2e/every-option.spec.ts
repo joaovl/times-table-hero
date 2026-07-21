@@ -11,7 +11,7 @@
 // DRIVABLE lists the modules whose input widgets the generic answerer can drive
 // today. Modules are moved in as their oracle + widget support lands; until
 // then their options are covered by the unit-level answer-integrity net.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import {
   skillsCard,
   isolateToggleByIndex,

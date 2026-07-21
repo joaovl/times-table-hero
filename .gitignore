@@ -44,3 +44,4 @@ android/
 
 # Test coverage reports
 coverage/
+.nyc_output/

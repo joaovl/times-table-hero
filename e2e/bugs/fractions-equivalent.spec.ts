@@ -1,5 +1,5 @@
 // e2e/bugs/fractions-equivalent.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 import { startFractions, answerFractionOp } from '../support/play';
 import { readOracle } from '../support/oracle';
 

@@ -1,5 +1,5 @@
 // e2e/bugs/charts-no-clue.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 import { startCharts } from '../support/play';
 import { readOracle } from '../support/oracle';
 

@@ -11,7 +11,7 @@
 // The complex multi-field / pick modules (decimals, fractions, shapes, money)
 // are intentionally excluded — they don't expose a whole-question oracle and
 // stay covered by the Layer 1 answer-integrity net.
-import { test } from '@playwright/test';
+import { test } from './fixtures';
 import { startModuleByRoute, answerAndAdvance } from './support/play';
 
 const MODULES: Array<{ slug: string; route: string }> = [

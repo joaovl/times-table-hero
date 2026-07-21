@@ -2,8 +2,13 @@
 import { defineConfig, type UserConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { VitePWA } from "vite-plugin-pwa";
+import istanbul from "vite-plugin-istanbul";
 import path from "path";
 import { execSync } from "child_process";
+
+// COVERAGE=1 instruments the app so the Playwright e2e run can collect per-file
+// line coverage. Off by default — production/e2e builds are never instrumented.
+const COVERAGE = process.env.COVERAGE === "1";
 
 // Get git commit hash for build versioning
 const getGitHash = () => {
@@ -22,6 +27,17 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    ...(COVERAGE
+      ? [
+          istanbul({
+            include: "src/*",
+            exclude: ["node_modules", "test/", "**/*.test.*", "**/*.spec.*", "src/lib/testkit/**"],
+            extension: [".ts", ".tsx"],
+            requireEnv: false,
+            forceBuildInstrument: true,
+          }),
+        ]
+      : []),
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
@@ -114,9 +130,10 @@ export default defineConfig({
     // generous default so it doesn't trip the watchdog under CI load.
     testTimeout: 30000,
     coverage: {
-      provider: "v8",
-      reporter: ["text", "text-summary", "html", "json-summary"],
-      reportsDirectory: "coverage",
+      // istanbul (not v8) so the JSON output can be merged with e2e coverage.
+      provider: "istanbul",
+      reporter: ["text", "text-summary", "html", "json-summary", "json"],
+      reportsDirectory: "coverage/unit",
       // Measure the code that ships to kids: module logic, shared libs,
       // components, and pages. Exclude tests, the test harness, generated
       // types, and config from the denominator.

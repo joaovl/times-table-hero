@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import pt from '../src/lib/i18n/locales/pt.json' with { type: 'json' };
 
 // The parent switches the device language: the UI flips instantly (no reload)

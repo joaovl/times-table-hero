@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // Full real-stack journey in a real Chromium against wrangler pages dev + D1:
 // sign up -> add a kid -> configure reward rules -> verify they persist across

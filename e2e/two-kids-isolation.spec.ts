@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // Verifies that a parent with TWO kids gets no mixed results: each kid's reward
 // rules are stored and shown independently, an all-kids rule stays separate, and

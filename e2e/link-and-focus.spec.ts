@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // Real-stack browser coverage for the two new parent-area UIs against
 // wrangler pages dev + D1: the times-table focus picker (must round-trip
