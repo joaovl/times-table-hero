@@ -1,0 +1,279 @@
+[
+  {
+    "slug": "charts",
+    "route": "/charts",
+    "heading": "Skill",
+    "difficulty": false,
+    "options": [
+      "read-bar",
+      "compare-bar",
+      "total-bar",
+      "read-pie",
+      "pie-fraction",
+      "read-line",
+      "line-trend",
+      "line-max",
+      "timetable-read",
+      "timetable-duration",
+      "multi-step-bar"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "number-sense",
+    "route": "/number-sense",
+    "heading": "Skills",
+    "difficulty": true,
+    "options": [
+      "place-value-3d",
+      "place-value-4d",
+      "place-value-7d",
+      "place-value-10m",
+      "round-10",
+      "round-100",
+      "round-1000",
+      "round-10k",
+      "round-1m",
+      "count-multiples",
+      "negative-count",
+      "negative-interval",
+      "roman-100",
+      "roman-1000",
+      "order-numbers",
+      "bidmas"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "conversions",
+    "route": "/conversions",
+    "heading": "Skills",
+    "difficulty": true,
+    "options": [
+      "length-cm-mm",
+      "length-m-cm",
+      "length-km-m",
+      "mass-kg-g",
+      "volume-L-mL",
+      "time-h-min",
+      "time-min-s",
+      "metric-imperial",
+      "perimeter-composite",
+      "area-irregular",
+      "volume-cube",
+      "volume-cuboid"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "word-problems",
+    "route": "/word-problems",
+    "heading": "Skills",
+    "difficulty": true,
+    "options": [
+      "arith-1step",
+      "arith-2step",
+      "money-1step",
+      "money-2step",
+      "time-1step",
+      "measure-1step",
+      "measure-2step",
+      "fractions-1step"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "algebra",
+    "route": "/algebra",
+    "heading": "Skills",
+    "difficulty": true,
+    "options": [
+      "formula-eval",
+      "missing-number",
+      "sequence-next",
+      "sequence-rule",
+      "expression-evaluate"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "statistics",
+    "route": "/statistics",
+    "heading": "Skills",
+    "difficulty": true,
+    "options": [
+      "mean-calc",
+      "mean-find-missing",
+      "median",
+      "mode",
+      "range"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "ratio-proportion",
+    "route": "/ratio-proportion",
+    "heading": "Skills",
+    "difficulty": true,
+    "options": [
+      "percent-of",
+      "scale-factor",
+      "ratio-share",
+      "ratio-simplify",
+      "ratio-equivalent"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "time",
+    "route": "/time",
+    "heading": "Skill",
+    "difficulty": true,
+    "options": [
+      "read",
+      "read-roman",
+      "arith",
+      "time-arith-pm",
+      "duration"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "decimals",
+    "route": "/decimals",
+    "heading": "Skills",
+    "difficulty": false,
+    "options": [
+      "identify-tenths",
+      "identify-hundredths",
+      "identify-thousandths",
+      "round-1dp",
+      "round-2dp",
+      "compare-decimals",
+      "fraction-to-decimal",
+      "decimal-to-fraction",
+      "percent-fraction",
+      "percent-decimal",
+      "decimal-percent",
+      "add-decimals",
+      "subtract-decimals"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "fractions",
+    "route": "/fractions",
+    "heading": "Skills",
+    "difficulty": false,
+    "options": [
+      "add-same",
+      "sub-same",
+      "add-diff",
+      "sub-diff",
+      "id",
+      "eq",
+      "cmp",
+      "mixed",
+      "mul-by-whole",
+      "mixed-mul-whole",
+      "mul-frac",
+      "to-decimal",
+      "from-decimal",
+      "add-mixed",
+      "sub-mixed",
+      "div-frac-whole"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "shapes",
+    "route": "/shapes",
+    "heading": "Skills",
+    "difficulty": true,
+    "options": [
+      "name-2d",
+      "count-sides",
+      "perimeter-rect",
+      "area-rect",
+      "area-tri",
+      "area-circle",
+      "circumference",
+      "angle-name",
+      "name-3d",
+      "count-faces",
+      "count-edges",
+      "count-vertices",
+      "angle-measure",
+      "angle-name-reflex",
+      "lines-of-symmetry",
+      "coord-read",
+      "coord-plot",
+      "translation",
+      "coord-four-quadrants",
+      "angle-at-point",
+      "angle-on-line",
+      "angle-vertical"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "money",
+    "route": "/money",
+    "heading": "Skills",
+    "difficulty": true,
+    "options": [
+      "add-money",
+      "subtract-money",
+      "change",
+      "multi-item",
+      "compare-prices",
+      "multiply-money"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "number-theory",
+    "route": "/number-theory",
+    "heading": "Skills",
+    "difficulty": true,
+    "options": [
+      "factors",
+      "factor-pair",
+      "multiples",
+      "is-multiple",
+      "prime-recognize",
+      "prime-list-19",
+      "square",
+      "cube",
+      "common-factor",
+      "square-root"
+    ],
+    "kind": "skill"
+  },
+  {
+    "slug": "times-tables",
+    "route": "/times-tables",
+    "heading": "Operation",
+    "difficulty": true,
+    "options": [
+      "multiply",
+      "divide",
+      "square",
+      "sqrt"
+    ],
+    "kind": "operation"
+  },
+  {
+    "slug": "arithmetic",
+    "route": "/arithmetic",
+    "heading": "Operation",
+    "difficulty": true,
+    "options": [
+      "add",
+      "subtract",
+      "multiply",
+      "divide"
+    ],
+    "kind": "operation"
+  }
+]
