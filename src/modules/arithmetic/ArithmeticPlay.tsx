@@ -12,6 +12,9 @@ import type { ArithQuestion, ArithSettings } from './logic';
 import { checkArithAnswer, divideUsesRemainderField, generateArithChoices, generateArithQuestions } from './logic';
 import { useT } from '@/lib/i18n/react';
 import { parseAnswer } from '@/lib/i18n/number';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { arithmeticOracle } from './oracle';
 
 export interface ArithGameResult {
   score: number;
@@ -270,6 +273,7 @@ export function ArithmeticPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
+          {E2E_ENABLED && <E2EOracle data={arithmeticOracle(q, choices)} />}
           {useHorizontalForDivide ? <HorizontalDisplay q={q} /> : <ColumnDisplay q={q} />}
           {feedback === 'incorrect' && (
             <div className="mt-3 text-2xl md:text-3xl font-bold text-destructive">= {formatExpected(q)}</div>

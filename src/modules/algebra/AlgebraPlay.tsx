@@ -18,6 +18,9 @@ import {
   isSequenceRuleQuestion,
 } from './logic';
 import { useT } from '@/lib/i18n/react';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { algebraOracle } from './oracle';
 
 export interface AlgebraIncorrectEntry {
   question: AlgebraQuestion;
@@ -229,6 +232,7 @@ export function AlgebraPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
+          {E2E_ENABLED && <E2EOracle data={algebraOracle(q, choices)} />}
           <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">{t('algebra.play.workItOut')}</p>
           <div className="font-mono text-2xl md:text-4xl font-extrabold text-foreground break-words">
             {questionPromptText(q)}

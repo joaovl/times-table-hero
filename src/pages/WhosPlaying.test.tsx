@@ -6,7 +6,7 @@ import '@testing-library/jest-dom/vitest';
 
 const pairKids = vi.fn();
 const kidSignin = vi.fn();
-const pairingGet = vi.fn<[], string | null>(() => 'pair-tok');
+const pairingGet = vi.fn<() => string | null>(() => 'pair-tok');
 vi.mock('@/lib/api/client', () => ({
   pairKids: (...a: unknown[]) => pairKids(...a),
   kidSignin: (...a: unknown[]) => kidSignin(...a),

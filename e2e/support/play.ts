@@ -182,6 +182,78 @@ export async function questionSignature(page: Page): Promise<string> {
   return (await readOracle(page)).questionId;
 }
 
+// Generic module start: go to the module route and press "Let's Go!" with the
+// setup screen's default settings, then wait for the first question's oracle.
+export async function startModuleByRoute(page: Page, route: string) {
+  await page.goto(route);
+  await page.getByRole('button', { name: START_BUTTON_NAME, exact: true }).click();
+  await expect(page.getByTestId('e2e-oracle')).toBeAttached();
+}
+
+// Answer the current question using the oracle's ground truth: click the
+// correct multiple-choice button (or "None of these" when the correct value
+// isn't shown), or type the expected answer and press Check. Returns the
+// questionId that was answered so the caller can wait for the next question.
+export async function answerViaOracle(page: Page): Promise<string> {
+  const o = await readOracle(page);
+  if (o.inputMode === 'choices') {
+    const shown = o.choices ?? [];
+    const target = shown.includes(o.expected) ? o.expected : 'None of these';
+    // The shared AnswerChoices renders aria-label "Answer X"; a couple of
+    // modules (e.g. times-tables) render the value as the button's own text.
+    const byAria = page.getByRole('button', { name: `Answer ${target}`, exact: true });
+    if (await byAria.count()) {
+      await byAria.first().click();
+    } else {
+      await page.getByRole('button', { name: target, exact: true }).first().click();
+    }
+  } else {
+    // Typed input. A question-change effect resets the field to '' shortly
+    // after the new question mounts — which can land *after* our fill and
+    // silently clear it. Fill, give that reset a beat to fire, and re-fill
+    // until the value holds; then click the form's (now-enabled) submit
+    // button. Enter alone is unreliable here: implicit submission is blocked
+    // while the submit button is disabled (empty field).
+    const box = page.locator('input:visible').first();
+    await box.waitFor({ state: 'visible' });
+    for (let attempt = 0; attempt < 6; attempt++) {
+      await box.fill(o.expected);
+      await page.waitForTimeout(120); // let any question-change reset fire
+      if ((await box.inputValue()) === o.expected) break;
+    }
+    const submit = page.locator('button[type="submit"]:visible').first();
+    if (await submit.count()) {
+      await submit.click();
+    } else {
+      await box.press('Enter');
+    }
+  }
+  return o.questionId;
+}
+
+// Answer the current question and wait until the game advances to the next one
+// (or ends). Submission can occasionally be swallowed by a question-change
+// re-render under parallel load, so this re-answers until the question id
+// actually changes, capped to a few attempts.
+export async function answerAndAdvance(page: Page): Promise<void> {
+  const start = (await readOracle(page)).questionId;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await answerViaOracle(page);
+    try {
+      await expect
+        .poll(
+          async () => (await readOracle(page).catch(() => ({ questionId: 'ended' }))).questionId,
+          { timeout: 2500 },
+        )
+        .not.toBe(start);
+      return;
+    } catch {
+      // Submission didn't take (transient race) — re-answer.
+    }
+  }
+  throw new Error(`question did not advance after retries (started at ${start})`);
+}
+
 // The "no clues" invariant: no chart element highlighted (except where the
 // oracle legitimately reports one, e.g. pie-fraction), and the answer string is
 // never present in the visible DOM.

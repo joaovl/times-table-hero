@@ -17,6 +17,9 @@ import {
 } from './logic';
 import { ConversionFigure } from './ConversionFigure';
 import { t } from '@/lib/i18n/i18n';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { conversionsOracle } from './oracle';
 
 export interface ConversionsGameResult {
   score: number;
@@ -233,6 +236,7 @@ export function ConversionsPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
+          {E2E_ENABLED && <E2EOracle data={conversionsOracle(q, choices)} />}
           {showFigure && (
             <div className="flex justify-center text-foreground">
               <ConversionFigure question={q} size={220} />

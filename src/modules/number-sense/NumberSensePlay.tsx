@@ -24,6 +24,9 @@ import {
 import { useT } from '@/lib/i18n/react';
 import type { MessageKey } from '@/lib/i18n/i18n';
 import { formatNumber } from '@/lib/i18n/number';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { numberSenseOracle } from './oracle';
 
 export interface NumberSenseIncorrectEntry {
   question: NumberSenseQuestion;
@@ -317,6 +320,7 @@ export function NumberSensePlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
+          {E2E_ENABLED && <E2EOracle data={numberSenseOracle(q, choices)} />}
           {isPlaceValueQuestion(q) && (
             <>
               <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">

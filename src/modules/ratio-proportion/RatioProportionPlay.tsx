@@ -18,6 +18,9 @@ import {
   isRatioSimplifyQuestion,
 } from './logic';
 import { t } from '@/lib/i18n/i18n';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { ratioProportionOracle } from './oracle';
 
 export interface RatioIncorrectEntry {
   question: RatioQuestion;
@@ -227,6 +230,7 @@ export function RatioProportionPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
+          {E2E_ENABLED && <E2EOracle data={ratioProportionOracle(q, choices)} />}
           <p className="text-sm md:text-base font-semibold text-muted-foreground mb-3">
             {t('ratio.play.workItOut')}
           </p>
