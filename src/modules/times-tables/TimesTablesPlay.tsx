@@ -12,6 +12,9 @@ import {
   factKey,
 } from './logic';
 import { NONE_OF_THESE, isChoiceCorrect } from '@/lib/game/choices';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { timesTablesOracle } from './oracle';
 import { recordAnswer } from './storage';
 import { recordAttempt } from '@/lib/feedback/attemptLog';
 import { recordPractice } from '@/lib/practice/recordPractice';
@@ -327,6 +330,7 @@ export function TimesTablesPlay({ settings, onComplete, onQuit, userId }: TimesT
           feedback === 'correct' && 'animate-pop bg-success/10',
           feedback === 'incorrect' && 'animate-shake bg-destructive/10'
         )}>
+          {E2E_ENABLED && <E2EOracle data={timesTablesOracle(currentQuestion, options)} />}
           {feedback === 'none' ? (
             <>
               <div className="mb-1 md:mb-2 text-5xl md:text-6xl lg:text-7xl font-extrabold text-foreground">

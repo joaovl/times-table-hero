@@ -16,6 +16,9 @@ import {
   generateWordQuestions,
   wordSkillShortLabel,
 } from './logic';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { wordProblemsOracle } from './oracle';
 
 export interface WordIncorrect {
   skill: WordQuestion['skill'];
@@ -254,6 +257,7 @@ export function WordProblemsPlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
+          {E2E_ENABLED && <E2EOracle data={wordProblemsOracle(q, choices)} />}
           <div className="text-[11px] md:text-xs text-muted-foreground uppercase tracking-wide mb-1">
             {wordSkillShortLabel(q.skill)}
           </div>

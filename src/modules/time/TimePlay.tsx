@@ -18,6 +18,9 @@ import {
 } from './logic';
 import { ClockDisplay } from './ClockDisplay';
 import { t } from '@/lib/i18n/i18n';
+import { E2EOracle } from '@/lib/e2e/oracle';
+import { E2E_ENABLED } from '@/lib/e2e/env';
+import { timeOracle } from './oracle';
 
 export interface TimeIncorrect {
   skill: 'read' | 'arith' | 'duration';
@@ -258,6 +261,7 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
             feedback === 'incorrect' && 'animate-shake bg-destructive/10'
           )}
         >
+          {E2E_ENABLED && <E2EOracle data={timeOracle(q)} />}
           {q.skill === 'arith' ? (
             <div className="flex flex-col items-center text-foreground">
               <div className="text-3xl md:text-5xl font-extrabold tracking-tight">
