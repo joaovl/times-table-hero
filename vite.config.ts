@@ -1,5 +1,5 @@
-/// <reference types="vitest" />
-import { defineConfig } from "vite";
+/// <reference types="vitest/config" />
+import { defineConfig, type UserConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
@@ -114,4 +114,8 @@ export default defineConfig({
     // generous default so it doesn't trip the watchdog under CI load.
     testTimeout: 30000,
   },
-});
+  // Cast: `test` is a Vitest field. Vitest 4 bundles its own vite copy, so the
+  // `vitest/config` augmentation of `test` lands on that nested vite's
+  // UserConfig, not vite 5's used here — the cast lets the shared config
+  // typecheck under `tsc -b` while passing `test` through at runtime.
+} as UserConfig);

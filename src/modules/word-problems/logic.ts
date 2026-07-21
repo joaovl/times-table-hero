@@ -916,7 +916,7 @@ export function expectedAnswerString(q: WordQuestion): string {
 // integer we offer value buttons; otherwise we return [] and the caller falls
 // back to a typed input (lists, decimals, units, coords, names, times, etc.).
 // Distractors are filtered through the module grader so exactly one is correct.
-export function generateChoices(q: WordQuestion, difficulty: Difficulty): string[] {
+export function generateChoices(q: WordQuestion, difficulty: WordDifficulty): string[] {
   const s = expectedAnswerString(q).trim();
   if (!/^-?\d+$/.test(s)) return [];
   return integerChoices(parseInt(s, 10), difficulty, c => !checkWordAnswer(q, c));

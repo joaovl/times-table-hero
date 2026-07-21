@@ -67,7 +67,7 @@ export default function RewardRulesForm({ value, onChange }: Props) {
             <label className="block text-sm font-medium" htmlFor="lastn">{t('parent.rewards.form.recentExercisesToAverage')}</label>
             <NumberField id="lastn" min={1}
               value={d.score.n}
-              onCommit={n => setGate({ score: { ...d.score, n } })} />
+              onCommit={n => setGate({ score: { kind: 'lastNAverage', n, minPercent: d.score.minPercent } })} />
           </>
         )}
         <label className="block text-sm font-medium" htmlFor="minpct">{t('parent.rewards.form.minimumPercent')}</label>

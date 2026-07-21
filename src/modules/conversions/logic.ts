@@ -752,7 +752,7 @@ export function isAnswerCorrect(q: ConversionQuestion, typed: string): boolean {
 // integer we offer value buttons; otherwise we return [] and the caller falls
 // back to a typed input (lists, decimals, units, coords, names, times, etc.).
 // Distractors are filtered through the module grader so exactly one is correct.
-export function generateChoices(q: ConversionQuestion, difficulty: Difficulty): string[] {
+export function generateChoices(q: ConversionQuestion, difficulty: ConversionDifficulty): string[] {
   const s = answerString(q).trim();
   if (!/^-?\d+$/.test(s)) return [];
   return integerChoices(parseInt(s, 10), difficulty, c => !isAnswerCorrect(q, c));

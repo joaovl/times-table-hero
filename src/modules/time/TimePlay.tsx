@@ -76,8 +76,8 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
   useEffect(() => {
     setTyped('');
     if (questions.length > 0) {
-      setChoices(settings.difficulty !== 'hard'
-        ? generateChoices(questions[currentIndex], settings.difficulty)
+      setChoices(settings.arithDifficulty !== 'hard'
+        ? generateChoices(questions[currentIndex], settings.arithDifficulty)
         : []);
     }
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -292,7 +292,7 @@ export function TimePlay({ settings, onComplete, onQuit }: Props) {
         </Card>
 
         {feedback === 'none' && (
-          settings.difficulty !== 'hard' && choices.length > 0 ? (
+          settings.arithDifficulty !== 'hard' && choices.length > 0 ? (
             <AnswerChoices options={choices} onChoose={submit} />
           ) : (
           <form onSubmit={handleSubmit} className="space-y-2 md:space-y-[13px]">

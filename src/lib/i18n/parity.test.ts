@@ -20,7 +20,7 @@ describe('catalog parity', () => {
     const params = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join(',');
     for (const [name, cat] of [['pt', pt], ['es', es], ['fr', fr]] as const) {
       for (const [k, v] of Object.entries(en)) {
-        const tv = (cat as Record<string, string>)[k];
+        const tv = (cat as Record<string, unknown>)[k] as string;
         expect(`${name}:${k}:${params(tv)}`).toBe(`${name}:${k}:${params(v)}`);
       }
     }
