@@ -23,7 +23,8 @@
     "db:tables:local": "wrangler d1 execute tth-db --local --command \"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;\"",
     "e2e:server": "vite build --mode e2e && wrangler d1 migrations apply tth-db --local && wrangler pages dev --port 8788",
     "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "report": "node scripts/report.cjs"
   },
   "dependencies": {
     "@fontsource/nunito": "^5.2.7",

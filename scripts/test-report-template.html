@@ -1,0 +1,187 @@
+<style>
+  :root {
+    --bg: #f6f7fb; --card: #ffffff; --text: #171a21; --muted: #5b6472;
+    --border: #e4e7ef; --accent: #6d28d9; --accent-soft: #ede9fe;
+    --pass: #15803d; --pass-bg: #dcfce7; --fail: #b91c1c; --fail-bg: #fee2e2;
+    --skip: #b45309; --skip-bg: #fef3c7; --shadow: 0 1px 2px rgba(20,24,40,.06), 0 8px 24px rgba(20,24,40,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1116; --card: #171a21; --text: #e8eaf0; --muted: #98a1b2;
+      --border: #262b36; --accent: #a78bfa; --accent-soft: #241b3d;
+      --pass: #4ade80; --pass-bg: #10241a; --fail: #f87171; --fail-bg: #2a1414;
+      --skip: #fbbf24; --skip-bg: #2a2110; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f7fb; --card: #ffffff; --text: #171a21; --muted: #5b6472;
+    --border: #e4e7ef; --accent: #6d28d9; --accent-soft: #ede9fe;
+    --pass: #15803d; --pass-bg: #dcfce7; --fail: #b91c1c; --fail-bg: #fee2e2;
+    --skip: #b45309; --skip-bg: #fef3c7; --shadow: 0 1px 2px rgba(20,24,40,.06), 0 8px 24px rgba(20,24,40,.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1116; --card: #171a21; --text: #e8eaf0; --muted: #98a1b2;
+    --border: #262b36; --accent: #a78bfa; --accent-soft: #241b3d;
+    --pass: #4ade80; --pass-bg: #10241a; --fail: #f87171; --fail-bg: #2a1414;
+    --skip: #fbbf24; --skip-bg: #2a2110; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 28px 20px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 22px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; }
+
+  .summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 16px; box-shadow: var(--shadow); min-width: 110px; }
+  .stat .n { font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+  .stat .l { font-size: 12px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .04em; }
+  .stat.pass .n { color: var(--pass); } .stat.fail .n { color: var(--fail); } .stat.skip .n { color: var(--skip); }
+
+  .bar { height: 10px; border-radius: 999px; overflow: hidden; display: flex; background: var(--border); margin-bottom: 22px; }
+  .bar i { display: block; height: 100%; }
+  .bar .p { background: var(--pass); } .bar .f { background: var(--fail); } .bar .s { background: var(--skip); }
+
+  .controls { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 10px 0 12px;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  #q { flex: 1 1 240px; min-width: 180px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); font-size: 14px; }
+  #q:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .chip { border: 1px solid var(--border); background: var(--card); color: var(--muted); border-radius: 999px;
+    padding: 7px 13px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  details.group { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    margin-top: 10px; box-shadow: var(--shadow); overflow: hidden; }
+  details.group > summary { list-style: none; cursor: pointer; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  details.group > summary::-webkit-details-marker { display: none; }
+  .caret { transition: transform .15s ease; color: var(--muted); }
+  details[open] .caret { transform: rotate(90deg); }
+  .gname { font-weight: 700; font-size: 13.5px; word-break: break-all; }
+  .gcounts { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+  .rows { border-top: 1px solid var(--border); }
+  .row { display: flex; align-items: center; gap: 12px; padding: 9px 16px 9px 40px; border-top: 1px solid var(--border); }
+  .row:first-child { border-top: none; }
+  .row .t { flex: 1; font-size: 13.5px; word-break: break-word; }
+  .row .d { color: var(--muted); font-size: 12px; flex-shrink: 0; }
+  .pill { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em;
+    padding: 3px 8px; border-radius: 999px; flex-shrink: 0; }
+  .pill.passed { color: var(--pass); background: var(--pass-bg); }
+  .pill.failed { color: var(--fail); background: var(--fail-bg); }
+  .pill.skipped { color: var(--skip); background: var(--skip-bg); }
+  .empty { color: var(--muted); padding: 30px; text-align: center; }
+  .srcbadge { font-size: 10.5px; font-weight: 700; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 6px; padding: 1px 6px; text-transform: uppercase; letter-spacing: .04em; }
+</style>
+
+<div class="wrap">
+  <h1>Times Table Hero — Test Report</h1>
+  <p class="sub" id="meta"></p>
+
+  <div class="summary" id="summary"></div>
+  <div class="bar" id="bar"></div>
+
+  <div class="controls">
+    <input id="q" type="search" placeholder="Filter by test title…" autocomplete="off" />
+    <button class="chip" data-f="all" aria-pressed="true">All</button>
+    <button class="chip" data-f="failed" aria-pressed="false">Failed</button>
+    <button class="chip" data-f="passed" aria-pressed="false">Passed</button>
+    <button class="chip" data-f="skipped" aria-pressed="false">Skipped</button>
+    <button class="chip" data-f="e2e" aria-pressed="false">Browser (e2e)</button>
+    <button class="chip" data-f="unit" aria-pressed="false">Unit</button>
+  </div>
+
+  <div id="groups"></div>
+</div>
+
+<script>
+  const DATA = /*__DATA__*/;
+  const { rows, summary } = DATA;
+
+  document.getElementById('meta').textContent =
+    'Generated ' + new Date(summary.generatedAt).toLocaleString() +
+    ' · ' + summary.unit + ' unit + ' + summary.e2e + ' browser (e2e) tests';
+
+  const stat = (n, l, cls) => '<div class="stat ' + cls + '"><div class="n">' + n + '</div><div class="l">' + l + '</div></div>';
+  document.getElementById('summary').innerHTML =
+    stat(summary.total, 'Total', '') + stat(summary.passed, 'Passed', 'pass') +
+    stat(summary.failed, 'Failed', 'fail') + stat(summary.skipped, 'Skipped', 'skip');
+
+  const pct = (n) => summary.total ? (100 * n / summary.total) + '%' : '0%';
+  document.getElementById('bar').innerHTML =
+    '<i class="p" style="width:' + pct(summary.passed) + '"></i>' +
+    '<i class="s" style="width:' + pct(summary.skipped) + '"></i>' +
+    '<i class="f" style="width:' + pct(summary.failed) + '"></i>';
+
+  // Group rows by suite; failed groups first, then by name.
+  const groups = new Map();
+  for (const r of rows) {
+    if (!groups.has(r.suite)) groups.set(r.suite, []);
+    groups.get(r.suite).push(r);
+  }
+  const groupList = [...groups.entries()].map(([name, items]) => ({
+    name, items,
+    failed: items.filter((i) => i.status === 'failed').length,
+    passed: items.filter((i) => i.status === 'passed').length,
+    skipped: items.filter((i) => i.status === 'skipped').length,
+    source: items[0].source,
+  })).sort((a, b) => (b.failed - a.failed) || a.name.localeCompare(b.name));
+
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const dur = (ms) => ms >= 1000 ? (ms / 1000).toFixed(1) + 's' : ms + 'ms';
+  let statusFilter = 'all', srcFilter = 'all', q = '';
+
+  function matches(r) {
+    if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+    if (srcFilter !== 'all' && r.source !== srcFilter) return false;
+    if (q && !r.title.toLowerCase().includes(q)) return false;
+    return true;
+  }
+
+  function render() {
+    const container = document.getElementById('groups');
+    let html = '';
+    let shown = 0;
+    for (const g of groupList) {
+      const visible = g.items.filter(matches);
+      if (!visible.length) continue;
+      shown += visible.length;
+      const cnt = (n, cls) => n ? '<span class="pill ' + cls + '">' + n + '</span>' : '';
+      const anyFail = g.failed > 0;
+      html += '<details class="group"' + (anyFail || q || statusFilter !== 'all' ? ' open' : '') + '>' +
+        '<summary><span class="caret">▸</span>' +
+        '<span class="gname mono">' + esc(g.name) + '</span>' +
+        '<span class="srcbadge">' + g.source + '</span>' +
+        '<span class="gcounts">' + cnt(g.failed, 'failed') + cnt(g.skipped, 'skipped') + cnt(g.passed, 'passed') + '</span>' +
+        '</summary><div class="rows">';
+      for (const r of visible) {
+        html += '<div class="row"><span class="pill ' + r.status + '">' + r.status + '</span>' +
+          '<span class="t">' + esc(r.title) + '</span>' +
+          '<span class="d">' + dur(r.ms) + '</span></div>';
+      }
+      html += '</div></details>';
+    }
+    container.innerHTML = html || '<div class="empty">No tests match this filter.</div>';
+  }
+
+  document.getElementById('q').addEventListener('input', (e) => { q = e.target.value.trim().toLowerCase(); render(); });
+  for (const chip of document.querySelectorAll('.chip')) {
+    chip.addEventListener('click', () => {
+      const f = chip.dataset.f;
+      const isSrc = f === 'unit' || f === 'e2e';
+      const group = isSrc ? ['unit', 'e2e'] : ['all', 'failed', 'passed', 'skipped'];
+      if (isSrc) srcFilter = (srcFilter === f) ? 'all' : f;
+      else statusFilter = f;
+      for (const c of document.querySelectorAll('.chip')) {
+        const cf = c.dataset.f;
+        if (group.includes(cf)) c.setAttribute('aria-pressed', String((isSrc ? srcFilter : statusFilter) === cf));
+      }
+      render();
+    });
+  }
+  render();
+</script>
